@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+<rect width="1600" height="900" fill="#FAFCFD"/>
+<rect width="1600" height="120" fill="#1F4E79"/>
+<rect y="120" width="1600" height="25" fill="#2E86C1"/>
+<text x="55" y="78" font-family="DejaVu Sans, Arial" font-size="38" fill="white">BUILD WITH PURPOSE | DOCUMENT WITH PRECISION | LEARN WITHOUT END</text>
+<circle cx="300" cy="470" r="75" fill="none" stroke="#1F4E79" stroke-width="12"/>
+<path d="M300 470 L300 250 L205 370 M300 250 L395 370" fill="none" stroke="#1F4E79" stroke-width="12" stroke-linecap="round"/>
+<path d="M190 565 A135 135 0 0 1 410 565" fill="none" stroke="#2E86C1" stroke-width="10"/>
+<path d="M130 620 A210 210 0 0 1 470 620" fill="none" stroke="#2E86C1" stroke-width="10"/>
+<path d="M75 675 A285 285 0 0 1 525 675" fill="none" stroke="#2E86C1" stroke-width="10"/>
+<text x="560" y="405" font-family="DejaVu Sans, Arial" font-size="130" font-weight="bold" fill="#1F4E79">Project AROC</text>
+<text x="565" y="505" font-family="DejaVu Sans, Arial" font-size="48" fill="#2E86C1">Amateur Radio Operations Center</text>
+<text x="565" y="590" font-family="DejaVu Sans, Arial" font-size="38" fill="#444444">KE4CON Technical Library and Engineering System</text>
+</svg>

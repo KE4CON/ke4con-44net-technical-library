@@ -1,0 +1,4 @@
+Body: Arial/Aptos 10.5 pt
+Headings: Arial/Aptos Bold
+Code: Consolas/Courier New
+Use high contrast and avoid decorative fonts in technical procedures.
