@@ -68,14 +68,38 @@ Guide) and the new `AROC-STD-0002 Engineering Standards` is grounded in:
    Administration"** — the Operations Center's admin surface won't be Linux-only (desktop
    clients and some AROC tooling will run on Windows/macOS too, matching how every other
    KE4CON app ships cross-platform).
+5. **Dual license by content type** (added later the same day) — CC BY-SA 4.0 for
+   documentation/the library, GPLv3 for software, as a default the project owner can
+   override case by case. Full detail in `LICENSING.md`; CLAUDE.md §7.
+6. **Archived `FieldComms-IMS`** into `99 Archive/FieldComms-IMS` via `git subtree`
+   (full history preserved) — FieldCommand-IMS's own CLAUDE.md calls that brand "now
+   purged," and the local FieldComms-IMS folder's configured GitHub remote didn't
+   actually resolve to a repo that exists.
+7. **Vision refinement, later the same day:** the library's own knowledge is the primary
+   deliverable, not the software/hardware — those are cited as grounding proof, not the
+   point. Standard: "PhD-thesis-level rigor, plain-language voice" (CLAUDE.md §8). Book 7
+   (APRS) Chapter 1 was written as the pilot for this standard, researched against
+   aprs.org, TAPR (Bell 202/AX.25), and APRS-Command's real architecture — see
+   `01 Publications/Book 7 - APRS/`. Pending the user's review before scaling to more
+   chapters/books.
+8. **AX.25 gets its own home in Book 1, not repeated per-book.** Book 7 Ch.1 deliberately
+   scoped AX.25 down to just what's needed to decode an APRS packet. Full AX.25 theory
+   (connected-mode sessions, KISS, node networks/NET/ROM, packet BBS operation) is used by
+   more than APRS — 44Net's early transport, packet BBS systems, some Winlink RF paths —
+   so it gets a dedicated chapter in Book 1 (Planning, Architecture & Network
+   Fundamentals) that Books 4, 7, and 8 all reference back to. See CLAUDE.md §5.
 
 ## What's still genuinely open
 
 - **Milestone 0003C** (Project Charter Version 1.0) — not started; the README's charter
   content is still the informal v0.x version.
-- **No book content exists yet.** `01 Publications` doesn't exist as a folder. Everything
-  shipped so far is documentation *about* documentation — the actual Operations Center
-  build-out (Books 1-10, `02 Operations`, `03 Software Development`) hasn't begun.
+- **Whether Book 7 Ch.1's depth/voice is actually right** — it's a pilot specifically
+  because it needs sign-off before becoming the template for ten more books.
+- **The absorb-vs-link question for `03 Software Development`:** do the six standalone
+  software repos (APRS-Command, FieldCommand-IMS, IcomRigControl, ActivationPlanner,
+  OpenTrack, AI-Server) get pulled into this repo, or stay independent and just get
+  documented/linked from here? Raised, not decided.
 - **The hardware/network side is undocumented here.** The Raspberry Pi / 44Net /
   networking work this project is ultimately about may already exist in the user's head
-  or on physical hardware, but nothing about it has been captured in this repository yet.
+  or on physical hardware, but nothing about it has been captured in this repository yet
+  beyond what Book 7 Ch.1 grounds against real software.
