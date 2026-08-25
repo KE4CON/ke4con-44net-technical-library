@@ -34,13 +34,7 @@ Build with Purpose. Document with Precision. Learn without End.
 
 Current Status
 
-Phase 0 – Project Foundation
-
-* ✅ Release 0001 – Initial Project Charter
-* ✅ Release 0002 – Project Vision and Roadmap
-* ✅ Milestone 0003A – Publishing Framework
-* ⏳ Milestone 0003B – Engineering Standards
-* ⏳ Milestone 0003C – Project Charter Version 1.0
+See [`CLAUDE.md`](CLAUDE.md) §3 "Current status" for the authoritative, always-up-to-date status. (Short version, as of this migration: Milestones 0003A and 0003B are complete; 0003C and all actual technical-library content are still ahead.)
 
 ⸻
 
@@ -51,7 +45,7 @@ The Project AROC engineering library will eventually include:
 * Book 0 – Administration
 * Book 1 – Planning, Architecture & Network Fundamentals
 * Book 2 – Hardware
-* Book 3 – Linux
+* Book 3 – Linux, Windows & macOS Administration
 * Book 4 – 44Net
 * Book 5 – Web Server
 * Book 6 – Operations
@@ -75,6 +69,8 @@ Repository Structure
 06 Downloads
 07 Templates
 99 Archive
+
+The numbered folders above are the published library itself. Repo-engineering-only material (build tooling, planning notes — nothing a library reader needs) lives separately under `docs/`; see [`docs/README.md`](docs/README.md).
 
 ⸻
 

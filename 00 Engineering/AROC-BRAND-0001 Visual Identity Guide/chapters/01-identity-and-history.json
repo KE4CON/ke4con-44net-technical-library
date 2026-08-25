@@ -1,0 +1,43 @@
+{
+  "order": 1,
+  "title": "Identity & Brand History",
+  "subtitle": "What Project AROC's visual identity communicates, and how it got here.",
+  "in_this_chapter": [
+    "What the identity is meant to communicate",
+    "The original ChatGPT-drafted identity (Rev0.1) and why it changed",
+    "What stayed the same"
+  ],
+  "blocks": [
+    {
+      "h1": "Identity"
+    },
+    {
+      "p": "Project AROC is the KE4CON Amateur Radio Operations Center. Its visual identity should communicate technical competence, reliability, amateur radio heritage, and long-term maintainability."
+    },
+    {
+      "h1": "Brand History"
+    },
+    {
+      "p": "Milestone 0003A shipped Project AROC's first visual identity on 2026-06-30, drafted in a **ChatGPT** chat session (not Claude) — a navy/blue palette (`#1F4E79` navy, `#2E86C1` blue, plus light-blue/gray/green/orange/purple support colors) and a custom radio-tower logo mark, delivered as hand-produced `.docx`/`.pdf` files with no editable source."
+    },
+    {
+      "callout": {
+        "kind": "important",
+        "label": "DESIGN DECISION 0003A→CC-01",
+        "text": "When Project AROC moved onto the Claude Code documentation pipeline (2026-08-25), the project adopted the **shared KE4CON navy + gold house style** in place of its own draft palette, so every KE4CON project's documents render from the exact same `docs_generators/style.py` and look like one family. This trades a unique AROC look for consistency across the whole KE4CON library — the AROC project name, motto, and station identity (KE4CON) are unchanged; only the color palette, typography, and cover layout changed. The original Rev0.1 identity is preserved for history in `99 Archive/0003A-chatgpt-draft-rev0.1/`."
+      }
+    },
+    {
+      "h1": "What Stayed the Same"
+    },
+    {
+      "bullets": [
+        "Project name: **Project AROC**",
+        "Expanded name: **Amateur Radio Operations Center**",
+        "Station identity: **KE4CON**",
+        "Motto: __Build with Purpose. Document with Precision. Learn without End.__",
+        "The radio-tower **logo mark** (PNG/SVG in `05 Media/`) — kept for the website and non-document uses; document covers no longer use a raster logo (see Chapter 3, Cover Page Design)"
+      ]
+    }
+  ]
+}

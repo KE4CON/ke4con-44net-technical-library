@@ -1,0 +1,82 @@
+{
+  "order": 1,
+  "title": "Purpose, Scope & Document Structure",
+  "subtitle": "Why Project AROC has a publishing standard, and what every formal document must contain.",
+  "in_this_chapter": [
+    "What this standard governs and why it exists",
+    "The required structure for every formal Project AROC document",
+    "Document numbering and status labels"
+  ],
+  "blocks": [
+    {
+      "h1": "Purpose and Scope"
+    },
+    {
+      "p": "This standard defines the official publishing system for Project AROC. It exists so every future Project AROC document looks, reads, and behaves like part of one coherent professional engineering library rather than a collection of unrelated files — whether that document is an installation guide, a network diagram set, an operations runbook, or a piece of the technical library (Books 0-10, see the repository `README.md`)."
+    },
+    {
+      "callout": {
+        "kind": "note",
+        "label": "ENGINEERING NOTE",
+        "text": "The publishing framework is treated as infrastructure. Just as a Raspberry Pi, a switch, and network cabling support the technical system, this publishing framework supports the documentation system. A consistent document system reduces confusion, makes updates easier, and lets the Project AROC library grow for years without losing organization."
+      }
+    },
+    {
+      "h1": "Standard Document Structure"
+    },
+    {
+      "p": "Every formal Project AROC publication shall use the following structure unless the document type makes a section unnecessary:"
+    },
+    {
+      "bullets": [
+        "Cover page",
+        "Document control page (owner, author, status, applicability)",
+        "Revision history page",
+        "Table of contents",
+        "Main body, organized into numbered chapters",
+        "Appendices, if applicable",
+        "Glossary, if applicable",
+        "Index, if applicable"
+      ]
+    },
+    {
+      "h1": "Document Numbering"
+    },
+    {
+      "p": "Every formal document carries a document number in the form `AROC-<TYPE>-<NUMBER>`, where `<TYPE>` identifies the document category and `<NUMBER>` is a 4-digit sequence assigned in order within that category:"
+    },
+    {
+      "table": {
+        "headers": ["Prefix", "Category", "Example"],
+        "rows": [
+          ["**STD**", "Publishing / engineering standards", "AROC-STD-0001"],
+          ["**BRAND**", "Visual identity / branding references", "AROC-BRAND-0001"],
+          ["**REL**", "Milestone / release notes", "AROC-REL-0003A"],
+          ["**BOOK**", "Technical library volumes (Books 0-10)", "AROC-BOOK-0007 (APRS)"]
+        ],
+        "widths": [1.1, 3.2, 2.2]
+      }
+    },
+    {
+      "p": "Full engineering-standards detail — folder structure, revision-control conventions, file naming, and figure/table numbering — lives in **AROC-STD-0002 Engineering Standards** (Chapter 3 of this standard gives the short version that applies to publishing specifically)."
+    },
+    {
+      "h1": "Status Labels"
+    },
+    {
+      "p": "Every document control page carries one of the following statuses:"
+    },
+    {
+      "table": {
+        "headers": ["Status", "Meaning"],
+        "rows": [
+          ["**Draft**", "In progress; content may still change materially"],
+          ["**Final / Approved for Review**", "Content-complete and ready to be read; not yet a locked reference"],
+          ["**Approved**", "Locked as the authoritative version of that revision"],
+          ["**Superseded**", "Replaced by a later revision; kept for history in `99 Archive`"]
+        ],
+        "widths": [2.2, 4.3]
+      }
+    }
+  ]
+}

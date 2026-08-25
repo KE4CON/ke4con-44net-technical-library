@@ -1,0 +1,35 @@
+{
+  "order": 3,
+  "title": "Cover Page Design & Callout Styles",
+  "subtitle": "How the identity actually renders on the page.",
+  "in_this_chapter": [
+    "The standard cover page layout",
+    "The four callout styles and their colors"
+  ],
+  "blocks": [
+    {
+      "h1": "Cover Page Design"
+    },
+    {
+      "p": "The standard cover is a full-bleed **navy panel** (`#1F3A5F`) topped and internally divided by a **gold marquee rule** (`#D9A521`). It carries, top to bottom: a small gold kicker (project name), the big white document title, a gold subtitle + revision line, a gold rule, the document kind in white, a muted tagline, and the author/date in white/faint gold-gray at the bottom. Covers are visually consistent across the entire library because every document calls the same `style.cover()` function — no cover is ever hand-built."
+    },
+    {
+      "h1": "Callout Styles"
+    },
+    {
+      "table": {
+        "headers": ["Kind", "Fill", "Border/Label"],
+        "rows": [
+          ["`note`", "#E7F0FA (pale blue)", "#2E6DA4"],
+          ["`important`", "#FFF4CC (pale amber)", "#E0A800"],
+          ["`tip`", "#E8F5E9 (pale green)", "#43A047"],
+          ["`warning`", "#FDECEA (pale red)", "#D9534F"]
+        ],
+        "widths": [1.3, 2.6, 2.0]
+      }
+    },
+    {
+      "p": "Usage guidance for these four kinds, and how they map to the old Engineering Note / Design Decision / Future Expansion vocabulary, is in **AROC-STD-0001 Chapter 3**."
+    }
+  ]
+}

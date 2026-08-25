@@ -1,0 +1,58 @@
+{
+  "order": 2,
+  "title": "Color Palette & Typography",
+  "subtitle": "The navy + gold house identity, in full.",
+  "in_this_chapter": [
+    "The current color palette (navy + gold)",
+    "Typography rules",
+    "How the old palette maps to the new one"
+  ],
+  "blocks": [
+    {
+      "h1": "Color Palette"
+    },
+    {
+      "code": [
+        "{",
+        "  \"aroc_navy\":   \"#1F3A5F\",",
+        "  \"aroc_gold\":   \"#D9A521\",",
+        "  \"aroc_blue\":   \"#2E6DA4\",",
+        "  \"aroc_panel\":  \"#EAF0F6\",",
+        "  \"aroc_ink\":    \"#222B38\",",
+        "  \"aroc_muted\":  \"#64748B\"",
+        "}"
+      ]
+    },
+    {
+      "p": "This is the authoritative copy of `05 Media/Project_AROC_Color_Palette.json`, which is regenerated in place whenever this table changes — the JSON file and this chapter must always agree."
+    },
+    {
+      "h2": "Mapping from the Rev0.1 draft palette"
+    },
+    {
+      "table": {
+        "headers": ["Rev0.1 (ChatGPT draft)", "Rev0.2 (house style)"],
+        "rows": [
+          ["`aroc_navy` #1F4E79", "`aroc_navy` #1F3A5F"],
+          ["`aroc_blue` #2E86C1", "`aroc_blue` #2E6DA4"],
+          ["`aroc_light_blue` #D6EAF8", "`aroc_panel` #EAF0F6"],
+          ["`aroc_gray` #F2F4F4 / `aroc_dark_gray` #444444", "`aroc_muted` #64748B / `aroc_ink` #222B38"],
+          ["`aroc_orange` #CA6F1E (design decisions)", "`aroc_gold` #D9A521 (marquee rules, cover accents, `important` callouts)"],
+          ["`aroc_green` #1E8449 / `aroc_purple` #6C3483", "Retired — the house callout set uses `tip` (green) and `warning` (red) instead; see AROC-STD-0001 Chapter 3"]
+        ],
+        "widths": [3.2, 3.3]
+      }
+    },
+    {
+      "h1": "Typography"
+    },
+    {
+      "bullets": [
+        "Body text: **Segoe UI**, 10.5pt — prioritizes readability over decoration",
+        "Headings: **Segoe UI Semibold**, high contrast, easy to scan",
+        "Technical examples / code: **Consolas** (monospaced)",
+        "Line spacing: 1.15 with spacing after paragraphs"
+      ]
+    }
+  ]
+}
