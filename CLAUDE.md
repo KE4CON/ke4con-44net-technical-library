@@ -28,6 +28,12 @@ operations).
   the same concepts for their own station. Write every book/standard/runbook so a
   stranger could actually follow it, not as private notes that happen to be public. See
   §7 Licensing for what makes that legally real, not just aspirational.
+- **The primary deliverable is the knowledge, not the software (decided 2026-08-25).**
+  Project AROC's software (APRS-Command, FieldCommand-IMS, etc.) and hardware (Kestrel,
+  Phoenix) are built and *referenced* here as real, working proof that the engineering
+  explained in the library actually works — but the library itself, not any one app, is
+  the point. The stated ambition: "the ultimate amateur radio RF knowledge base." See §8
+  for the depth/rigor standard that ambition implies.
 
 ---
 
@@ -60,9 +66,14 @@ not deleted, at `99 Archive/0003A-chatgpt-draft-rev0.1/`.
   document numbering, folder structure, revision control, file naming, figure/table
   numbering, diagram standards)
 - ⏳ Milestone 0003C — Project Charter Version 1.0 (not started)
-- ⏳ First technical library content (`01 Publications`, any Book 0-10) — **not started**;
-  everything so far is documentation *about* documentation
-- ⏳ `02 Operations`, `03 Software Development` — **do not exist yet**
+- 🟡 First technical library content — **Book 7 (APRS), Chapter 1** drafted 2026-08-25
+  as the pilot for the depth/rigor standard in §8 (`01 Publications/Book 7 - APRS/`,
+  `AROC-BOOK-0007`, Rev0.1, Draft — awaiting the user's review before more chapters or
+  books are started in the same style). All other books: not started.
+- ⏳ `02 Operations`, `03 Software Development` — **do not exist yet**; also still open:
+  whether the standalone software repos (APRS-Command, FieldCommand-IMS, etc.) get
+  absorbed into `03 Software Development` or stay independent and just get linked/
+  documented from here (raised 2026-08-25, undecided)
 
 The README's own "Current Status" section should always **link here**, not restate this
 list — this file is authoritative; update it in the same commit that completes a
@@ -109,7 +120,13 @@ reasoning.
 ## 5. Planned library (from the charter, `README.md`)
 
 - Book 0 – Administration
-- Book 1 – Planning, Architecture & Network Fundamentals
+- Book 1 – Planning, Architecture & Network Fundamentals *(decided 2026-08-25: gets a
+  dedicated "AX.25 / Packet Radio Fundamentals" chapter — connected-mode sessions, the
+  KISS protocol between TNC and computer, general digipeating/node networks (NET/ROM,
+  packet BBS operation) — covering AX.25 as a protocol in general, not just the
+  APRS-specific slice already written in Book 7 Ch.1. Book 4 (44Net), Book 7 (APRS), and
+  Book 8 (Winlink) all reference back to this chapter instead of re-explaining AX.25 at
+  three different depths.)*
 - Book 2 – Hardware
 - Book 3 – Linux, Windows & macOS Administration *(broadened 2026-08-25 from "Linux" —
   the Operations Center's admin surface isn't Linux-only)*
@@ -121,9 +138,10 @@ reasoning.
 - Book 9 – AI Integration
 - Book 10 – Emergency Communications
 
-None of these exist as content yet. When starting the first one, **Book 1 (Planning,
-Architecture & Network Fundamentals)** is the natural first pick — everything else
-depends on it.
+Book 7's Chapter 1 is drafted (§3) as the pilot for the §8 depth standard — pending
+review, the rest of Book 7 and the other ten books follow the same template. Absent that
+pilot, **Book 1 (Planning, Architecture & Network Fundamentals)** would be the natural
+next pick, since everything else depends on it.
 
 ---
 
@@ -158,3 +176,38 @@ Dual-licensed by content type, decided 2026-08-25 — full detail in `LICENSING.
   for code) — it overrides the table above for that item only.
 - Full texts: `LICENSE` (GPLv3) and `LICENSE-CONTENT` (CC BY-SA 4.0), fetched verbatim
   from gnu.org / creativecommons.org, not reproduced from memory.
+
+---
+
+## 8. Content depth & rigor standard (decided 2026-08-25)
+
+The library's ambition, in the user's own words: *"do it at a PhD thesis level but keep
+the language such that everyone can understand it... the ultimate amateur radio RF
+knowledge base."* Two things have to be true of every chapter at once, not traded off
+against each other:
+
+- **PhD-thesis-level rigor.** Technical claims are exact and grounded in real sources —
+  actual specs, standards documents, and reference material, cited by name and URL in a
+  "Sources & Further Reading" section — not written fluently from memory and assumed
+  correct. Every design choice is explained by the real engineering problem it solves,
+  not just stated as fact. Where a topic is real but out of scope for the current
+  chapter, say so explicitly (a scope-boundary callout) rather than covering it shallowly
+  just to seem complete.
+- **Plain enough that everyone can follow it.** Define every piece of jargon inline the
+  first time it's used. Build intuition with a plain-language explanation before (or
+  alongside) any formal/technical statement. A beginner and a working engineer should
+  both get real value from the same page — this is the same principle behind the global
+  house standard's "define every acronym on first use," applied at a much greater depth.
+- **Ground book content in the real software/hardware this project has built wherever
+  possible** — e.g. connect an explained protocol or technique to exactly where it's
+  implemented in APRS-Command, FieldCommand-IMS, etc. This is what makes the library
+  provably not chat-drafted theory (§2's original failure mode) — the pattern this whole
+  migration exists to break.
+- **The pilot:** `01 Publications/Book 7 - APRS/chapters/01-what-aprs-is-and-how-it-works.json`
+  (Book 7, Chapter 1) is the first chapter written to this standard — researched against
+  aprs.org, TAPR, and a real AX.25 frame-structure reference, and grounded against
+  APRS-Command's actual architecture. Read it before writing another chapter; match its
+  depth, its citation habit, and its voice, not just its section structure.
+- **Length is not the target — depth and correctness are.** A chapter runs as long as the
+  material actually requires (Book 7 Ch.1 landed around 2,900 words); padding to hit a
+  word count, or cutting real content to stay short, are both wrong moves.

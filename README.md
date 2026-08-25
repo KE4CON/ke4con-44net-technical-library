@@ -14,6 +14,8 @@ The project is built around the philosophy that engineering knowledge should be 
 
 Project AROC is written for two audiences at once: James (KE4CON), building this specific operations center, and anyone else who wants to learn from and implement the same concepts for their own station. Every book, standard, and runbook should read as something a reader could actually follow to build their own version — not private notes that happen to be public. See "License" below for what that means in practice.
 
+**The knowledge is the point.** This library is meant to become the ultimate amateur radio RF knowledge base — engineering content written at PhD-thesis-level rigor, in language anyone can actually follow. The software (APRS-Command, FieldCommand-IMS, and the rest) and hardware (Kestrel, Phoenix) this project has built are mentioned throughout as real, working proof that the engineering explained here actually works — not as the main event. See [`CLAUDE.md`](CLAUDE.md) §8 for the depth/rigor standard, and `01 Publications/Book 7 - APRS/` for the first chapter written to it.
+
 Project AROC combines:
 
 * 44Net networking
