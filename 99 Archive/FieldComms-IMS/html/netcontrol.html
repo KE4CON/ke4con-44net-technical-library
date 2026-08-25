@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Net Control Logger — Incident Management</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.net-picker-bar {
+  background: var(--panel); border-bottom: 1px solid var(--line);
+  padding: 10px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+/* Net selector tab styling */
+.net-badge {
+  background: var(--panel2); border: 1px solid var(--line);
+  padding: 4px 12px; border-radius: 16px; font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+}
+.net-badge.active {
+  border-color: var(--green); color: var(--green);
+  background: rgba(26,122,58,0.12);
+  font-weight: bold;
+}
+.net-badge:hover:not(.active) { border-color: var(--eoc-lt); color: var(--txt); }
+.net-badge .dot { width:7px; height:7px; }
+
+.entry-form {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 16px; margin-bottom: 14px;
+}
+.form-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.form-row input, .form-row select { flex: 1; min-width: 100px; }
+.form-row .call-input { max-width: 160px; text-transform: uppercase; }
+
+.fcc-card {
+  background: var(--panel2); border: 1px solid var(--blue); border-radius: 6px;
+  padding: 10px 14px; margin-bottom: 10px; font-size: 13px;
+  display: none; grid-template-columns: 1fr 1fr 1fr; gap: 6px;
+}
+.fcc-card.show { display: grid; }
+.fcc-card strong { color: var(--blue); }
+.fcc-field { display: flex; flex-direction: column; gap: 2px; }
+.fcc-field .label { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+
+/* Station table */
+.stn-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; font-size: 12px; margin: 2px; }
+.stn-chip .cs { font-weight: bold; }
+
+/* Precedence colors */
+.prec-EMERGENCY { background: #fde8e8; border-left:4px solid var(--red); }
+.prec-PRIORITY  { background:#3a1500; border-left:4px solid var(--amber); }
+.prec-WELFARE   { background: #d4f0de; border-left:4px solid var(--green); }
+.prec-ROUTINE   { border-left:4px solid var(--line); }
+
+/* Traffic log */
+.traffic-item { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; margin-bottom: 6px; font-size: 13px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+.tab { padding: 8px 18px; cursor: pointer; font-size: 13px; border-bottom: 2px solid transparent; color: var(--muted); }
+.tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+/* Roster chips import */
+.chip-import-area { border: 2px dashed var(--line); border-radius: 6px; padding: 14px; text-align: center; font-size: 12px; color: var(--muted); cursor: pointer; }
+.chip-import-area:hover { border-color: var(--blue); }
+
+/* ICS-309 print */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; color: black; font-family: Arial, sans-serif; }
+  .ics309-header { text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 16px; }
+  .drill-watermark {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-30deg);
+    font-size: 80px; opacity: 0.1; color: orange; font-weight: bold; z-index: 9999;
+    pointer-events: none;
+  }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ccc; padding: 6px 8px; font-size: 11px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Drill banner (hidden unless drill mode) -->
+<div id="drillBanner" class="drill-banner" style="display:none">⚠ DRILL / EXERCISE — NOT ACTUAL EMERGENCY ⚠</div>
+
+<!-- Nav -->
+<div class="nav-bar no-print">
+  <span class="logo">📻 NET CONTROL</span>
+  <a href="index.html">Dashboard</a>
+  <a href="starcom.html">Starcom Logger</a>
+  <a href="observer.html">Observer</a>
+  <a href="printcenter.html">Print</a>
+</div>
+
+<!-- Net selector tabs bar -->
+<div class="net-picker-bar no-print" id="netPickerBar">
+  <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+    <span style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap">NET TABS</span>
+    <button onclick="showNewNetDialog()" style="background:var(--green);border-color:var(--green);color:#000;font-weight:bold;white-space:nowrap">+ New Net</button>
+  </div>
+  <div id="netBadges" style="display:flex;flex-wrap:wrap;gap:6px;flex:1">
+    <span style="color:var(--muted);font-size:12px">No active nets — click + New Net to begin</span>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+    <button onclick="shareObserverLink()" title="Share read-only view of currently selected net">🔗 Observer Link</button>
+    <button onclick="exportICS309()" style="background:var(--panel2)" title="Export ICS-309 for currently selected net">📄 ICS-309</button>
+    <button onclick="exportJSON()">💾 Backup JSON</button>
+  </div>
+</div>
+
+<div class="page-wrap" style="display:grid;grid-template-columns:1fr 280px;gap:16px">
+<div>
+
+<!-- Current Net Header -->
+<div id="netHeader" class="panel" style="margin-bottom:14px;padding:12px 16px;border-left:4px solid var(--green)">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div>
+      <div id="netName" style="font-family:var(--font-hd);font-size:18px;letter-spacing:1px">No Net Selected</div>
+      <div id="netType" style="font-size:11px;color:var(--muted)">Select or create a net to begin</div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:4px;font-size:11px">
+        <div style="display:flex;gap:5px;align-items:center">
+          <span style="color:var(--muted)">Opened:</span>
+          <span id="netOpenedDisplay" style="font-family:var(--font-hd)">—</span>
+        </div>
+        <div style="display:flex;gap:5px;align-items:center">
+          <span style="color:var(--muted)">Closed:</span>
+          <span id="netClosedDisplay" style="font-family:var(--font-hd)">—</span>
+        </div>
+        <div style="display:flex;gap:5px;align-items:center">
+          <span style="color:var(--muted)">Duration:</span>
+          <span id="netDurationDisplay" style="font-family:var(--font-hd)">—</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:11px;display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="drillToggle" onchange="toggleDrill()"> Drill Mode
+      </label>
+      <button onclick="closeNet()" id="closeNetBtn" style="display:none;background:var(--red);border-color:var(--red)">Close Net</button>
+    </div>
+  </div>
+</div>
+
+<!-- Entry form -->
+<div class="entry-form no-print" id="entryForm" style="display:none">
+  <div style="font-size:11px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Log Station Check-In / Traffic</div>
+
+  <!-- FCC Autofill card -->
+  <div class="fcc-card" id="fccCard">
+    <div class="fcc-field"><span class="label">Name</span><strong id="fccName"></strong></div>
+    <div class="fcc-field"><span class="label">Class</span><strong id="fccClass"></strong></div>
+    <div class="fcc-field"><span class="label">Status</span><strong id="fccStatus"></strong></div>
+    <div class="fcc-field"><span class="label">Location</span><strong id="fccLoc"></strong></div>
+    <div class="fcc-field"><span class="label">Expires</span><strong id="fccExp"></strong></div>
+  </div>
+
+  <div class="form-row">
+    <input class="call-input" type="text" id="callInput" placeholder="Callsign" maxlength="12"
+           oninput="this.value=this.value.toUpperCase()" onchange="lookupFCC(this.value)">
+    <input type="text" id="nameInput" placeholder="Name (auto-fill)">
+    <select id="statusSel">
+      <option>Check-In</option><option>Traffic</option><option>Priority</option>
+      <option>Emergency</option><option>Net Control</option><option>Check-Out</option>
+      <option>Mobile</option><option>Portable</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <input type="text" id="locationInput" placeholder="Location/Grid">
+    <select id="precSel">
+      <option value="ROUTINE">Routine</option>
+      <option value="WELFARE">Welfare</option>
+      <option value="PRIORITY">Priority</option>
+      <option value="EMERGENCY">Emergency</option>
+    </select>
+    <input type="text" id="remarksInput" placeholder="Remarks / Traffic">
+  </div>
+  <div style="display:flex;gap:8px">
+    <button onclick="logEntry()" style="background:var(--green);border-color:var(--green);color:#000;font-weight:bold;padding:8px 24px">LOG ENTRY</button>
+    <button onclick="clearEntryForm()">Clear</button>
+    <label style="font-size:11px;display:flex;align-items:center;gap:6px;margin-left:auto">
+      <input type="checkbox" id="autolookup" checked> Auto FCC lookup
+    </label>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab('checkins')">✅ Stations Logged (<span id="countCheckins">0</span>)</div>
+  <div class="tab" onclick="showTab('traffic')">📨 Traffic Log (<span id="countTraffic">0</span>)</div>
+  <div class="tab" onclick="showTab('roster')">👥 Roster Chips</div>
+</div>
+
+<!-- Check-ins table -->
+<div id="tabCheckins">
+  <div id="entryList" style="display:flex;flex-direction:column;gap:6px">
+    <div style="color:var(--muted);text-align:center;padding:30px">Select a net to begin logging</div>
+  </div>
+</div>
+
+<!-- Traffic tab -->
+<div id="tabTraffic" style="display:none">
+  <div class="form-row no-print" style="margin-bottom:12px">
+    <input type="text" id="trafficFrom" placeholder="From callsign">
+    <input type="text" id="trafficTo" placeholder="To callsign/address">
+    <select id="trafficType">
+      <option>Radiogram</option><option>Health &amp; Welfare</option>
+      <option>Official</option><option>Priority</option><option>Emergency</option>
+    </select>
+    <input type="text" id="trafficNote" placeholder="Message summary">
+    <button onclick="logTraffic()">Log Traffic</button>
+  </div>
+  <div id="trafficList">
+    <div style="color:var(--muted);text-align:center;padding:20px">No traffic logged yet</div>
+  </div>
+</div>
+
+<!-- Roster chips tab -->
+<div id="tabRoster" style="display:none">
+  <div class="chip-import-area no-print" id="chipImport" onclick="document.getElementById('chipFile').click()">
+    📥 Click to import roster (CSV or JSON) — or drag &amp; drop
+    <input type="file" id="chipFile" accept=".csv,.json" style="display:none" onchange="importRosterFile(this)">
+  </div>
+  <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap" id="chipList"></div>
+  <div style="margin-top:10px;font-size:11px;color:var(--muted)">Click a chip to log check-in</div>
+</div>
+
+</div><!-- end main col -->
+
+<!-- Sidebar -->
+<div class="no-print">
+  <div class="panel" style="margin-bottom:12px">
+    <div style="font-family:var(--font-hd);font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:10px">NET SUMMARY</div>
+    <div class="stat-row" style="margin-bottom:6px"><span class="label">Net Name</span><span class="value" id="sumName">—</span></div>
+    <div class="stat-row" style="margin-bottom:6px"><span class="label">Check-ins</span><span class="value" id="sumCheckins">0</span></div>
+    <div class="stat-row" style="margin-bottom:6px"><span class="label">Traffic</span><span class="value" id="sumTraffic">0</span></div>
+    <div class="stat-row" style="margin-bottom:6px"><span class="label">Duration</span><span class="value" id="sumDuration">—</span></div>
+    <div class="stat-row"><span class="label">Status</span><span class="value" id="sumStatus"><span class="badge badge-green">OPEN</span></span></div>
+  </div>
+
+  <div class="panel" style="margin-bottom:12px">
+    <div style="font-family:var(--font-hd);font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:10px">ACTIVE NETS</div>
+    <div id="activeNetsList" style="font-size:12px;color:var(--muted)">None</div>
+  </div>
+
+  <div class="panel">
+    <div style="font-family:var(--font-hd);font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:10px">LAST 5 ENTRIES</div>
+    <div id="recentEntries" style="font-size:12px"></div>
+  </div>
+</div>
+
+</div><!-- page-wrap -->
+
+<!-- New Net Modal -->
+<div id="newNetModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.2);z-index:100;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+<div style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:24px;width:400px;max-width:95vw">
+  <div style="font-family:var(--font-hd);font-size:16px;margin-bottom:16px">Create New Net</div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <input type="text" id="newNetName" placeholder="Net Name (e.g. Thursday Evening Net)">
+    <select id="newNetType">
+      <option>ARES Net</option><option>RACES Net</option><option>SKYWARN Net</option>
+      <option>EmComm Net</option><option>Traffic Net</option><option>Training Net</option>
+      <option>HF Net</option><option>VHF/UHF Net</option><option>Digital Net</option>
+    </select>
+    <input type="text" id="newNetFreq" placeholder="Frequency / Mode (e.g. 146.520 FM)">
+    <input type="text" id="newNetNC" placeholder="Net Control Callsign">
+  </div>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button onclick="createNet()" style="flex:1;background:var(--green);border-color:var(--green);color:#000;font-weight:bold">Create Net</button>
+    <button onclick="document.getElementById('newNetModal').style.display='none'">Cancel</button>
+  </div>
+</div>
+</div>
+
+<script>
+const API = "http://192.168.50.1:5050";
+let currentNetId = null;
+let currentNet = null;
+
+// ── Tabs ──────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll(".tab").forEach((t,i) => {
+    const names = ["checkins","traffic","roster"];
+    t.classList.toggle("active", names[i] === name);
+  });
+  document.getElementById("tabCheckins").style.display = name==="checkins" ? "" : "none";
+  document.getElementById("tabTraffic").style.display  = name==="traffic"  ? "" : "none";
+  document.getElementById("tabRoster").style.display   = name==="roster"   ? "" : "none";
+}
+
+// ── Net management ────────────────────────────────────────────────────
+async function loadNets() {
+  try {
+    const r = await fetch(`${API}/api/nets?starcom=false`);
+    const nets = await r.json();
+    const bar = document.getElementById("netBadges");
+    if (nets.length === 0) {
+      bar.innerHTML = '<span style="color:var(--muted);font-size:12px">No nets — create one to start</span>';
+    } else {
+      bar.innerHTML = nets.filter(n=>n.active).map(n =>
+        `<div class="net-badge ${n.id===currentNetId?'active':''}" onclick="selectNet('${n.id}')">
+          <span class="dot ${n.active?'dot-green':'dot-gray'}"></span>
+          ${n.name} (${n.entry_count})
+        </div>`
+      ).join("") + (nets.filter(n=>!n.active).length ?
+        `<details style="font-size:11px;color:var(--muted)"><summary>Closed nets</summary>${
+          nets.filter(n=>!n.active).map(n=>
+            `<div class="net-badge" onclick="selectNet('${n.id}')" style="opacity:0.6">${n.name}</div>`
+          ).join("")
+        }</details>` : "");
+    }
+
+    // Active nets sidebar
+    const active = nets.filter(n=>n.active);
+    document.getElementById("activeNetsList").innerHTML = active.length ?
+      active.map(n=>`<div style="padding:4px 0;border-bottom:1px solid var(--line)">${n.name}</div>`).join("") :
+      '<span style="color:var(--muted)">None active</span>';
+
+  } catch(e) {
+    document.getElementById("netBadges").innerHTML = '<span style="color:var(--red)">Cannot reach API server</span>';
+  }
+}
+
+async function selectNet(netId) {
+  currentNetId = netId;
+  try {
+    const r = await fetch(`${API}/api/nets/${netId}`);
+    currentNet = await r.json();
+    renderNet();
+    loadNets(); // refresh badges
+  } catch(e) {
+    alert("Failed to load net: " + e);
+  }
+}
+
+// ── Time helpers (shared with starcom) ───────────────────────────────────────
+function roundUpQH(minutes) {
+  if (minutes <= 0) return "0:15";
+  const qh = Math.ceil(minutes / 15) * 15;
+  const h = Math.floor(qh / 60), m = qh % 60;
+  return h > 0 ? `${h}h ${m.toString().padStart(2,"0")}m` : `${m}m`;
+}
+function fmtTime(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"}) + " local";
+}
+function netDuration(openIso, closeIso) {
+  if (!openIso) return "—";
+  const end = closeIso ? new Date(closeIso) : new Date();
+  const mins = Math.floor((end - new Date(openIso)) / 60000);
+  return mins < 60 ? `${mins}m` : `${Math.floor(mins/60)}h ${mins%60}m`;
+}
+function entryDuration(checkinIso, checkoutIso, netCloseIso) {
+  if (!checkinIso) return "—";
+  const end = checkoutIso ? new Date(checkoutIso) : (netCloseIso ? new Date(netCloseIso) : new Date());
+  const mins = Math.floor((end - new Date(checkinIso)) / 60000);
+  return roundUpQH(mins);
+}
+
+function renderNet() {
+  if (!currentNet) return;
+  const opened = currentNet.net_opened;
+  const closed = currentNet.net_closed;
+
+  document.getElementById("netName").textContent = currentNet.name;
+  document.getElementById("netType").textContent = `${currentNet.type} · ${currentNet.id}`;
+  document.getElementById("entryForm").style.display = "";
+  document.getElementById("closeNetBtn").style.display = currentNet.active ? "" : "none";
+  document.getElementById("sumName").textContent = currentNet.name;
+  document.getElementById("drillToggle").checked = currentNet.drill || false;
+  updateDrillUI();
+
+  // Net open/close/duration
+  document.getElementById("netOpenedDisplay").textContent = fmtTime(opened);
+  document.getElementById("netClosedDisplay").textContent = closed ? fmtTime(closed) : (currentNet.active ? "Net open" : "—");
+  document.getElementById("netDurationDisplay").textContent = netDuration(opened, closed);
+
+  const entries = currentNet.entries || [];
+  const traffic = currentNet.traffic || [];
+  const chips   = currentNet.roster_chips || [];
+
+  document.getElementById("countCheckins").textContent = entries.length;
+  document.getElementById("countTraffic").textContent  = traffic.length;
+  document.getElementById("sumCheckins").textContent   = entries.length;
+  document.getElementById("sumTraffic").textContent    = traffic.length;
+
+  // Entry list
+  const entryList = document.getElementById("entryList");
+  if (entries.length === 0) {
+    entryList.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">No entries yet — log a station above</div>';
+  } else {
+    entryList.innerHTML = [...entries].reverse().map((e,i) => {
+      const prec = e.precedence || "ROUTINE";
+      const isWalkIn = e.walk_in || (!e.fcc_verified && e.name && !e.callsign);
+      const isInRoster = currentNet?.roster_chips?.some(c =>
+        c.callsign && e.callsign && c.callsign.toUpperCase() === e.callsign.toUpperCase());
+      const canPromote = e.callsign && !isInRoster;
+      const checkedOut = !!e.checkout_time;
+      const dur = entryDuration(e.timestamp, e.checkout_time, closed);
+      return `<div class="panel2 prec-${prec}" style="padding:10px 14px;display:flex;gap:12px;align-items:flex-start">
+        <div style="font-size:11px;color:var(--muted);min-width:55px">${(e.timestamp||"").slice(11,19)}</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <strong style="font-size:14px">${e.callsign || "?"}</strong>
+            ${e.name ? `<span style="color:var(--muted);font-size:12px"> / ${e.name}</span>` : ""}
+            <span class="badge badge-${prec==='EMERGENCY'?'red':prec==='PRIORITY'?'amber':prec==='WELFARE'?'green':'gray'}" style="margin-left:8px;font-size:10px">${e.status||""}</span>
+            ${isWalkIn ? `<span style="font-size:9px;background:rgba(200,118,10,0.15);color:var(--amber);border:1px solid var(--amber);border-radius:3px;padding:1px 5px">WALK-IN</span>` : ""}
+            ${e.ema_id ? `<span style="font-size:10px;padding:1px 6px;background:#1a3a6b22;border:1px solid var(--blue);color:var(--blue);border-radius:3px">ESV ${e.ema_id}</span>` : ""}
+          </div>
+          ${e.remarks ? `<div style="font-size:12px;color:var(--muted);margin-top:3px">${e.remarks}</div>` : ""}
+          ${e.location ? `<div style="font-size:11px;color:var(--dim)">📍 ${e.location}</div>` : ""}
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">
+            Duration: <strong>${dur}</strong>
+            ${checkedOut ? `<span style="color:var(--green)"> · Out ${(e.checkout_time||"").slice(11,19)}</span>` : "<span style='color:var(--amber)'> · On net</span>"}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+          <button onclick="checkoutEntry('${e.id}')"
+            style="font-size:10px;padding:2px 8px;background:${checkedOut?'var(--line)':'var(--amber)'};border-color:${checkedOut?'var(--line)':'var(--amber)'};color:${checkedOut?'var(--muted)':'#fff'};border-radius:3px;white-space:nowrap"
+            ${checkedOut?"disabled":""} class="no-print">
+            ${checkedOut?"✓ Out":"Check Out"}
+          </button>
+          ${canPromote ? `<button onclick="promoteToRoster('${e.id}')" title="Add to permanent roster"
+            style="font-size:9px;padding:3px 7px;background:var(--green);border-color:var(--green);
+                   color:#fff;white-space:nowrap" class="no-print">+ Roster</button>` : ""}
+          <button onclick="removeEntry('${e.id}')" style="font-size:10px;padding:2px 6px;background:var(--panel)" class="no-print">✕</button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  // Traffic list
+  const trafficList = document.getElementById("trafficList");
+  trafficList.innerHTML = traffic.length === 0 ?
+    '<div style="color:var(--muted);text-align:center;padding:20px">No traffic logged</div>' :
+    [...traffic].reverse().map(t =>
+      `<div class="traffic-item">
+        <div style="display:flex;justify-content:space-between">
+          <span><strong>${t.from_call||"?"}</strong> → <strong>${t.to||"?"}</strong></span>
+          <span style="font-size:11px;color:var(--muted)">${(t.timestamp||"").slice(11,19)} UTC</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted)">${t.type||""} · ${t.note||""}</div>
+      </div>`
+    ).join("");
+
+  // Roster chips
+  const chipList = document.getElementById("chipList");
+  chipList.innerHTML = chips.map(c =>
+    `<div class="stn-chip" onclick="chipCheckin('${c.callsign}','${c.name||''}')" title="Click to log check-in">
+      <span class="cs">${c.callsign}</span>${c.name ? `<span style="color:var(--muted);font-size:11px">${c.name}</span>` : ""}
+    </div>`
+  ).join("") || '<span style="color:var(--muted);font-size:12px">No roster chips — import a file above</span>';
+
+  // Recent entries sidebar
+  const recent = document.getElementById("recentEntries");
+  recent.innerHTML = entries.slice(-5).reverse().map(e =>
+    `<div style="padding:4px 0;border-bottom:1px solid var(--line)">
+      <strong>${e.callsign}</strong><span style="color:var(--muted);font-size:11px"> ${(e.timestamp||"").slice(11,19)}</span>
+    </div>`
+  ).join("") || '<span style="color:var(--muted)">None yet</span>';
+
+  // Duration
+  if (currentNet.created) {
+    const start = new Date(currentNet.created);
+    const now   = new Date();
+    const mins  = Math.floor((now - start) / 60000);
+    document.getElementById("sumDuration").textContent =
+      mins < 60 ? `${mins}m` : `${Math.floor(mins/60)}h ${mins%60}m`;
+  }
+}
+
+// ── FCC Lookup ────────────────────────────────────────────────────────
+let fccLookupTimer = null;
+async function lookupFCC(call) {
+  if (!document.getElementById("autolookup").checked) return;
+  clearTimeout(fccLookupTimer);
+  if (call.length < 3) {
+    document.getElementById("fccCard").classList.remove("show");
+    return;
+  }
+  fccLookupTimer = setTimeout(async () => {
+    try {
+      const r = await fetch(`${API}/api/fcc?call=${call}`,{signal:AbortSignal.timeout(3000)});
+      if (!r.ok) { document.getElementById("fccCard").classList.remove("show"); return; }
+      const d = await r.json();
+      document.getElementById("fccName").textContent    = d.name || "—";
+      document.getElementById("fccClass").textContent   = d.operator_class || "—";
+      document.getElementById("fccStatus").textContent  = d.license_status || "—";
+      document.getElementById("fccLoc").textContent     = `${d.city||""}, ${d.state||""}`.replace(/^, |, $/,"");
+      document.getElementById("fccExp").textContent     = d.expired_date || "—";
+      document.getElementById("nameInput").value        = d.name || "";
+      document.getElementById("fccCard").classList.add("show");
+    } catch(e) {
+      document.getElementById("fccCard").classList.remove("show");
+    }
+  }, 600);
+}
+
+// ── Log entry ─────────────────────────────────────────────────────────
+async function logEntry() {
+  if (!currentNetId) { alert("Select a net first"); return; }
+  const call = document.getElementById("callInput").value.trim().toUpperCase();
+  if (!call) { alert("Enter a callsign"); return; }
+
+  const entry = {
+    callsign:   call,
+    name:       document.getElementById("nameInput").value.trim(),
+    status:     document.getElementById("statusSel").value,
+    location:   document.getElementById("locationInput").value.trim(),
+    precedence: document.getElementById("precSel").value,
+    remarks:    document.getElementById("remarksInput").value.trim(),
+  };
+
+  try {
+    const r = await fetch(`${API}/api/nets/${currentNetId}/entry`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(entry)
+    });
+    const res = await r.json();
+    clearEntryForm();
+    await selectNet(currentNetId);
+  } catch(e) {
+    alert("Failed to log entry: " + e);
+  }
+}
+
+async function logTraffic() {
+  if (!currentNetId) { alert("Select a net first"); return; }
+  const msg = {
+    from_call: document.getElementById("trafficFrom").value.trim().toUpperCase(),
+    to:        document.getElementById("trafficTo").value.trim(),
+    type:      document.getElementById("trafficType").value,
+    note:      document.getElementById("trafficNote").value.trim(),
+  };
+  try {
+    await fetch(`${API}/api/nets/${currentNetId}/traffic`, {
+      method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(msg)
+    });
+    document.getElementById("trafficFrom").value = "";
+    document.getElementById("trafficTo").value   = "";
+    document.getElementById("trafficNote").value = "";
+    await selectNet(currentNetId);
+    showTab("traffic");
+  } catch(e) { alert("Failed: " + e); }
+}
+
+function clearEntryForm() {
+  ["callInput","nameInput","locationInput","remarksInput"].forEach(id =>
+    document.getElementById(id).value = "");
+  document.getElementById("statusSel").value = "Check-In";
+  document.getElementById("precSel").value   = "ROUTINE";
+  document.getElementById("fccCard").classList.remove("show");
+}
+
+async async function promoteToRoster(entryId) {
+  const entry = currentNet?.entries?.find(e => e.id === entryId);
+  if (!entry) return;
+  try {
+    const r = await fetch(`${API}/api/roster/promote`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        callsign:   entry.callsign || '',
+        first_name: (entry.name||'').split(' ')[0] || '',
+        last_name:  (entry.name||'').split(' ').slice(1).join(' ') || '',
+        role:       'Operator',
+        member_type:'member',
+        entry_id:   entry.id,
+      })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      alert(`✓ ${entry.callsign} added to roster (ID: ${d.member_id})`);
+      renderNet();
+    } else {
+      alert('Promote failed: ' + (d.error || 'unknown'));
+    }
+  } catch(e) {
+    alert('Could not reach server — check the Incident Management server is running.');
+  }
+}
+
+function removeEntry(entryId) {
+  if (!confirm("Remove this entry?")) return;
+  if (!currentNet) return;
+  currentNet.entries = (currentNet.entries || []).filter(e => e.id !== entryId);
+  await fetch(`${API}/api/nets/${currentNetId}/update`, {
+    method: "POST", headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({entries: currentNet.entries})
+  });
+  renderNet();
+}
+
+function chipCheckin(callsign, name) {
+  document.getElementById("callInput").value = callsign;
+  document.getElementById("nameInput").value = name || "";
+  showTab("checkins");
+  lookupFCC(callsign);
+}
+
+// ── Drill mode ────────────────────────────────────────────────────────
+async function toggleDrill() {
+  const drill = document.getElementById("drillToggle").checked;
+  updateDrillUI();
+  if (!currentNetId) return;
+  await fetch(`${API}/api/nets/${currentNetId}/update`, {
+    method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({drill})
+  });
+}
+
+function updateDrillUI() {
+  const drill = document.getElementById("drillToggle").checked;
+  document.getElementById("drillBanner").style.display = drill ? "" : "none";
+  document.body.classList.toggle("drill-mode", drill);
+  document.querySelectorAll(".panel,.panel2").forEach(el => el.classList.toggle("drill-mode", drill));
+}
+
+// ── Create net ────────────────────────────────────────────────────────
+function showNewNetDialog() {
+  document.getElementById("newNetModal").style.display = "flex";
+}
+
+async function createNet() {
+  const name = document.getElementById("newNetName").value.trim();
+  const type = document.getElementById("newNetType").value;
+  const freq = document.getElementById("newNetFreq").value.trim();
+  const nc   = document.getElementById("newNetNC").value.trim().toUpperCase();
+  if (!name) { alert("Enter a net name"); return; }
+
+  const netId = "net-" + Date.now();
+  try {
+    await fetch(`${API}/api/nets`, {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({id: netId, name, type, freq, net_control: nc, starcom: false})
+    });
+    document.getElementById("newNetModal").style.display = "none";
+    await loadNets();
+    selectNet(netId);
+  } catch(e) { alert("Failed to create net: " + e); }
+}
+
+async function checkoutEntry(entryId) {
+  if (!currentNetId) return;
+  try {
+    await fetch(`${API}/api/nets/${currentNetId}/checkout`, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({entry_id:entryId})
+    });
+    await selectNet(currentNetId);
+  } catch(e) { alert("Checkout failed: "+e); }
+}
+
+async function closeNet() {
+  if (!currentNetId || !confirm("Close this net? All remaining stations will be automatically checked out.")) return;
+  await fetch(`${API}/api/nets/${currentNetId}/close`, {method:"POST"});
+  await selectNet(currentNetId);
+  await loadNets();
+  document.getElementById("closeNetBtn").style.display = "none";
+}
+
+// ── Roster import ─────────────────────────────────────────────────────
+function importRosterFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    let chips = [];
+    const txt = e.target.result;
+    if (file.name.endsWith(".json")) {
+      const data = JSON.parse(txt);
+      chips = Array.isArray(data) ? data :
+              data.members ? data.members.map(m => ({callsign: m.callsign, name: m.name})) : [];
+    } else {
+      // CSV
+      const lines = txt.split("\n").filter(l => l.trim());
+      const hdrs  = lines[0].split(",").map(h => h.trim().toLowerCase());
+      chips = lines.slice(1).map(line => {
+        const vals = line.split(",");
+        const row  = {};
+        hdrs.forEach((h,i) => row[h] = (vals[i]||"").trim());
+        return {callsign: row.callsign || row.call, name: row.name || `${row.first_name||""} ${row.last_name||""}`.trim()};
+      }).filter(c => c.callsign);
+    }
+    if (!currentNetId) { alert("Select a net first"); return; }
+    await fetch(`${API}/api/nets/${currentNetId}/update`, {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({roster_chips: chips})
+    });
+    await selectNet(currentNetId);
+    showTab("roster");
+  };
+  reader.readAsText(file);
+  input.value = "";
+}
+
+// ── Observer link ─────────────────────────────────────────────────────
+function shareObserverLink() {
+  if (!currentNetId) { alert("Select a net first"); return; }
+  const url = `${location.origin}/observer.html?net=${currentNetId}`;
+  navigator.clipboard?.writeText(url);
+  alert(`Observer link copied:\n${url}`);
+}
+
+// ── Export ICS-309 ────────────────────────────────────────────────────
+function exportICS309() {
+  if (!currentNet) { alert("Select a net first"); return; }
+  const entries = currentNet.entries || [];
+  const opened  = currentNet.net_opened;
+  const closed  = currentNet.net_closed;
+  const dur     = netDuration(opened, closed);
+  const drillWatermark = currentNet.drill ?
+    '<div class="drill-watermark">DRILL EXERCISE</div>' : "";
+
+  const rows = entries.map((e,i) => {
+    const edur = entryDuration(e.timestamp, e.checkout_time, closed);
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${(e.timestamp||"").slice(11,19)}</td>
+      <td>${e.callsign||""}</td>
+      <td>${e.name||""}</td>
+      <td>${e.status||""}</td>
+      <td>${e.location||""}</td>
+      <td>${e.remarks||""}</td>
+      <td style="text-align:center"><strong>${edur}</strong></td>
+      <td style="text-align:center">${e.ema_id||""}</td>
+    </tr>`;
+  }).join("");
+
+  const html = `<!DOCTYPE html><html><head><title>ICS-309 — ${currentNet.name}</title>
+  <style>
+    body{font-family:Arial,sans-serif;font-size:10px;margin:20px}
+    table{border-collapse:collapse;width:100%}
+    th,td{border:1px solid #888;padding:4px 6px;vertical-align:top}
+    th{background:#1a3a6b;color:#fff;font-size:10px}
+    .drill-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);
+      font-size:100px;opacity:0.1;color:orange;font-weight:bold;pointer-events:none}
+    .meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;font-size:10px}
+    .meta-box{border:1px solid #888;padding:6px 10px}
+    .meta-label{color:#555;font-size:9px;text-transform:uppercase}
+    @media print{.no-print{display:none}}
+  </style></head><body>${drillWatermark}
+  <div style="text-align:center;border-bottom:2px solid black;padding-bottom:10px;margin-bottom:12px">
+    <div style="font-size:16px;font-weight:bold">ICS-309 COMMUNICATIONS LOG${currentNet.drill?" — DRILL / EXERCISE":""}</div>
+    <div style="font-size:12px;margin-top:4px">Amateur Net · ${currentNet.name} · McHenry County ESV / K9ESV</div>
+  </div>
+  <div class="meta">
+    <div class="meta-box"><div class="meta-label">Net Type</div>${currentNet.type||"—"}</div>
+    <div class="meta-box"><div class="meta-label">Net Opened</div>${fmtTime(opened)}</div>
+    <div class="meta-box"><div class="meta-label">Net Closed</div>${closed?fmtTime(closed):"Still Open"}</div>
+    <div class="meta-box"><div class="meta-label">Net Duration</div>${dur}</div>
+    <div class="meta-box"><div class="meta-label">Total Check-Ins</div>${entries.length}</div>
+    <div class="meta-box"><div class="meta-label">Date</div>${new Date().toLocaleDateString()}</div>
+  </div>
+  <table><thead><tr>
+    <th>#</th><th>Time (UTC)</th><th>Callsign</th><th>Name</th>
+    <th>Status</th><th>Location</th><th>Remarks</th>
+    <th>Duration<br>(↑ ¼ hr)</th><th>EMA ID</th>
+  </tr></thead>
+  <tbody>${rows}</tbody></table>
+  <div style="margin-top:10px;font-size:9px;color:#555">
+    Duration rounded up to nearest quarter hour · EMA ID populated from MCESV roster ·
+    Exported ${new Date().toISOString()} · FieldComms IMS v1.0 · © 2026 KE4CON / MCESV K9ESV · CC BY-SA 4.0
+  </div>
+  <script>window.print()<\/script>
+  <script src="/lib/identity.js"><\/script>
+</body></html>`;
+
+  const win = window.open("","_blank");
+  win.document.write(html);
+  win.document.close();
+}
+
+function exportJSON() {
+  if (!currentNet) { alert("Select a net first"); return; }
+  const blob = new Blob([JSON.stringify(currentNet,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `net-${currentNetId}-${Date.now()}.json`;
+  a.click();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────
+loadNets();
+setInterval(loadNets, 30000);
+
+// Handle ?net= URL param
+const urlNet = new URLSearchParams(location.search).get("net");
+if (urlNet) selectNet(urlNet);
+</script>
+</body>
+</html>

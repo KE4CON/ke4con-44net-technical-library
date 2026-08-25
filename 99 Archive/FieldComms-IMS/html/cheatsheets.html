@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — Radio Cheat Sheets</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.page-header {
+  background: linear-gradient(135deg, var(--eoc) 0%, var(--eoc-lt) 100%);
+  border-bottom: 2px solid var(--eoc);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.page-header a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; }
+.page-header a:hover { color: #fff; }
+.page-title { font-family: var(--font-hd); font-size: 18px; color: var(--eoc); letter-spacing: 2px; }
+
+.tab-bar {
+  background: var(--panel); border-bottom: 1px solid var(--line);
+  padding: 0 20px; display: flex; gap: 0; overflow-x: auto;
+}
+.tab {
+  background: none; border: none; border-bottom: 3px solid transparent;
+  color: var(--muted); font-family: var(--font-hd); font-size: 11px; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 12px 16px; cursor: pointer; white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab:hover { color: var(--txt); }
+.tab.active { color: var(--eoc); border-bottom-color: var(--eoc); }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Section label */
+.sec-label {
+  font-family: var(--font-hd); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--eoc); padding: 16px 0 8px;
+  display: flex; align-items: center; gap: 10px;
+}
+.sec-label::after { content:''; flex:1; height:1px; background: var(--line); }
+
+/* Reference tables */
+.ref-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 16px; }
+.ref-table th {
+  text-align: left; padding: 7px 10px; color: #ffffff;
+  font-family: var(--font-hd); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  border-bottom: 2px solid var(--line); background: var(--panel2);
+}
+.ref-table td { padding: 6px 10px; border-bottom: 1px solid var(--line); color: var(--txt); vertical-align: top; }
+.ref-table tr:hover td { background: var(--panel); }
+.ref-table .code { font-family: var(--font-hd); color: var(--green); letter-spacing: 1px; }
+.ref-table .amber { color: var(--eoc-lt); font-family: var(--font-hd); }
+.ref-table .muted { color: var(--muted); font-size: 11px; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+@media(max-width:700px){ .two-col,.three-col { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
+}
+.panel-title {
+  font-family: var(--font-hd); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--eoc); margin-bottom: 12px;
+}
+
+/* Phonetic alphabet grid */
+.phonetic-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px;
+}
+.phonetic-card {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+  display: flex; align-items: baseline; gap: 8px;
+}
+.pc-letter { font-family: var(--font-hd); font-size: 20px; color: var(--eoc); min-width: 16px; }
+.pc-word { font-size: 12px; color: var(--txt); }
+.pc-pron { font-size: 10px; color: var(--muted); display: block; margin-top: 2px; }
+
+/* Q-code cards */
+.qcode-list { display: flex; flex-direction: column; gap: 4px; }
+.qcode-row {
+  display: flex; gap: 10px; padding: 5px 8px; border-radius: 4px;
+  border-bottom: 1px solid var(--line); font-size: 12px;
+}
+.qcode-row:hover { background: var(--panel2); }
+.qc-code { font-family: var(--font-hd); color: var(--green); min-width: 44px; }
+.qc-text { color: var(--txt); }
+
+/* Band plan */
+.band-card {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.band-name { font-family: var(--font-hd); font-size: 13px; color: var(--eoc-lt); }
+.band-range { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.band-seg { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; }
+.band-seg .bs-range { color: var(--green); font-family: var(--font-hd); }
+.band-seg .bs-use { color: var(--muted); }
+
+/* Precedence */
+.prec-card {
+  border-radius: 6px; padding: 10px 14px; margin-bottom: 8px;
+  border-left: 4px solid;
+}
+.prec-card.emergency { border-color: var(--red); background: rgba(184,32,32,0.06); }
+.prec-card.priority  { border-color: var(--eoc-lt); background: rgba(26,58,107,0.06); }
+.prec-card.welfare   { border-color: var(--green); background: rgba(26,122,58,0.06); }
+.prec-card.routine   { border-color: var(--blue); background: rgba(0,120,255,0.08); }
+.prec-title { font-family: var(--font-hd); font-size: 13px; margin-bottom: 4px; }
+.prec-card.emergency .prec-title { color: var(--red); }
+.prec-card.priority  .prec-title { color: var(--amber); }
+.prec-card.welfare   .prec-title { color: var(--green); }
+.prec-card.routine   .prec-title { color: var(--blue); }
+.prec-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+/* ICS org */
+.ics-box {
+  text-align:center; padding:8px 12px; border:2px solid var(--amber); border-radius:6px;
+  background:var(--panel); font-family:var(--font-hd); font-size:11px; color:var(--eoc);
+  letter-spacing:0.05em;
+}
+.ics-sub-box {
+  text-align:center; padding:6px 10px; border:1px solid var(--line); border-radius:4px;
+  background: var(--bg); font-size:11px; color:var(--txt); margin:3px;
+}
+.ics-tree { display:flex; flex-direction:column; align-items:center; gap:0; }
+.ics-row { display:flex; gap:8px; justify-content:center; margin-top:4px; }
+.ics-line { width:2px; height:14px; background:var(--line); margin:0 auto; }
+
+@media print {
+  .tab-bar { display:none; }
+  .tab-content { display:block !important; page-break-after:always; }
+  .page-header a { display:none; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <a href="index.html">⌂ Home</a>
+  <span style="color:var(--line)">›</span>
+  <span class="page-title">📖 RADIO CHEAT SHEETS</span>
+  <span style="margin-left:auto">
+    <button class="btn btn-sm" onclick="window.print()" style="background:var(--panel2)">🖨 Print All</button>
+  </span>
+</div>
+
+<div class="tab-bar">
+  <button class="tab active" onclick="showTab('phonetic')">Phonetic Alphabet</button>
+  <button class="tab" onclick="showTab('qcodes')">Q-Codes</button>
+  <button class="tab" onclick="showTab('prowords')">Prowords</button>
+  <button class="tab" onclick="showTab('bandplan')">Band Plan</button>
+  <button class="tab" onclick="showTab('precedence')">NTS Precedence</button>
+  <button class="tab" onclick="showTab('ics')">ICS Structure</button>
+  <button class="tab" onclick="showTab('ctcss')">CTCSS / DCS</button>
+  <button class="tab" onclick="showTab('signal')">Signal Reports</button>
+</div>
+
+<div class="container">
+
+<!-- PHONETIC ALPHABET -->
+<div class="tab-content active" id="tab-phonetic">
+  <div class="sec-label">🔤 NATO Phonetic Alphabet</div>
+  <div class="phonetic-grid">
+    <div class="phonetic-card"><span class="pc-letter">A</span><div><span class="pc-word">Alpha</span><span class="pc-pron">AL-fah</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">B</span><div><span class="pc-word">Bravo</span><span class="pc-pron">BRAH-voh</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">C</span><div><span class="pc-word">Charlie</span><span class="pc-pron">CHAR-lee</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">D</span><div><span class="pc-word">Delta</span><span class="pc-pron">DELL-tah</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">E</span><div><span class="pc-word">Echo</span><span class="pc-pron">ECK-oh</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">F</span><div><span class="pc-word">Foxtrot</span><span class="pc-pron">FOKS-trot</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">G</span><div><span class="pc-word">Golf</span><span class="pc-pron">GOLF</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">H</span><div><span class="pc-word">Hotel</span><span class="pc-pron">hoh-TELL</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">I</span><div><span class="pc-word">India</span><span class="pc-pron">IN-dee-ah</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">J</span><div><span class="pc-word">Juliet</span><span class="pc-pron">JEW-lee-ett</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">K</span><div><span class="pc-word">Kilo</span><span class="pc-pron">KEY-loh</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">L</span><div><span class="pc-word">Lima</span><span class="pc-pron">LEE-mah</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">M</span><div><span class="pc-word">Mike</span><span class="pc-pron">MIKE</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">N</span><div><span class="pc-word">November</span><span class="pc-pron">no-VEM-ber</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">O</span><div><span class="pc-word">Oscar</span><span class="pc-pron">OSS-cah</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">P</span><div><span class="pc-word">Papa</span><span class="pc-pron">PAH-pah</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">Q</span><div><span class="pc-word">Quebec</span><span class="pc-pron">keh-BECK</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">R</span><div><span class="pc-word">Romeo</span><span class="pc-pron">ROW-me-oh</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">S</span><div><span class="pc-word">Sierra</span><span class="pc-pron">see-AIR-rah</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">T</span><div><span class="pc-word">Tango</span><span class="pc-pron">TANG-go</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">U</span><div><span class="pc-word">Uniform</span><span class="pc-pron">YOU-ni-form</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">V</span><div><span class="pc-word">Victor</span><span class="pc-pron">VIK-tah</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">W</span><div><span class="pc-word">Whiskey</span><span class="pc-pron">WISS-key</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">X</span><div><span class="pc-word">X-ray</span><span class="pc-pron">ECKS-ray</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">Y</span><div><span class="pc-word">Yankee</span><span class="pc-pron">YANG-key</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">Z</span><div><span class="pc-word">Zulu</span><span class="pc-pron">ZOO-loo</span></div></div>
+  </div>
+
+  <div class="sec-label" style="margin-top:16px">🔢 Numbers (ITU)</div>
+  <div class="phonetic-grid">
+    <div class="phonetic-card"><span class="pc-letter">0</span><div><span class="pc-word">Zero</span><span class="pc-pron">ZEE-ro</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">1</span><div><span class="pc-word">One</span><span class="pc-pron">WUN</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">2</span><div><span class="pc-word">Two</span><span class="pc-pron">TOO</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">3</span><div><span class="pc-word">Three</span><span class="pc-pron">TREE</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">4</span><div><span class="pc-word">Four</span><span class="pc-pron">FOW-er</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">5</span><div><span class="pc-word">Five</span><span class="pc-pron">FIFE</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">6</span><div><span class="pc-word">Six</span><span class="pc-pron">SIX</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">7</span><div><span class="pc-word">Seven</span><span class="pc-pron">SEV-en</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">8</span><div><span class="pc-word">Eight</span><span class="pc-pron">AIT</span></div></div>
+    <div class="phonetic-card"><span class="pc-letter">9</span><div><span class="pc-word">Nine</span><span class="pc-pron">NIN-er</span></div></div>
+  </div>
+</div>
+
+<!-- Q-CODES -->
+<div class="tab-content" id="tab-qcodes">
+  <div class="two-col">
+    <div>
+      <div class="sec-label">📻 Common Q-Codes (HF / Amateur)</div>
+      <div class="qcode-list">
+        <div class="qcode-row"><span class="qc-code">QRM</span><span class="qc-text">Man-made interference</span></div>
+        <div class="qcode-row"><span class="qc-code">QRN</span><span class="qc-text">Atmospheric noise / static</span></div>
+        <div class="qcode-row"><span class="qc-code">QRO</span><span class="qc-text">Increase power</span></div>
+        <div class="qcode-row"><span class="qc-code">QRP</span><span class="qc-text">Reduce power / low power ops</span></div>
+        <div class="qcode-row"><span class="qc-code">QRS</span><span class="qc-text">Send more slowly</span></div>
+        <div class="qcode-row"><span class="qc-code">QRT</span><span class="qc-text">Stop transmitting / shut down</span></div>
+        <div class="qcode-row"><span class="qc-code">QRU</span><span class="qc-text">Nothing for you</span></div>
+        <div class="qcode-row"><span class="qc-code">QRV</span><span class="qc-text">Ready to receive</span></div>
+        <div class="qcode-row"><span class="qc-code">QRX</span><span class="qc-text">Wait / stand by</span></div>
+        <div class="qcode-row"><span class="qc-code">QRZ</span><span class="qc-text">Who is calling me?</span></div>
+        <div class="qcode-row"><span class="qc-code">QSB</span><span class="qc-text">Signal fading</span></div>
+        <div class="qcode-row"><span class="qc-code">QSL</span><span class="qc-text">Acknowledge / confirm receipt</span></div>
+        <div class="qcode-row"><span class="qc-code">QSO</span><span class="qc-text">Two-way communication</span></div>
+        <div class="qcode-row"><span class="qc-code">QST</span><span class="qc-text">General call to all stations</span></div>
+        <div class="qcode-row"><span class="qc-code">QSY</span><span class="qc-text">Change frequency</span></div>
+        <div class="qcode-row"><span class="qc-code">QTH</span><span class="qc-text">My location is…</span></div>
+        <div class="qcode-row"><span class="qc-code">QTR</span><span class="qc-text">Exact time is…</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="sec-label">🚨 EmComm Q-Codes</div>
+      <div class="qcode-list">
+        <div class="qcode-row"><span class="qc-code">QNI</span><span class="qc-text">May I join the net?</span></div>
+        <div class="qcode-row"><span class="qc-code">QNS</span><span class="qc-text">Following stations are on the net</span></div>
+        <div class="qcode-row"><span class="qc-code">QNC</span><span class="qc-text">All net stations copy</span></div>
+        <div class="qcode-row"><span class="qc-code">QND</span><span class="qc-text">Net is directed (NCS in control)</span></div>
+        <div class="qcode-row"><span class="qc-code">QNM</span><span class="qc-text">You are copying too many</span></div>
+        <div class="qcode-row"><span class="qc-code">QNN</span><span class="qc-text">Net control station is…</span></div>
+        <div class="qcode-row"><span class="qc-code">QNO</span><span class="qc-text">Station is leaving the net</span></div>
+        <div class="qcode-row"><span class="qc-code">QNP</span><span class="qc-text">Unable to copy you</span></div>
+        <div class="qcode-row"><span class="qc-code">QNQ</span><span class="qc-text">Move to net frequency</span></div>
+        <div class="qcode-row"><span class="qc-code">QNR</span><span class="qc-text">Answer (callsign) and receive traffic</span></div>
+        <div class="qcode-row"><span class="qc-code">QNT</span><span class="qc-text">I request permission to leave net</span></div>
+        <div class="qcode-row"><span class="qc-code">QNX</span><span class="qc-text">You are excused from the net</span></div>
+        <div class="qcode-row"><span class="qc-code">QNZ</span><span class="qc-text">Zero beat your signal</span></div>
+        <div class="qcode-row"><span class="qc-code">QRR</span><span class="qc-text">Ready for automatic operation</span></div>
+        <div class="qcode-row"><span class="qc-code">QTC</span><span class="qc-text">I have messages to send</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROWORDS -->
+<div class="tab-content" id="tab-prowords">
+  <div class="sec-label">🗣 Procedure Words (Prowords)</div>
+  <table class="ref-table">
+    <tr><th>Proword</th><th>Meaning</th><th>Example Use</th></tr>
+    <tr><td class="code">ALL AFTER</td><td>The portion of the message following…</td><td>"Say again all after Hotel"</td></tr>
+    <tr><td class="code">ALL BEFORE</td><td>The portion of the message preceding…</td><td>"Say again all before Kilo"</td></tr>
+    <tr><td class="code">BREAK</td><td>I am separating message parts</td><td>"…Columbus… Break …ETA 1400…"</td></tr>
+    <tr><td class="code">CONFIRM</td><td>Is my information correct?</td><td>"Confirm 14 casualties, over?"</td></tr>
+    <tr><td class="code">CORRECT</td><td>You are correct</td><td>"Correct, 14 casualties"</td></tr>
+    <tr><td class="code">CORRECTION</td><td>An error was made; correct version follows</td><td>"Correction, that is 40, not 14"</td></tr>
+    <tr><td class="code">DISREGARD</td><td>Ignore my last transmission</td><td>"Disregard my last"</td></tr>
+    <tr><td class="code">DO NOT ANSWER</td><td>No reply required</td><td>Broadcast messages</td></tr>
+    <tr><td class="code">FIGURES</td><td>Numerals or decimal fraction follow</td><td>"Figures 4-7-2"</td></tr>
+    <tr><td class="code">I SPELL</td><td>I will spell phonetically</td><td>"Elm — I spell Echo Lima Mike"</td></tr>
+    <tr><td class="code">I SAY AGAIN</td><td>I am repeating for clarity</td><td>"I say again, three-zero"</td></tr>
+    <tr><td class="code">MESSAGE</td><td>Formal message traffic follows</td><td>"Message, over"</td></tr>
+    <tr><td class="code">NEGATIVE</td><td>No / that is not correct / not capable</td><td>"Negative, we have no power"</td></tr>
+    <tr><td class="code">OUT</td><td>Conversation is ended; no response expected</td><td>"W8ABC out"</td></tr>
+    <tr><td class="code">OVER</td><td>My transmission is ended; reply expected</td><td>"Relay confirmed, over"</td></tr>
+    <tr><td class="code">RADIO CHECK</td><td>What is my signal strength and readability?</td><td>"W8ABC radio check, over"</td></tr>
+    <tr><td class="code">READ BACK</td><td>Repeat this message back exactly</td><td>"Read back, over"</td></tr>
+    <tr><td class="code">ROGER</td><td>I have received and understood</td><td>"Roger, copy all"</td></tr>
+    <tr><td class="code">SAY AGAIN</td><td>Repeat all or part of your transmission</td><td>"Say again your location"</td></tr>
+    <tr><td class="code">SILENCE</td><td>Cease transmissions on this net immediately</td><td>Emergency use only</td></tr>
+    <tr><td class="code">SILENCE LIFTED</td><td>Normal net traffic may resume</td><td>After SILENCE</td></tr>
+    <tr><td class="code">SPEAK SLOWER</td><td>Reduce transmission speed</td><td>"Speak slower, over"</td></tr>
+    <tr><td class="code">STANDBY</td><td>I must pause; wait for my next call</td><td>"Standby one"</td></tr>
+    <tr><td class="code">THIS IS</td><td>Identifies the station transmitting</td><td>"This is W8ABC"</td></tr>
+    <tr><td class="code">UNKNOWN STATION</td><td>Identity of calling station is unknown</td><td>"Unknown station, say again"</td></tr>
+    <tr><td class="code">WAIT</td><td>I must pause briefly (under 10 sec)</td><td>"Wait"</td></tr>
+    <tr><td class="code">WAIT OUT</td><td>I must pause longer; will call you</td><td>"Wait out"</td></tr>
+    <tr><td class="code">WILCO</td><td>I will comply (received + understood + will do)</td><td>"Wilco, en route"</td></tr>
+    <tr><td class="code">WORD AFTER</td><td>The word following…</td><td>"Say again word after Sierra"</td></tr>
+    <tr><td class="code">WORD BEFORE</td><td>The word preceding…</td><td>"Say again word before Tango"</td></tr>
+    <tr><td class="code">WRONG</td><td>Your last transmission was incorrect</td><td>"Wrong, it is forty"</td></tr>
+  </table>
+</div>
+
+<!-- BAND PLAN -->
+<div class="tab-content" id="tab-bandplan">
+  <div class="two-col">
+    <div>
+      <div class="sec-label">📡 2-Meter Band (144–148 MHz)</div>
+      <div class="band-card">
+        <div class="band-name">2 Meters</div>
+        <div class="band-range">144.000 – 148.000 MHz</div>
+        <div class="band-seg"><span class="bs-range">144.000–144.100</span><span class="bs-use">EME / Weak Signal CW</span></div>
+        <div class="band-seg"><span class="bs-range">144.100–144.275</span><span class="bs-use">SSB / Weak Signal Voice</span></div>
+        <div class="band-seg"><span class="bs-range">144.200</span><span class="bs-use">National SSB Calling</span></div>
+        <div class="band-seg"><span class="bs-range">144.275–144.300</span><span class="bs-use">SSB Beacons</span></div>
+        <div class="band-seg"><span class="bs-range">144.300–144.500</span><span class="bs-use">APRS / Packet</span></div>
+        <div class="band-seg"><span class="bs-range">144.390</span><span class="bs-use">APRS National Frequency</span></div>
+        <div class="band-seg"><span class="bs-range">144.490</span><span class="bs-use">APRS Alt / Alternate</span></div>
+        <div class="band-seg"><span class="bs-range">144.500–145.500</span><span class="bs-use">FM Simplex</span></div>
+        <div class="band-seg"><span class="bs-range">146.520</span><span class="bs-use">National FM Simplex Calling</span></div>
+        <div class="band-seg"><span class="bs-range">146.580</span><span class="bs-use">Simplex Alt</span></div>
+        <div class="band-seg"><span class="bs-range">146.400–146.580</span><span class="bs-use">Repeater Inputs</span></div>
+        <div class="band-seg"><span class="bs-range">146.610–147.390</span><span class="bs-use">Repeater Outputs</span></div>
+        <div class="band-seg"><span class="bs-range">147.435–147.585</span><span class="bs-use">Repeater Inputs</span></div>
+        <div class="band-seg"><span class="bs-range">147.600–147.990</span><span class="bs-use">Repeater Outputs</span></div>
+      </div>
+
+      <div class="sec-label">📡 70-Centimeter Band (420–450 MHz)</div>
+      <div class="band-card">
+        <div class="band-name">70 cm</div>
+        <div class="band-range">420.000 – 450.000 MHz</div>
+        <div class="band-seg"><span class="bs-range">420.000–426.000</span><span class="bs-use">ATV / Weak Signal</span></div>
+        <div class="band-seg"><span class="bs-range">432.100</span><span class="bs-use">National SSB Calling</span></div>
+        <div class="band-seg"><span class="bs-range">432.300</span><span class="bs-use">Satellite Downlinks</span></div>
+        <div class="band-seg"><span class="bs-range">440.000–445.000</span><span class="bs-use">FM Repeater Outputs</span></div>
+        <div class="band-seg"><span class="bs-range">445.000–447.000</span><span class="bs-use">FM Simplex</span></div>
+        <div class="band-seg"><span class="bs-range">446.000</span><span class="bs-use">National FM Simplex Calling</span></div>
+        <div class="band-seg"><span class="bs-range">447.000–450.000</span><span class="bs-use">FM Repeater Inputs</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="sec-label">📡 HF Emergency Frequencies</div>
+      <table class="ref-table">
+        <tr><th>Freq (kHz)</th><th>Mode</th><th>Use</th></tr>
+        <tr><td class="code">3.873</td><td>LSB</td><td>Ohio ARES 80m</td></tr>
+        <tr><td class="code">3.950</td><td>LSB</td><td>ARRL 80m Net</td></tr>
+        <tr><td class="code">3.985</td><td>LSB</td><td>National Traffic 80m</td></tr>
+        <tr><td class="code">7.290</td><td>LSB</td><td>ARRL 40m Net</td></tr>
+        <tr><td class="code">7.240</td><td>LSB</td><td>ARRL 40m Emg</td></tr>
+        <tr><td class="code">14.265</td><td>USB</td><td>ARRL 20m Net</td></tr>
+        <tr><td class="code">14.300</td><td>USB</td><td>IARU Distress</td></tr>
+        <tr><td class="code">21.390</td><td>USB</td><td>ARRL 15m Net</td></tr>
+        <tr><td class="code">28.950</td><td>USB</td><td>ARRL 10m Net</td></tr>
+        <tr><td class="code">5.330.5</td><td>USB</td><td>60m Ch 1 (EmComm)</td></tr>
+        <tr><td class="code">5.346.5</td><td>USB</td><td>60m Ch 2</td></tr>
+        <tr><td class="code">5.357.0</td><td>USB</td><td>60m Ch 3</td></tr>
+        <tr><td class="code">5.371.5</td><td>USB</td><td>60m Ch 4</td></tr>
+        <tr><td class="code">5.403.5</td><td>USB</td><td>60m Ch 5</td></tr>
+      </table>
+
+      <div class="sec-label" style="margin-top:12px">📡 Special Service Bands</div>
+      <table class="ref-table">
+        <tr><th>Band</th><th>Freq Range</th><th>Notes</th></tr>
+        <tr><td>MURS</td><td class="code">151.820–154.600</td><td>No license, 2W</td></tr>
+        <tr><td>FRS</td><td class="code">462.5625–467.7125</td><td>No license, 0.5W simplex</td></tr>
+        <tr><td>GMRS</td><td class="code">462/467 MHz</td><td>License required, repeater OK</td></tr>
+        <tr><td>Marine 16</td><td class="code">156.800</td><td>Distress / calling</td></tr>
+        <tr><td>Marine 22A</td><td class="code">157.100</td><td>USCG liaison</td></tr>
+        <tr><td>Aviation</td><td class="code">121.500</td><td>Guard / distress</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PRECEDENCE -->
+<div class="tab-content" id="tab-precedence">
+  <div class="sec-label">🚨 NTS / ARRL Message Precedence</div>
+  <div class="prec-card emergency">
+    <div class="prec-title">EMERGENCY</div>
+    <div class="prec-desc">Any message having life-or-death urgency. Takes absolute priority over all other traffic. Declared by the originating station. Any amateur may break into a net to pass emergency traffic. Identify with "EMERGENCY" before the message.</div>
+  </div>
+  <div class="prec-card priority">
+    <div class="prec-title">PRIORITY (P)</div>
+    <div class="prec-desc">Important messages having some urgency that should be handled as quickly as possible. Situations that are serious but where life is not immediately at risk. Examples: officials need routing, critical supply requests.</div>
+  </div>
+  <div class="prec-card welfare">
+    <div class="prec-title">WELFARE (W)</div>
+    <div class="prec-desc">Message intended to inquire into the health and welfare of individuals, or messages between individuals in or near disaster areas. Passed after EMERGENCY and PRIORITY traffic clears.</div>
+  </div>
+  <div class="prec-card routine">
+    <div class="prec-title">ROUTINE (R)</div>
+    <div class="prec-desc">Normal traffic that is not urgent or time-sensitive. Processed in the order received during normal net cycles.</div>
+  </div>
+
+  <div class="sec-label" style="margin-top:12px">📋 ICS Priority</div>
+  <table class="ref-table">
+    <tr><th>Priority</th><th>Color</th><th>Use</th></tr>
+    <tr><td class="amber">IMMEDIATE</td><td>Red</td><td>Life-threatening, must act now</td></tr>
+    <tr><td class="amber">DELAYED</td><td>Yellow</td><td>Serious but not immediately life-threatening</td></tr>
+    <tr><td class="amber">MINOR</td><td>Green</td><td>Minor injuries, walking wounded</td></tr>
+    <tr><td class="amber">EXPECTANT</td><td>Black</td><td>Survivable only with resources beyond available</td></tr>
+  </table>
+</div>
+
+<!-- ICS STRUCTURE -->
+<div class="tab-content" id="tab-ics">
+  <div class="sec-label">🏛 ICS Organizational Structure</div>
+  <div class="panel" style="overflow-x:auto">
+    <div class="ics-tree">
+      <div class="ics-box" style="width:220px">INCIDENT COMMANDER</div>
+      <div style="display:flex;gap:32px;margin-top:14px;flex-wrap:wrap;justify-content:center">
+        <div style="text-align:center">
+          <div style="height:14px;width:2px;background:var(--line);margin:0 auto"></div>
+          <div class="ics-box" style="width:150px;border-color:var(--blue);color:var(--blue)">SAFETY OFFICER</div>
+        </div>
+        <div style="text-align:center">
+          <div style="height:14px;width:2px;background:var(--line);margin:0 auto"></div>
+          <div class="ics-box" style="width:150px;border-color:var(--blue);color:var(--blue)">PUBLIC INFO OFFICER</div>
+        </div>
+        <div style="text-align:center">
+          <div style="height:14px;width:2px;background:var(--line);margin:0 auto"></div>
+          <div class="ics-box" style="width:150px;border-color:var(--blue);color:var(--blue)">LIAISON OFFICER</div>
+        </div>
+      </div>
+      <div style="height:20px;width:2px;background:var(--line);margin:0 auto"></div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
+        <div style="text-align:center"><div class="ics-sub-box" style="width:130px;border-color:var(--red);color:var(--red)">OPERATIONS<br><span style="font-size:10px;color:var(--muted)">Tactical</span></div></div>
+        <div style="text-align:center"><div class="ics-sub-box" style="width:130px;border-color: var(--eoc-lt);color:var(--eoc)">PLANNING<br><span style="font-size:10px;color:var(--muted)">Resources/Docs</span></div></div>
+        <div style="text-align:center"><div class="ics-sub-box" style="width:130px;border-color:var(--green);color:var(--green)">LOGISTICS<br><span style="font-size:10px;color:var(--muted)">Support</span></div></div>
+        <div style="text-align:center"><div class="ics-sub-box" style="width:130px;border-color:#c850ff;color:#c850ff">FINANCE/ADMIN<br><span style="font-size:10px;color:var(--muted)">Cost/Records</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-label" style="margin-top:12px">📋 Key ICS Forms</div>
+  <table class="ref-table">
+    <tr><th>Form</th><th>Name</th><th>Section</th><th>Purpose</th></tr>
+    <tr><td class="code">ICS-201</td><td>Incident Briefing</td><td>IC</td><td>Initial situation summary, map, resources</td></tr>
+    <tr><td class="code">ICS-202</td><td>Incident Objectives</td><td>Planning</td><td>Safety messages, weather, objectives</td></tr>
+    <tr><td class="code">ICS-203</td><td>Organization Assignment</td><td>Planning</td><td>Who is assigned to each ICS position</td></tr>
+    <tr><td class="code">ICS-204</td><td>Assignment List</td><td>Planning</td><td>Tactical assignments for each division</td></tr>
+    <tr><td class="code">ICS-205</td><td>Incident Radio Plan</td><td>Logistics</td><td>All frequencies, channels, assignments</td></tr>
+    <tr><td class="code">ICS-206</td><td>Medical Plan</td><td>Logistics</td><td>Medical aid stations, hospitals, EMT info</td></tr>
+    <tr><td class="code">ICS-207</td><td>Incident Organization Chart</td><td>Planning</td><td>Visual org chart for posting</td></tr>
+    <tr><td class="code">ICS-208</td><td>Safety Message</td><td>Safety</td><td>Hazards, safety rules</td></tr>
+    <tr><td class="code">ICS-209</td><td>Incident Status Summary</td><td>Planning</td><td>Status report to agency administrators</td></tr>
+    <tr><td class="code">ICS-211</td><td>Incident Check-In List</td><td>Logistics</td><td>Personnel/resource check-in log</td></tr>
+    <tr><td class="code">ICS-213</td><td>General Message</td><td>All</td><td>Routine written messages</td></tr>
+    <tr><td class="code">ICS-214</td><td>Activity Log</td><td>All</td><td>Unit-level activity record</td></tr>
+    <tr><td class="code">ICS-215</td><td>Operational Planning Worksheet</td><td>Operations</td><td>Tactical resource planning by period</td></tr>
+    <tr><td class="code">ICS-309</td><td>Communications Log</td><td>Logistics</td><td>Radio/phone message log</td></tr>
+  </table>
+</div>
+
+<!-- CTCSS / DCS -->
+<div class="tab-content" id="tab-ctcss">
+  <div class="two-col">
+    <div>
+      <div class="sec-label">🔊 CTCSS Tones (Hz)</div>
+      <table class="ref-table">
+        <tr><th>#</th><th>Freq (Hz)</th><th>#</th><th>Freq (Hz)</th></tr>
+        <tr><td>1</td><td class="code">67.0</td><td>20</td><td class="code">118.8</td></tr>
+        <tr><td>2</td><td class="code">71.9</td><td>21</td><td class="code">123.0</td></tr>
+        <tr><td>3</td><td class="code">74.4</td><td>22</td><td class="code">127.3</td></tr>
+        <tr><td>4</td><td class="code">77.0</td><td>23</td><td class="code">131.8</td></tr>
+        <tr><td>5</td><td class="code">79.7</td><td>24</td><td class="code">136.5</td></tr>
+        <tr><td>6</td><td class="code">82.5</td><td>25</td><td class="code">141.3</td></tr>
+        <tr><td>7</td><td class="code">85.4</td><td>26</td><td class="code">146.2</td></tr>
+        <tr><td>8</td><td class="code">88.5</td><td>27</td><td class="code">151.4</td></tr>
+        <tr><td>9</td><td class="code">91.5</td><td>28</td><td class="code">156.7</td></tr>
+        <tr><td>10</td><td class="code">94.8</td><td>29</td><td class="code">162.2</td></tr>
+        <tr><td>11</td><td class="code">97.4</td><td>30</td><td class="code">167.9</td></tr>
+        <tr><td>12</td><td class="code">100.0</td><td>31</td><td class="code">173.8</td></tr>
+        <tr><td>13</td><td class="code">103.5</td><td>32</td><td class="code">179.9</td></tr>
+        <tr><td>14</td><td class="code">107.2</td><td>33</td><td class="code">186.2</td></tr>
+        <tr><td>15</td><td class="code">110.9</td><td>34</td><td class="code">192.8</td></tr>
+        <tr><td>16</td><td class="code">114.8</td><td>35</td><td class="code">203.5</td></tr>
+        <tr><td>17</td><td class="code">118.8</td><td>36</td><td class="code">210.7</td></tr>
+        <tr><td>18</td><td class="code">123.0</td><td>37</td><td class="code">218.1</td></tr>
+        <tr><td>19</td><td class="code">127.3</td><td>38</td><td class="code">225.7</td></tr>
+        <tr><td></td><td></td><td>39</td><td class="code">233.6</td></tr>
+        <tr><td></td><td></td><td>40</td><td class="code">241.8</td></tr>
+        <tr><td></td><td></td><td>41</td><td class="code">250.3</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="sec-label">🔢 Common DCS Codes</div>
+      <table class="ref-table">
+        <tr><th>Code</th><th>Code</th><th>Code</th><th>Code</th></tr>
+        <tr><td class="code">023</td><td class="code">071</td><td class="code">165</td><td class="code">311</td></tr>
+        <tr><td class="code">025</td><td class="code">072</td><td class="code">172</td><td class="code">315</td></tr>
+        <tr><td class="code">026</td><td class="code">073</td><td class="code">174</td><td class="code">325</td></tr>
+        <tr><td class="code">031</td><td class="code">074</td><td class="code">205</td><td class="code">331</td></tr>
+        <tr><td class="code">032</td><td class="code">114</td><td class="code">212</td><td class="code">332</td></tr>
+        <tr><td class="code">036</td><td class="code">115</td><td class="code">223</td><td class="code">343</td></tr>
+        <tr><td class="code">043</td><td class="code">116</td><td class="code">225</td><td class="code">346</td></tr>
+        <tr><td class="code">047</td><td class="code">122</td><td class="code">226</td><td class="code">351</td></tr>
+        <tr><td class="code">051</td><td class="code">125</td><td class="code">243</td><td class="code">356</td></tr>
+        <tr><td class="code">053</td><td class="code">131</td><td class="code">244</td><td class="code">364</td></tr>
+        <tr><td class="code">054</td><td class="code">132</td><td class="code">245</td><td class="code">365</td></tr>
+        <tr><td class="code">065</td><td class="code">134</td><td class="code">246</td><td class="code">371</td></tr>
+        <tr><td class="code">071</td><td class="code">143</td><td class="code">251</td><td class="code">411</td></tr>
+        <tr><td class="code">072</td><td class="code">145</td><td class="code">252</td><td class="code">412</td></tr>
+        <tr><td class="code">073</td><td class="code">152</td><td class="code">255</td><td class="code">413</td></tr>
+        <tr><td class="code">074</td><td class="code">155</td><td class="code">261</td><td class="code">423</td></tr>
+        <tr><td class="code">114</td><td class="code">156</td><td class="code">263</td><td class="code">431</td></tr>
+        <tr><td class="code">115</td><td class="code">162</td><td class="code">265</td><td class="code">432</td></tr>
+        <tr><td class="code">116</td><td class="code">165</td><td class="code">271</td><td class="code">445</td></tr>
+        <tr><td class="code">122</td><td class="code">172</td><td class="code">274</td><td class="code">446</td></tr>
+      </table>
+      <div style="margin-top:12px;font-size:11px;color:var(--muted)">
+        DCS codes are transmitted as continuous digital subaudible data at 134.4 bps. Prefix with D for DCS vs T for CTCSS (e.g., D023 vs T100.0).
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SIGNAL REPORTS -->
+<div class="tab-content" id="tab-signal">
+  <div class="two-col">
+    <div>
+      <div class="sec-label">📊 RST Signal Report</div>
+      <table class="ref-table">
+        <tr><th colspan="3">Readability (1–5)</th></tr>
+        <tr><td class="amber">R1</td><td>Unreadable</td><td></td></tr>
+        <tr><td class="amber">R2</td><td>Barely readable, occasional words</td><td></td></tr>
+        <tr><td class="amber">R3</td><td>Readable with considerable difficulty</td><td></td></tr>
+        <tr><td class="amber">R4</td><td>Readable with practically no difficulty</td><td></td></tr>
+        <tr><td class="amber">R5</td><td>Perfectly readable</td><td></td></tr>
+      </table>
+      <table class="ref-table" style="margin-top:8px">
+        <tr><th colspan="2">Signal Strength (1–9)</th></tr>
+        <tr><td class="amber">S1</td><td>Faint, barely perceptible</td></tr>
+        <tr><td class="amber">S2</td><td>Very weak</td></tr>
+        <tr><td class="amber">S3</td><td>Weak</td></tr>
+        <tr><td class="amber">S4</td><td>Fair</td></tr>
+        <tr><td class="amber">S5</td><td>Fairly good</td></tr>
+        <tr><td class="amber">S6</td><td>Good</td></tr>
+        <tr><td class="amber">S7</td><td>Moderately strong</td></tr>
+        <tr><td class="amber">S8</td><td>Strong</td></tr>
+        <tr><td class="amber">S9</td><td>Extremely strong</td></tr>
+        <tr><td class="amber">S9+10</td><td>10 dB over S9</td></tr>
+        <tr><td class="amber">S9+20</td><td>20 dB over S9</td></tr>
+        <tr><td class="amber">S9+40</td><td>40 dB over S9 (monster signal)</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="sec-label">📻 APCO P25 Signal Quality</div>
+      <table class="ref-table">
+        <tr><th>BER %</th><th>Quality</th><th>Voice Quality</th></tr>
+        <tr><td class="code">0.0</td><td style="color:var(--green)">Excellent</td><td>Perfect</td></tr>
+        <tr><td class="code">0.5</td><td style="color:var(--green)">Very Good</td><td>Clear, minor artifacts</td></tr>
+        <tr><td class="code">1.0</td><td style="color:var(--eoc)">Good</td><td>Intelligible, some distortion</td></tr>
+        <tr><td class="code">3.0</td><td style="color:var(--eoc)">Marginal</td><td>Difficult to understand</td></tr>
+        <tr><td class="code">5.0+</td><td style="color:var(--red)">Poor</td><td>Frequent garbling</td></tr>
+      </table>
+
+      <div class="sec-label" style="margin-top:12px">🔊 Voice Report Shorthand (FM)</div>
+      <table class="ref-table">
+        <tr><th>Report</th><th>Meaning</th></tr>
+        <tr><td class="code">Full quieting</td><td>No noise, perfect signal</td></tr>
+        <tr><td class="code">Solid copy</td><td>Clear, no issues</td></tr>
+        <tr><td class="code">Good copy</td><td>Readable with minor noise</td></tr>
+        <tr><td class="code">Readable</td><td>Understandable despite noise</td></tr>
+        <tr><td class="code">Broken / Scratchy</td><td>Intermittent, hard to copy</td></tr>
+        <tr><td class="code">In the mud / Weak</td><td>Barely above noise floor</td></tr>
+        <tr><td class="code">Armchair copy</td><td>Very strong, comfortable</td></tr>
+        <tr><td class="code">Picket fencing</td><td>Rapid signal flicker (mobile flutter)</td></tr>
+      </table>
+
+      <div class="sec-label" style="margin-top:12px">⚡ dBm / Watt Reference</div>
+      <table class="ref-table">
+        <tr><th>dBm</th><th>Watts</th><th>dBm</th><th>Watts</th></tr>
+        <tr><td class="amber">0</td><td>1 mW</td><td class="amber">37</td><td>5 W</td></tr>
+        <tr><td class="amber">10</td><td>10 mW</td><td class="amber">40</td><td>10 W</td></tr>
+        <tr><td class="amber">20</td><td>100 mW</td><td class="amber">47</td><td>50 W</td></tr>
+        <tr><td class="amber">27</td><td>500 mW</td><td class="amber">50</td><td>100 W</td></tr>
+        <tr><td class="amber">30</td><td>1 W</td><td class="amber">53</td><td>200 W</td></tr>
+        <tr><td class="amber">33</td><td>2 W</td><td class="amber">57</td><td>500 W</td></tr>
+        <tr><td class="amber">35</td><td>3 W</td><td class="amber">60</td><td>1000 W</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

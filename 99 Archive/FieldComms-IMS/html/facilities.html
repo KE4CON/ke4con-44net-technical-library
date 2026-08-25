@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — Facilities Directory</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.page-header {
+  background: linear-gradient(135deg, var(--eoc) 0%, var(--eoc-lt) 100%);
+  border-bottom: 2px solid var(--eoc);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.page-header a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; }
+.page-header a:hover { color: #fff; }
+.page-title { font-family: var(--font-hd); font-size: 18px; color: var(--eoc); letter-spacing: 2px; }
+
+.toolbar {
+  background: var(--panel); border-bottom: 1px solid var(--line);
+  padding: 10px 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+}
+.toolbar input[type=text], .toolbar select {
+  background: var(var(--input-bg); border: 1px solid var(--line); border-radius: 4px;
+  color: var(--txt); padding: 6px 10px; font-size: 13px;
+}
+.toolbar input:focus, .toolbar select:focus { outline: none; border-color: var(--eoc-lt); }
+.tlabel { font-size: 11px; color: var(--muted); display: block; margin-bottom: 3px; }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 20px 20px 60px; }
+
+.sec-label {
+  font-family: var(--font-hd); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--eoc); padding: 16px 0 8px;
+  display: flex; align-items: center; gap: 10px;
+}
+.sec-label::after { content:''; flex:1; height:1px; background: var(--line); }
+
+.fac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+
+.fac-card {
+  background: var(--input-bg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 14px 16px; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative; overflow: hidden;
+}
+.fac-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background: var(--card-color, var(--eoc));
+}
+.fac-card:hover { border-color: var(--card-color, var(--eoc)); background: var(--panel2); }
+.fac-card.eoc    { --card-color: var(--amber); }
+.fac-card.hospital { --card-color: var(--red); }
+.fac-card.shelter  { --card-color: var(--green); }
+.fac-card.staging  { --card-color: var(--blue); }
+.fac-card.command  { --card-color: #c850ff; }
+.fac-card.other    { --card-color: var(--muted); }
+
+.fac-type-badge {
+  font-size: 9px; font-family: var(--font-hd); letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 3px; margin-bottom: 8px; display: inline-block;
+}
+.fac-name { font-family: var(--font-hd); font-size: 14px; color: var(--txt); margin-bottom: 4px; }
+.fac-addr { font-size: 11px; color: var(--muted); margin-bottom: 8px; line-height: 1.4; }
+.fac-meta { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; }
+.fac-chip {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 3px; padding: 2px 6px;
+  color: var(--muted);
+}
+.fac-chip.highlight { border-color: var(--green); color: var(--green); }
+
+/* Status dot */
+.stat-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
+.stat-dot.active   { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.stat-dot.standby  { background: var(--amber); }
+.stat-dot.inactive { background: var(--muted); }
+
+/* Modal / detail panel */
+.modal-bg {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3);
+  z-index: 50; align-items: center; justify-content: center;
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: var(--panel); border: 2px solid var(--amber); border-radius: 10px;
+  width: min(680px, 95vw); max-height: 85vh; overflow-y: auto; padding: 24px;
+  position: relative;
+}
+.modal-close { position:absolute; top:12px; right:16px; background:none; border:none; color:var(--muted); font-size:22px; cursor:pointer; }
+.modal-close:hover { color:var(--txt); }
+.modal-title { font-family: var(--font-hd); font-size: 20px; color: var(--amber); margin-bottom:4px; }
+.modal-sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+.mrow { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--line); font-size:12px; }
+.mrow:last-child { border-bottom:none; }
+.mrow .ml { color:var(--muted); min-width:130px; }
+.mrow .mr { color:var(--txt); font-family:var(--font-hd); font-size:11px; text-align:right; }
+.mrow .mr a { color: var(--amber); text-decoration:none; }
+.mrow .mr a:hover { text-decoration:underline; }
+
+/* Add/Edit form */
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media(max-width:520px){ .form-grid { grid-template-columns:1fr; } }
+.field label { font-size:11px; color:var(--muted); display:block; margin-bottom:3px; }
+.field input, .field select, .field textarea {
+  width:100%; box-sizing:border-box;
+  background:var(var(--input-bg); border:1px solid var(--line); border-radius:4px;
+  color:var(--txt); padding:7px 10px; font-size:13px;
+}
+.field textarea { resize:vertical; min-height:70px; }
+.field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color: var(--eoc-lt); }
+.full { grid-column: 1 / -1; }
+
+.empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
+.empty-state .es-icon { font-size:48px; margin-bottom:12px; }
+.empty-state .es-title { font-family:var(--font-hd); font-size:16px; color:var(--txt); }
+
+.status-bar {
+  position:fixed; bottom:0; left:0; right:0;
+  background: var(--eoc); border-top:1px solid var(--line);
+  padding:7px 20px; font-size:11px; color: rgba(255,255,255,0.8);
+  display:flex; justify-content:space-between; z-index:10;
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <a href="index.html">⌂ Home</a>
+  <span style="color:var(--line)">›</span>
+  <span class="page-title">🏥 FACILITIES DIRECTORY</span>
+  <span style="margin-left:auto">
+    <button class="btn" onclick="openAdd()">+ Add Facility</button>
+  </span>
+</div>
+
+<div class="toolbar">
+  <div>
+    <span class="tlabel">Search</span>
+    <input type="text" id="searchBox" placeholder="Name, address, notes…" style="width:200px" oninput="render()">
+  </div>
+  <div>
+    <span class="tlabel">Type</span>
+    <select id="filterType" onchange="render()">
+      <option value="">All Types</option>
+      <option value="eoc">EOC</option>
+      <option value="hospital">Hospital</option>
+      <option value="shelter">Shelter</option>
+      <option value="staging">Staging Area</option>
+      <option value="command">Command Post</option>
+      <option value="other">Other</option>
+    </select>
+  </div>
+  <div>
+    <span class="tlabel">Status</span>
+    <select id="filterStatus" onchange="render()">
+      <option value="">All</option>
+      <option value="active">Active</option>
+      <option value="standby">Standby</option>
+      <option value="inactive">Inactive</option>
+    </select>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <button class="btn btn-sm" onclick="exportCSV()">⬇ CSV</button>
+    <button class="btn btn-sm" onclick="window.print()" style="background:var(--panel2)">🖨 Print</button>
+  </div>
+</div>
+
+<div class="container" id="mainContainer"></div>
+
+<div class="status-bar">
+  <span id="statusLeft">Loading…</span>
+  <span id="statusRight"></span>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-bg" id="detailModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="mTitle"></div>
+    <div class="modal-sub" id="mSub"></div>
+    <div id="mRows"></div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-sm" onclick="editCurrent()">✏ Edit</button>
+      <button class="btn btn-sm" onclick="deleteCurrent()" style="background:rgba(184,32,32,0.10);border-color:var(--red);color:var(--red)">🗑 Delete</button>
+      <button class="btn btn-sm" onclick="copyAddress()" style="background:var(--panel2)">📋 Copy Address</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-bg" id="editModal" onclick="if(event.target===this)closeEdit()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeEdit()">✕</button>
+    <div class="modal-title" id="editTitle">Add Facility</div>
+    <div style="margin-top:16px">
+      <div class="form-grid">
+        <div class="field full">
+          <label>Facility Name *</label>
+          <input type="text" id="eName" placeholder="Franklin County EOC">
+        </div>
+        <div class="field">
+          <label>Type *</label>
+          <select id="eType">
+            <option value="eoc">EOC</option>
+            <option value="hospital">Hospital</option>
+            <option value="shelter">Shelter</option>
+            <option value="staging">Staging Area</option>
+            <option value="command">Command Post</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Operational Status</label>
+          <select id="eStatus">
+            <option value="active">Active</option>
+            <option value="standby">Standby</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>Street Address</label>
+          <input type="text" id="eAddr" placeholder="369 S High St">
+        </div>
+        <div class="field">
+          <label>City</label>
+          <input type="text" id="eCity" placeholder="Columbus">
+        </div>
+        <div class="field">
+          <label>State / ZIP</label>
+          <input type="text" id="eStateZip" placeholder="OH 43215">
+        </div>
+        <div class="field">
+          <label>Latitude</label>
+          <input type="number" id="eLat" step="0.0001" placeholder="42.3153">
+        </div>
+        <div class="field">
+          <label>Longitude</label>
+          <input type="number" id="eLon" step="0.0001" placeholder="-88.4473">
+        </div>
+        <div class="field">
+          <label>Primary Phone</label>
+          <input type="text" id="ePhone" placeholder="(614) 555-0100">
+        </div>
+        <div class="field">
+          <label>Secondary Phone</label>
+          <input type="text" id="ePhone2" placeholder="(614) 555-0101">
+        </div>
+        <div class="field">
+          <label>Primary Frequency (MHz)</label>
+          <input type="text" id="eFreq" placeholder="146.940">
+        </div>
+        <div class="field">
+          <label>Secondary Frequency (MHz)</label>
+          <input type="text" id="eFreq2" placeholder="443.600">
+        </div>
+        <div class="field">
+          <label>CTCSS Tone</label>
+          <input type="text" id="eTone" placeholder="100.0">
+        </div>
+        <div class="field">
+          <label>Capacity</label>
+          <input type="text" id="eCap" placeholder="250 persons">
+        </div>
+        <div class="field">
+          <label>Contact Person</label>
+          <input type="text" id="eContact" placeholder="Jane Smith W8ABC">
+        </div>
+        <div class="field">
+          <label>Ham Callsign on Site</label>
+          <input type="text" id="eCallsign" placeholder="W8ABC">
+        </div>
+        <div class="field">
+          <label>Generator</label>
+          <select id="eGen">
+            <option value="">Unknown</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+            <option value="partial">Partial</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>ADA Accessible</label>
+          <select id="eADA">
+            <option value="">Unknown</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+            <option value="partial">Partial</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>Notes</label>
+          <textarea id="eNotes" placeholder="Parking, access codes, special instructions…"></textarea>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-sm" onclick="closeEdit()" style="background:var(--panel2)">Cancel</button>
+        <button class="btn" onclick="saveFacility()">💾 Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORE_KEY = 'fieldcomms_facilities';
+let facilities = [], currentIdx = null;
+
+const TYPE_META = {
+  eoc:      { label:'EOC',          icon:'🏛', color:'var(--eoc)' },
+  hospital: { label:'Hospital',     icon:'🏥', color:'var(--red)' },
+  shelter:  { label:'Shelter',      icon:'🏠', color:'var(--green)' },
+  staging:  { label:'Staging Area', icon:'🚛', color:'var(--blue)' },
+  command:  { label:'Command Post', icon:'⭐', color:'#c850ff' },
+  other:    { label:'Other',        icon:'📍', color:'var(--muted)' },
+};
+
+function load() {
+  try {
+    const d = localStorage.getItem(STORE_KEY);
+    facilities = d ? JSON.parse(d) : [];
+  } catch(e) { facilities = []; }
+  if (facilities.length === 0) loadDefaults();
+  render();
+}
+
+function save() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(facilities));
+}
+
+function loadDefaults() {
+  facilities = [
+    { id: uid(), name:'Franklin County EOC', type:'eoc', status:'active', address:'369 S High St', city:'Columbus', state_zip:'OH 43215', lat:39.9597, lon:-83.0008, phone:'(614) 525-3378', phone2:'', freq:'146.940', freq2:'443.600', tone:'100.0', capacity:'', contact:'', callsign:'', generator:'yes', ada:'yes', notes:'Main county EOC. 24/7 when activated.' },
+    { id: uid(), name:'Nationwide Children\'s Hospital', type:'hospital', status:'active', address:'700 Children\'s Dr', city:'Columbus', state_zip:'OH 43205', lat:39.9510, lon:-82.9892, phone:'(614) 722-2000', phone2:'', freq:'155.340', freq2:'', tone:'', capacity:'700 beds', contact:'', callsign:'', generator:'yes', ada:'yes', notes:'Level I trauma center.' },
+    { id: uid(), name:'Ohio State Fairgrounds Shelter', type:'shelter', status:'standby', address:'717 E 17th Ave', city:'Columbus', state_zip:'OH 43211', lat:40.0006, lon:-82.9890, phone:'(614) 644-3247', phone2:'', freq:'146.820', freq2:'', tone:'100.0', capacity:'5000 persons', contact:'', callsign:'WA8YRS', generator:'partial', ada:'yes', notes:'Large-scale mass care. Activate via Red Cross.' },
+    { id: uid(), name:'Westland Mall Staging Area', type:'staging', status:'standby', address:'2700 Westland Mall Dr', city:'Columbus', state_zip:'OH 43228', lat:39.9475, lon:-83.1077, phone:'', phone2:'', freq:'147.015', freq2:'', tone:'107.2', capacity:'', contact:'', callsign:'', generator:'no', ada:'yes', notes:'West-side staging. Large parking lot.' },
+  ];
+  save();
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+function render() {
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  const ft = document.getElementById('filterType').value;
+  const fs = document.getElementById('filterStatus').value;
+
+  const groups = {};
+  Object.keys(TYPE_META).forEach(k => groups[k] = []);
+
+  facilities.forEach((f, i) => {
+    if (ft && f.type !== ft) return;
+    if (fs && f.status !== fs) return;
+    if (q && !JSON.stringify(f).toLowerCase().includes(q)) return;
+    groups[f.type || 'other'].push({ f, i });
+  });
+
+  const total = Object.values(groups).reduce((a, g) => a + g.length, 0);
+  document.getElementById('statusLeft').textContent = `${total} of ${facilities.length} facilities`;
+
+  const container = document.getElementById('mainContainer');
+  if (total === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="es-icon">🏛</div><div class="es-title">No facilities match filter</div><div style="margin-top:8px;font-size:12px">Try adjusting filters or <span style="color:var(--eoc);cursor:pointer" onclick="openAdd()">add a facility</span></div></div>`;
+    return;
+  }
+
+  let html = '';
+  Object.entries(TYPE_META).forEach(([type, meta]) => {
+    const items = groups[type];
+    if (!items.length) return;
+    html += `<div class="sec-label">${meta.icon} ${meta.label}s (${items.length})</div>`;
+    html += `<div class="fac-grid">`;
+    items.forEach(({ f, i }) => {
+      const dotClass = f.status === 'active' ? 'active' : f.status === 'standby' ? 'standby' : 'inactive';
+      const statusLabel = f.status ? f.status.charAt(0).toUpperCase() + f.status.slice(1) : '—';
+      html += `
+        <div class="fac-card ${type}" onclick="showDetail(${i})">
+          <div><span class="fac-type-badge" style="background:${meta.color}22;color:${meta.color};border:1px solid ${meta.color}55">${meta.label}</span></div>
+          <div class="fac-name">${f.name}</div>
+          <div class="fac-addr">${[f.address, f.city, f.state_zip].filter(Boolean).join(', ') || '—'}</div>
+          <div class="fac-meta">
+            <span class="fac-chip"><span class="stat-dot ${dotClass}"></span>${statusLabel}</span>
+            ${f.freq ? `<span class="fac-chip highlight">📻 ${f.freq}</span>` : ''}
+            ${f.phone ? `<span class="fac-chip">📞 ${f.phone}</span>` : ''}
+            ${f.generator === 'yes' ? `<span class="fac-chip">⚡ Generator</span>` : ''}
+            ${f.ada === 'yes' ? `<span class="fac-chip">♿ ADA</span>` : ''}
+            ${f.capacity ? `<span class="fac-chip">👥 ${f.capacity}</span>` : ''}
+          </div>
+        </div>`;
+    });
+    html += `</div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+function showDetail(i) {
+  currentIdx = i;
+  const f = facilities[i];
+  const meta = TYPE_META[f.type] || TYPE_META.other;
+  document.getElementById('mTitle').textContent = f.name;
+  document.getElementById('mSub').innerHTML = `<span style="color:${meta.color}">${meta.icon} ${meta.label}</span> &nbsp;·&nbsp; <span class="stat-dot ${f.status==='active'?'active':f.status==='standby'?'standby':'inactive'}"></span>${f.status||'—'}`;
+
+  const rows = [
+    ['Address', [f.address, f.city, f.state_zip].filter(Boolean).join(', ')],
+    ['Coordinates', f.lat && f.lon ? `${parseFloat(f.lat).toFixed(4)}, ${parseFloat(f.lon).toFixed(4)}` : '—'],
+    ['Primary Phone', f.phone ? `<a href="tel:${f.phone}">${f.phone}</a>` : '—'],
+    ['Secondary Phone', f.phone2 || '—'],
+    ['Primary Freq', f.freq ? `${f.freq} MHz` + (f.tone ? ` (${f.tone} Hz)` : '') : '—'],
+    ['Secondary Freq', f.freq2 ? `${f.freq2} MHz` : '—'],
+    ['Capacity', f.capacity || '—'],
+    ['Contact', f.contact || '—'],
+    ['Ham Callsign', f.callsign || '—'],
+    ['Generator', f.generator || '—'],
+    ['ADA Accessible', f.ada || '—'],
+  ].filter(([, v]) => v && v !== '—');
+
+  if (f.notes) rows.push(['Notes', f.notes]);
+
+  document.getElementById('mRows').innerHTML = rows.map(([l, v]) =>
+    `<div class="mrow"><span class="ml">${l}</span><span class="mr">${v}</span></div>`
+  ).join('');
+
+  document.getElementById('detailModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('detailModal').classList.remove('open'); }
+
+function copyAddress() {
+  if (currentIdx === null) return;
+  const f = facilities[currentIdx];
+  const txt = [f.name, f.address, f.city, f.state_zip].filter(Boolean).join(', ');
+  navigator.clipboard.writeText(txt);
+  document.getElementById('statusLeft').textContent = 'Address copied';
+  closeModal();
+}
+
+function editCurrent() {
+  if (currentIdx === null) return;
+  closeModal();
+  openEdit(currentIdx);
+}
+
+function deleteCurrent() {
+  if (currentIdx === null) return;
+  if (!confirm(`Delete "${facilities[currentIdx].name}"?`)) return;
+  facilities.splice(currentIdx, 1);
+  save(); currentIdx = null;
+  closeModal(); render();
+}
+
+function openAdd() { openEdit(null); }
+
+function openEdit(i) {
+  const isNew = i === null;
+  const f = isNew ? {} : facilities[i];
+  document.getElementById('editTitle').textContent = isNew ? 'Add Facility' : 'Edit Facility';
+  document.getElementById('eName').value = f.name || '';
+  document.getElementById('eType').value = f.type || 'eoc';
+  document.getElementById('eStatus').value = f.status || 'active';
+  document.getElementById('eAddr').value = f.address || '';
+  document.getElementById('eCity').value = f.city || '';
+  document.getElementById('eStateZip').value = f.state_zip || '';
+  document.getElementById('eLat').value = f.lat || '';
+  document.getElementById('eLon').value = f.lon || '';
+  document.getElementById('ePhone').value = f.phone || '';
+  document.getElementById('ePhone2').value = f.phone2 || '';
+  document.getElementById('eFreq').value = f.freq || '';
+  document.getElementById('eFreq2').value = f.freq2 || '';
+  document.getElementById('eTone').value = f.tone || '';
+  document.getElementById('eCap').value = f.capacity || '';
+  document.getElementById('eContact').value = f.contact || '';
+  document.getElementById('eCallsign').value = f.callsign || '';
+  document.getElementById('eGen').value = f.generator || '';
+  document.getElementById('eADA').value = f.ada || '';
+  document.getElementById('eNotes').value = f.notes || '';
+  document.getElementById('editModal').dataset.editIdx = isNew ? '' : i;
+  document.getElementById('editModal').classList.add('open');
+}
+
+function closeEdit() { document.getElementById('editModal').classList.remove('open'); }
+
+function saveFacility() {
+  const name = document.getElementById('eName').value.trim();
+  if (!name) { alert('Facility name is required'); return; }
+  const idxStr = document.getElementById('editModal').dataset.editIdx;
+  const isNew = idxStr === '';
+  const obj = {
+    id: isNew ? uid() : (facilities[parseInt(idxStr)]?.id || uid()),
+    name,
+    type: document.getElementById('eType').value,
+    status: document.getElementById('eStatus').value,
+    address: document.getElementById('eAddr').value.trim(),
+    city: document.getElementById('eCity').value.trim(),
+    state_zip: document.getElementById('eStateZip').value.trim(),
+    lat: parseFloat(document.getElementById('eLat').value) || null,
+    lon: parseFloat(document.getElementById('eLon').value) || null,
+    phone: document.getElementById('ePhone').value.trim(),
+    phone2: document.getElementById('ePhone2').value.trim(),
+    freq: document.getElementById('eFreq').value.trim(),
+    freq2: document.getElementById('eFreq2').value.trim(),
+    tone: document.getElementById('eTone').value.trim(),
+    capacity: document.getElementById('eCap').value.trim(),
+    contact: document.getElementById('eContact').value.trim(),
+    callsign: document.getElementById('eCallsign').value.trim().toUpperCase(),
+    generator: document.getElementById('eGen').value,
+    ada: document.getElementById('eADA').value,
+    notes: document.getElementById('eNotes').value.trim(),
+  };
+  if (isNew) facilities.push(obj);
+  else facilities[parseInt(idxStr)] = obj;
+  save(); closeEdit(); render();
+}
+
+function exportCSV() {
+  const cols = ['name','type','status','address','city','state_zip','lat','lon','phone','phone2','freq','freq2','tone','capacity','contact','callsign','generator','ada','notes'];
+  const rows = [cols.join(',')];
+  facilities.forEach(f => rows.push(cols.map(c => `"${(f[c]||'').toString().replace(/"/g,'""')}"`).join(',')));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([rows.join('\n')], {type:'text/csv'}));
+  a.download = 'facilities.csv'; a.click();
+}
+
+window.addEventListener('load', load);
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

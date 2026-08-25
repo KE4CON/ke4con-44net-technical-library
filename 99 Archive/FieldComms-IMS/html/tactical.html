@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tactical Map — Incident Management</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+html, body { height:100%; margin:0; overflow:hidden; }
+body { display:flex; flex-direction:column; }
+
+.top-bar {
+  flex-shrink:0;
+  background:var(--panel); border-bottom: 2px solid var(--eoc);
+  padding:8px 14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+}
+.top-bar h1 { font-family:var(--font-hd); font-size:15px; color:var(--eoc); letter-spacing:2px; margin:0; }
+
+.map-wrap { flex:1; display:flex; min-height:0; position:relative; }
+#map { flex:1; }
+
+/* ── Sidebar ─────────────────────────────────────── */
+.sidebar {
+  width:310px; flex-shrink:0; background:var(--panel); border-left:1px solid var(--line);
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.sidebar-tabs { display:flex; border-bottom:1px solid var(--line); }
+.stab {
+  flex:1; padding:9px 4px; font-size:10px; font-family:var(--font-hd);
+  letter-spacing:0.5px; text-align:center; cursor:pointer; color:var(--muted);
+  border:none; background:none; border-bottom:3px solid transparent; white-space:nowrap;
+}
+.stab.active { color: var(--eoc); border-bottom-color: var(--eoc); }
+.tab-content { flex:1; overflow-y:auto; display:none; }
+.tab-content.active { display:block; }
+
+/* ── Left map controls ───────────────────────────── */
+.map-controls {
+  position:absolute; top:10px; left:10px; z-index:1000;
+  display:flex; flex-direction:column; gap:5px;
+}
+.map-btn {
+  background:#fff; border:1px solid var(--line); border-radius:5px;
+  padding:6px 11px; font-size:11px; color:var(--txt); cursor:pointer;
+  white-space:nowrap; transition:border-color 0.15s, background 0.15s;
+  text-align:left;
+}
+.map-btn:hover { border-color: var(--eoc-lt); color:var(--eoc); }
+.map-btn.active { border-color: var(--eoc-lt); color: var(--eoc); background:rgba(245,166,35,0.1); }
+.map-btn.layer-gw.active { border-color:#39ff14; color:#39ff14; background:rgba(26,122,58,0.06); }
+.map-btn.layer-yc.active { border-color:#60aaff; color:#60aaff; background:rgba(96,170,255,0.08); }
+.map-btn.layer-is.active { border-color:#c850ff; color:#c850ff; background:rgba(91,45,140,0.06); }
+
+.tab-content { flex:1; overflow-y:auto; display:none; }
+.tab-content.active { display:block; }
+
+/* ── Station list items ─────────────────────────── */
+.stn-item {
+  display:flex; align-items:flex-start; gap:8px;
+  padding:8px 10px; border-bottom:1px solid var(--line); cursor:pointer;
+  transition:background 0.1s;
+}
+.stn-item:hover { background:var(--panel2); }
+.stn-symbol { font-size:16px; width:20px; text-align:center; flex-shrink:0; margin-top:1px; }
+.stn-call { font-family:var(--font-hd); font-size:13px; color:var(--txt); }
+.stn-sub { font-size:10px; color:var(--muted); margin-top:2px; line-height:1.4; }
+.stn-src-badge {
+  font-size:8px; font-family:var(--font-hd); padding:1px 4px; border-radius:2px;
+  margin-left:4px; vertical-align:middle;
+}
+.src-gw { background:rgba(26,122,58,0.10); color:#39ff14; border:1px solid rgba(57,255,20,0.3); }
+.src-yc { background:rgba(96,170,255,0.15); color:#60aaff; border:1px solid rgba(96,170,255,0.3); }
+.src-is { background:rgba(91,45,140,0.10); color:#c850ff; border:1px solid rgba(200,80,255,0.3); }
+.src-ms { background:rgba(26,58,107,0.10); color:var(--eoc); border:1px solid rgba(245,166,35,0.3); }
+.src-both { background:rgba(255,255,255,0.08); color:var(--txt); border:1px solid var(--line); }
+
+/* ── Station age indicator ──────────────────────── */
+.age-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:4px; }
+
+/* ── Popup styling ──────────────────────────────── */
+.leaflet-popup-content-wrapper { background: var(--panel); color:var(--txt); border:1px solid var(--amber); border-radius:6px; }
+.leaflet-popup-tip { background:var(--panel); }
+.stn-popup { font-size:12px; line-height:1.5; min-width:180px; }
+.stn-popup .pcall { font-family:var(--font-hd); font-size:15px; color:var(--eoc); margin-bottom:6px; }
+.stn-popup .prow { display:flex; justify-content:space-between; padding:2px 0; border-bottom:1px solid var(--line); }
+.stn-popup .prow:last-child { border:none; }
+.stn-popup .pk { color:var(--muted); font-size:11px; }
+.stn-popup .pv { font-family:var(--font-hd); font-size:11px; }
+
+/* ── Messages panel ─────────────────────────────── */
+.msg-item {
+  padding:8px 10px; border-bottom:1px solid var(--line); font-size:11px;
+}
+.msg-item .mfrom { font-family:var(--font-hd); color:var(--eoc); font-size:12px; }
+.msg-item .mto   { color:var(--muted); font-size:10px; }
+.msg-item .mbody { color:var(--txt); margin-top:4px; line-height:1.4; }
+.msg-item .mtime { color:var(--muted); font-size:10px; margin-top:3px; }
+.msg-unread { border-left:3px solid var(--green); }
+
+/* ── Send message form ──────────────────────────── */
+.msg-send-form { padding:10px; border-top:1px solid var(--line); flex-shrink:0; }
+.msg-send-form input, .msg-send-form textarea {
+  width:100%; box-sizing:border-box;
+  background:var(var(--input-bg); border:1px solid var(--line); border-radius:4px;
+  color:var(--txt); padding:6px 8px; font-size:12px; margin-bottom:6px;
+}
+.msg-send-form input:focus, .msg-send-form textarea:focus { outline:none; border-color: var(--eoc-lt); }
+
+/* ── Overlays form ──────────────────────────────── */
+.pad10 { padding:10px; }
+.field-label { font-size:11px; color:var(--muted); display:block; margin-bottom:3px; }
+.form-input { width:100%; box-sizing:border-box; background:var(var(--input-bg); border:1px solid var(--line); border-radius:4px; color:var(--txt); padding:6px 8px; font-size:12px; margin-bottom:8px; }
+.form-input:focus { outline:none; border-color: var(--eoc-lt); }
+
+/* ── Settings ───────────────────────────────────── */
+.settings-section { padding:10px; border-bottom:1px solid var(--line); }
+.settings-title { font-family:var(--font-hd); font-size:10px; letter-spacing:0.15em; text-transform:uppercase; color:var(--eoc); margin-bottom:8px; }
+.setting-row { display:flex; flex-direction:column; margin-bottom:8px; }
+.setting-row label { font-size:11px; color:var(--muted); margin-bottom:3px; }
+.setting-row input, .setting-row select { background:var(var(--input-bg); border:1px solid var(--line); border-radius:4px; color:var(--txt); padding:5px 8px; font-size:12px; width:100%; box-sizing:border-box; }
+.setting-row input:focus, .setting-row select:focus { outline:none; border-color: var(--eoc-lt); }
+
+/* ── Legend ─────────────────────────────────────── */
+.legend-row { display:flex; align-items:center; gap:8px; font-size:11px; padding:3px 0; }
+.leg-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.leg-sym { width:16px; text-align:center; font-size:14px; }
+
+/* ── Badge counts ───────────────────────────────── */
+.badge-count {
+  display:inline-block; background:var(--amber); color:#000;
+  border-radius:8px; padding:1px 5px; font-size:9px; font-family:var(--font-hd); font-weight:bold; margin-left:3px;
+}
+
+/* ── Filter bar ─────────────────────────────────── */
+.filter-bar { padding:6px 10px; border-bottom:1px solid var(--line); display:flex; gap:6px; }
+.filter-bar input { flex:1; background:var(var(--input-bg); border:1px solid var(--line); border-radius:4px; color:var(--txt); padding:4px 7px; font-size:11px; }
+.filter-bar input:focus { outline:none; border-color: var(--eoc-lt); }
+.filter-bar select { background:var(var(--input-bg); border:1px solid var(--line); border-radius:4px; color:var(--txt); padding:4px 5px; font-size:11px; }
+
+/* ── Sidebar tabs panel for messages ─────────── */
+.msgs-body { flex:1; overflow-y:auto; }
+
+/* Picking cursor */
+body.picking #map { cursor:crosshair !important; }
+
+/* Port status row */
+.port-row { display:flex; align-items:center; gap:8px; padding:5px 10px; border-bottom:1px solid var(--line); font-size:11px; }
+.port-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="top-bar">
+  <a href="index.html" style="color:var(--muted);text-decoration:none;font-size:12px">⌂</a>
+  <h1>📡 TACTICAL MAP</h1>
+  <div style="font-size:11px;color:var(--muted)">APRS · Graywolf + YAAC · Auto-refresh</div>
+  <div style="flex:1"></div>
+  <div style="font-family:var(--font-hd);font-size:12px;color:var(--green)">
+    Stations: <span id="stn-count" style="color:var(--green)">0</span>
+  </div>
+  <button class="btn btn-sm" onclick="refreshAll()" title="Refresh all sources">⟳ Refresh</button>
+  <button class="btn btn-sm" onclick="exportKML()" style="background:var(--panel2)" title="Export to KML">⬇ KML</button>
+  <span id="utc-clock" style="font-family:var(--font-hd);color:#fff;font-size:13px;letter-spacing:1px;min-width:60px;text-align:right"></span>
+</div>
+
+<!-- Map area: icon rail + slide panel + map -->
+<!-- Map + sidebar -->
+<div class="map-wrap">
+  <div id="map"></div>
+
+  <!-- Layer toggles -->
+  <div class="map-controls">
+    <button class="map-btn layer-gw active" id="btn-gw" onclick="toggleLayer('gw')" title="Graywolf APRS">🟢 Graywolf</button>
+    <button class="map-btn layer-yc active" id="btn-yc" onclick="toggleLayer('yc')" title="YAAC APRS">🔵 YAAC</button>
+    <button class="map-btn layer-is active" id="btn-is" onclick="toggleLayer('is')" title="APRS-IS (internet)">🟣 APRS-IS</button>
+    <button class="map-btn active" id="btn-ov" onclick="toggleLayer('ov')" title="Manual overlays">📌 Overlays</button>
+    <button class="map-btn active" id="btn-me" onclick="toggleLayer('me')" title="My station">⬡ My Station</button>
+    <button class="map-btn" id="btn-range" onclick="toggleLayer('range')" title="Range ring">◎ Range Ring</button>
+    <button class="map-btn" id="btn-track" onclick="toggleTrack()" title="Track selected station">🛤 Track</button>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-tabs">
+      <button class="stab active" id="tab-stations" onclick="activateTab('stations')">Stations<span class="badge-count" id="stn-badge">0</span></button>
+      <button class="stab" id="tab-messages" onclick="activateTab('messages')">Msgs<span class="badge-count" id="msg-badge" style="background:var(--green)">0</span></button>
+      <button class="stab" id="tab-overlays" onclick="activateTab('overlays')">Markers<span class="badge-count" id="ov-badge">0</span></button>
+      <button class="stab" id="tab-sources" onclick="activateTab('sources')">Sources</button>
+      <button class="stab" id="tab-settings" onclick="activateTab('settings')">⚙</button>
+    </div>
+
+    <!-- STATIONS TAB -->
+    <div class="tab-content active" id="tc-stations" style="display:flex;flex-direction:column">
+      <div class="filter-bar">
+        <input type="text" id="stn-search" placeholder="Search callsign, comment…" oninput="renderStationList()">
+        <select id="stn-filter-src" onchange="renderStationList()">
+          <option value="">All sources</option>
+          <option value="gw">Graywolf</option>
+          <option value="yc">YAAC</option>
+          <option value="is">APRS-IS</option>
+        </select>
+        <select id="stn-filter-type" onchange="renderStationList()">
+          <option value="">All types</option>
+          <option value="MOBILE">Mobile</option>
+          <option value="FIXED">Fixed</option>
+          <option value="WX">Weather</option>
+          <option value="DIGI">Digi</option>
+          <option value="IGATE">iGate</option>
+        </select>
+      </div>
+      <div id="stn-list" style="flex:1;overflow-y:auto">
+        <div style="color:var(--muted);font-size:12px;padding:20px;text-align:center">Loading APRS data…</div>
+      </div>
+    </div>
+
+    <!-- MESSAGES TAB -->
+    <div class="tab-content" id="tc-messages" style="display:flex;flex-direction:column">
+      <div class="msgs-body" id="msg-list">
+        <div style="color:var(--muted);font-size:12px;padding:20px;text-align:center">No APRS messages received</div>
+      </div>
+      <div class="msg-send-form">
+        <div style="font-family:var(--font-hd);font-size:10px;color:var(--eoc);letter-spacing:0.1em;margin-bottom:6px">SEND APRS MESSAGE</div>
+        <input type="text" id="msg-to" placeholder="To callsign (e.g. W8ABC)" style="margin-bottom:6px;width:100%;box-sizing:border-box;background:var(var(--input-bg);border:1px solid var(--line);border-radius:4px;color:var(--txt);padding:6px 8px;font-size:12px">
+        <textarea id="msg-body" placeholder="Message text (max 67 chars)" rows="2" maxlength="67" style="width:100%;box-sizing:border-box;resize:none;background:var(var(--input-bg);border:1px solid var(--line);border-radius:4px;color:var(--txt);padding:6px 8px;font-size:12px"></textarea>
+        <div style="display:flex;gap:6px;margin-top:4px">
+          <select id="msg-via" style="background:var(var(--input-bg);border:1px solid var(--line);border-radius:4px;color:var(--txt);padding:5px;font-size:11px;flex:1">
+            <option value="gw">Via Graywolf</option>
+            <option value="yc">Via YAAC</option>
+          </select>
+          <button class="btn" onclick="sendMessage()" style="font-size:11px">Send</button>
+        </div>
+        <div id="msg-status" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
+      </div>
+    </div>
+
+    <!-- OVERLAYS TAB -->
+    <div class="tab-content" id="tc-overlays">
+      <div class="pad10">
+        <div style="font-family:var(--font-hd);font-size:10px;color:var(--eoc);letter-spacing:0.1em;margin-bottom:8px">ADD MARKER</div>
+        <label class="field-label">Label</label>
+        <input type="text" id="ov-label" class="form-input" placeholder="EOC, Shelter, Command Post…">
+        <label class="field-label">Type</label>
+        <select id="ov-type" class="form-input">
+          <option value="eoc">🏛 EOC</option>
+          <option value="shelter">🏠 Shelter</option>
+          <option value="staging">🚐 Staging Area</option>
+          <option value="command">🎯 Command Post</option>
+          <option value="medical">🏥 Medical</option>
+          <option value="repeater">📡 Repeater</option>
+          <option value="fire">🔥 Fire / Hazmat</option>
+          <option value="police">🚔 Law Enforcement</option>
+          <option value="custom">📌 Custom</option>
+        </select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div>
+            <label class="field-label">Latitude</label>
+            <input type="number" id="ov-lat" class="form-input" step="0.0001" placeholder="42.3153">
+          </div>
+          <div>
+            <label class="field-label">Longitude</label>
+            <input type="number" id="ov-lon" class="form-input" step="0.0001" placeholder="-88.4473">
+          </div>
+        </div>
+        <label class="field-label">Notes</label>
+        <input type="text" id="ov-notes" class="form-input" placeholder="Optional info">
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <button class="btn btn-sm" onclick="pickOnMap()" style="flex:1;background:var(--panel2)">🗺 Pick on Map</button>
+          <button class="btn btn-sm" onclick="addOverlay()" style="flex:1">+ Add Marker</button>
+        </div>
+        <div style="font-family:var(--font-hd);font-size:10px;color:var(--eoc);letter-spacing:0.1em;margin-bottom:6px">PLACED MARKERS</div>
+        <div id="ov-list"></div>
+        <button class="btn btn-sm" onclick="clearOverlays()" style="width:100%;margin-top:8px;background:rgba(255,80,80,0.1);border-color:var(--red);color:var(--red)">🗑 Clear All Markers</button>
+      </div>
+    </div>
+
+    <!-- SOURCES TAB -->
+    <div class="tab-content" id="tc-sources">
+      <div style="padding:10px">
+        <!-- Graywolf -->
+        <div class="settings-section" style="padding:0;margin-bottom:0">
+          <div style="padding:8px 10px;background:rgba(57,255,20,0.06);border-bottom:1px solid rgba(57,255,20,0.2)">
+            <div style="font-family:var(--font-hd);font-size:11px;color:#39ff14;letter-spacing:0.1em">🟢 GRAYWOLF TNC</div>
+          </div>
+          <div class="port-row">
+            <div class="port-dot" id="gw-dot" style="background:var(--muted)"></div>
+            <div style="flex:1">
+              <div style="font-size:11px;color:var(--txt)">REST API</div>
+              <div style="font-size:10px;color:var(--muted)" id="gw-url">http://localhost:8080/api/stations</div>
+            </div>
+            <div style="font-family:var(--font-hd);font-size:12px;color:#39ff14" id="gw-count">—</div>
+          </div>
+          <div class="port-row">
+            <div class="port-dot" id="gw-ws-dot" style="background:var(--muted)"></div>
+            <div style="flex:1">
+              <div style="font-size:11px;color:var(--txt)">WebSocket (live)</div>
+              <div style="font-size:10px;color:var(--muted)" id="gw-ws-url">ws://localhost:8080/ws</div>
+            </div>
+            <div style="font-size:10px;color:var(--muted)" id="gw-ws-status">—</div>
+          </div>
+          <div style="padding:6px 10px;display:flex;gap:6px">
+            <button class="btn btn-sm" onclick="openGraywolf()" style="background:rgba(26,122,58,0.06);border-color:#39ff14;color:#39ff14;font-size:10px">Open UI ↗</button>
+            <button class="btn btn-sm" onclick="pollGraywolf()" style="font-size:10px;background:var(--panel2)">⟳ Poll</button>
+          </div>
+        </div>
+
+        <!-- YAAC -->
+        <div class="settings-section" style="padding:0;margin-top:12px;margin-bottom:0">
+          <div style="padding:8px 10px;background:rgba(96,170,255,0.06);border-bottom:1px solid rgba(96,170,255,0.2)">
+            <div style="font-family:var(--font-hd);font-size:11px;color:#60aaff;letter-spacing:0.1em">🔵 YAAC (Yet Another APRS Client)</div>
+          </div>
+          <div class="port-row">
+            <div class="port-dot" id="yc-dot" style="background:var(--muted)"></div>
+            <div style="flex:1">
+              <div style="font-size:11px;color:var(--txt)">REST API</div>
+              <div style="font-size:10px;color:var(--muted)" id="yc-url">http://localhost:8082/api/stations</div>
+            </div>
+            <div style="font-family:var(--font-hd);font-size:12px;color:#60aaff" id="yc-count">—</div>
+          </div>
+          <div class="port-row">
+            <div class="port-dot" id="yc-ws-dot" style="background:var(--muted)"></div>
+            <div style="flex:1">
+              <div style="font-size:11px;color:var(--txt)">WebSocket (live)</div>
+              <div style="font-size:10px;color:var(--muted)" id="yc-ws-url">ws://localhost:8082/ws/aprs</div>
+            </div>
+            <div style="font-size:10px;color:var(--muted)" id="yc-ws-status">—</div>
+          </div>
+          <div style="padding:6px 10px;display:flex;gap:6px">
+            <button class="btn btn-sm" onclick="openYAAC()" style="background:rgba(96,170,255,0.08);border-color:#60aaff;color:#60aaff;font-size:10px">Open UI ↗</button>
+            <button class="btn btn-sm" onclick="pollYAAC()" style="font-size:10px;background:var(--panel2)">⟳ Poll</button>
+            <button class="btn btn-sm" onclick="showYAACSetup()" style="font-size:10px;background:var(--panel2)">? Setup</button>
+          </div>
+        </div>
+
+        <!-- APRS-IS -->
+        <div class="settings-section" style="padding:0;margin-top:12px;margin-bottom:0">
+          <div style="padding:8px 10px;background:rgba(91,45,140,0.05);border-bottom:1px solid rgba(200,80,255,0.2)">
+            <div style="font-family:var(--font-hd);font-size:11px;color:#c850ff;letter-spacing:0.1em">🟣 APRS-IS (Internet)</div>
+          </div>
+          <div class="port-row">
+            <div class="port-dot" id="is-dot" style="background:var(--muted)"></div>
+            <div style="flex:1">
+              <div style="font-size:11px;color:var(--txt)">aprs.fi API (internet required)</div>
+              <div style="font-size:10px;color:var(--muted)" id="is-status">Not configured</div>
+            </div>
+            <div style="font-family:var(--font-hd);font-size:12px;color:#c850ff" id="is-count">—</div>
+          </div>
+          <div style="padding:6px 10px">
+            <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">aprs.fi API key (optional)</label>
+            <input type="text" id="aprsfi-key" placeholder="Leave blank to disable" style="width:100%;box-sizing:border-box;background:var(var(--input-bg);border:1px solid var(--line);border-radius:4px;color:var(--txt);padding:5px 8px;font-size:11px" oninput="saveSettings()">
+          </div>
+        </div>
+
+        <!-- Merge stats -->
+        <div style="padding:10px;margin-top:8px;background:var(--panel2);border-radius:6px">
+          <div style="font-family:var(--font-hd);font-size:10px;color:var(--eoc);letter-spacing:0.1em;margin-bottom:6px">MERGED DATASET</div>
+          <div style="font-size:11px;color:var(--muted);line-height:2">
+            Total unique stations: <span style="color:var(--txt);font-family:var(--font-hd)" id="merge-total">0</span><br>
+            Seen by both GW+YC: <span style="color:var(--txt);font-family:var(--font-hd)" id="merge-both">0</span><br>
+            Graywolf only: <span style="color:#39ff14;font-family:var(--font-hd)" id="merge-gw-only">0</span><br>
+            YAAC only: <span style="color:#60aaff;font-family:var(--font-hd)" id="merge-yc-only">0</span><br>
+            APRS-IS only: <span style="color:#c850ff;font-family:var(--font-hd)" id="merge-is-only">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div class="tab-content" id="tc-settings">
+      <div class="settings-section">
+        <div class="settings-title">My Station</div>
+        <div class="setting-row"><label>Callsign</label><input type="text" id="s-callsign" placeholder="W8ABC" oninput="saveSettings();updateStationMarker()"></div>
+        <div class="setting-row"><label>Latitude</label><input type="number" id="s-lat" step="0.0001" value="42.3153" oninput="saveSettings();updateStationMarker()"></div>
+        <div class="setting-row"><label>Longitude</label><input type="number" id="s-lon" step="0.0001" value="-88.4473" oninput="saveSettings();updateStationMarker()"></div>
+        <button class="btn btn-sm" onclick="goToStation()" style="width:100%;margin-top:4px">📍 Center on Station</button>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title">APRS Sources (Ports)</div>
+        <div class="setting-row"><label>Graywolf port</label><input type="number" id="s-gw-port" value="8080" oninput="saveSettings()"></div>
+        <div class="setting-row"><label>YAAC port</label><input type="number" id="s-yc-port" value="8082" oninput="saveSettings()"></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title">Display</div>
+        <div class="setting-row">
+          <label>Auto-refresh (seconds)</label>
+          <select id="s-refresh" onchange="saveSettings();resetTimer()">
+            <option value="15">15s</option>
+            <option value="30" selected>30s</option>
+            <option value="60">60s</option>
+            <option value="120">2 min</option>
+            <option value="0">Manual only</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label>Map Tiles</label>
+          <div id="tileStatus" style="font-size:11px;color:var(--eoc-lt);padding:4px 0">Detecting…</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">
+            Use the layer icon (top-right of map) to switch tile sources.<br>
+            Download offline tiles: <code>sudo bash download_tiles.sh</code>
+          </div>
+        </div>
+        <div class="setting-row">
+          <label>Station age threshold (min)</label>
+          <input type="number" id="s-age-fresh" value="15" min="1" max="120" oninput="saveSettings()">
+        </div>
+        <div class="setting-row">
+          <label>Range ring radius (km)</label>
+          <input type="number" id="s-range-km" value="50" min="5" max="500" oninput="saveSettings();updateRangeRing()">
+        </div>
+        <div class="setting-row">
+          <label>Show APRS symbols</label>
+          <select id="s-symbols" onchange="saveSettings();renderAPRS()">
+            <option value="1">Yes — emoji symbols</option>
+            <option value="0">No — colored dots only</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label>Station labels</label>
+          <select id="s-labels" onchange="saveSettings();renderAPRS()">
+            <option value="1">Show callsign labels</option>
+            <option value="0">Hide labels (less clutter)</option>
+          </select>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title">Legend</div>
+        <div class="legend-row"><div class="leg-dot" style="background:#39ff14"></div>Fresh station (&lt;15 min)</div>
+        <div class="legend-row"><div class="leg-dot" style="background:#f5a623"></div>Aging station (15–60 min)</div>
+        <div class="legend-row"><div class="leg-dot" style="background:#888"></div>Old station (&gt;60 min)</div>
+        <div class="legend-row"><div class="leg-dot" style="background:#60aaff"></div>My station</div>
+        <div class="legend-row"><div class="leg-dot" style="background:#e040fb"></div>Manual overlay</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--muted)">Border color = data source</div>
+        <div class="legend-row"><div style="width:10px;height:10px;border-radius:50%;background:var(--panel);border:2px solid #39ff14;flex-shrink:0"></div>Graywolf</div>
+        <div class="legend-row"><div style="width:10px;height:10px;border-radius:50%;background:var(--panel);border:2px solid #60aaff;flex-shrink:0"></div>YAAC</div>
+        <div class="legend-row"><div style="width:10px;height:10px;border-radius:50%;background:var(--panel);border:2px solid #c850ff;flex-shrink:0"></div>APRS-IS</div>
+        <div class="legend-row"><div style="width:10px;height:10px;border-radius:50%;background:var(--panel);border:2px solid #fff;flex-shrink:0"></div>Multiple sources</div>
+      </div>
+    </div>
+
+  </div><!-- end sidebar -->
+
+    <!-- Source strip at bottom of map -->
+  <div class="src-strip">
+    <div class="src-pill gw" id="strip-gw" onclick="toggleLayer('gw')" title="Toggle Graywolf layer">
+      <div class="src-dot" id="strip-gw-dot" style="background:#39ff14"></div>
+      GW: <span id="strip-gw-n">—</span>
+    </div>
+    <div class="src-pill yc" id="strip-yc" onclick="toggleLayer('yc')" title="Toggle YAAC layer">
+      <div class="src-dot" id="strip-yc-dot" style="background:#60aaff"></div>
+      YC: <span id="strip-yc-n">—</span>
+    </div>
+    <div class="src-pill is" id="strip-is" onclick="toggleLayer('is')" title="Toggle APRS-IS layer">
+      <div class="src-dot" id="strip-is-dot" style="background:var(--muted)"></div>
+      IS: <span id="strip-is-n">—</span>
+    </div>
+    <div class="src-spacer"></div>
+    <div class="src-pill ms" id="strip-last" style="pointer-events:none">
+      Last: <span id="strip-time">—</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- YAAC Setup Modal -->
+<div id="yaac-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.2);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:var(--panel);border:2px solid #60aaff;border-radius:10px;width:min(580px,95vw);padding:24px;max-height:85vh;overflow-y:auto">
+    <div style="font-family:var(--font-hd);font-size:16px;color:#60aaff;margin-bottom:16px">🔵 YAAC Setup Guide</div>
+    <div style="font-size:12px;color:var(--txt);line-height:1.8">
+      <p><strong style="color:var(--eoc)">1. Install YAAC</strong><br>
+      Download from <a href="http://www.ka2ddo.org/ka2ddo/YAAC.html" target="_blank" style="color:#60aaff">ka2ddo.org/ka2ddo/YAAC.html</a><br>
+      Requires Java 8+: <code style="background: var(--bg);padding:1px 4px;border-radius:3px">sudo apt install default-jre</code></p>
+
+      <p><strong style="color:var(--eoc)">2. Configure YAAC web server port</strong><br>
+      In YAAC: <em>File → Configure</em> → <em>Web Server</em> tab<br>
+      Set port to <strong style="color:#60aaff">8082</strong> (avoids conflict with Graywolf on 8080)<br>
+      Enable: <em>Enable REST API</em> ✓ &nbsp; <em>Enable WebSocket</em> ✓</p>
+
+      <p><strong style="color:var(--eoc)">3. Connect your TNC / radio</strong><br>
+      YAAC → Configure → Ports → Add Port<br>
+      • <em>Serial TNC</em>: select COM port, baud 9600<br>
+      • <em>KISS TNC</em>: uses TCP, e.g. Dire Wolf on port 8001<br>
+      • <em>APRS-IS</em>: internet gateway (server: noam.aprs2.net:14580)<br>
+      • <em>AGW</em>: for AGWpe / sound card TNC</p>
+
+      <p><strong style="color:var(--eoc)">4. Run as a service (optional)</strong><br>
+      Create <code>/etc/systemd/system/yaac.service</code>:<br>
+      <pre style="background: var(--bg);padding:8px;border-radius:4px;font-size:11px;overflow-x:auto">[Unit]
+Description=YAAC APRS Client
+After=network.target
+
+[Service]
+Type=simple
+User=fieldcomms
+WorkingDirectory=/opt/yaac
+ExecStart=/usr/bin/java -jar /opt/yaac/YAAC.jar -nogui
+Restart=always
+
+[Install]
+WantedBy=multi-user.target</pre>
+      Then: <code>sudo systemctl enable --now yaac</code></p>
+
+      <p><strong style="color:var(--eoc)">5. Verify connection</strong><br>
+      This page will show 🔵 YAAC as connected when it responds on port 8082.<br>
+      Click <em>⟳ Poll</em> on the Sources tab after YAAC is running.</p>
+    </div>
+    <div style="margin-top:16px;text-align:right">
+      <button class="btn" onclick="document.getElementById('yaac-modal').style.display='none'">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="/lib/tiles.js"></script>
+<script>
+// ══════════════════════════════════════════════════
+// Constants & state
+// ══════════════════════════════════════════════════
+const FC_API = 'http://192.168.50.1:5050';
+
+// Raw data per source
+let rawGW = [], rawYC = [], rawIS = [];
+
+// Merged + deduped station map: callsign → merged station object
+let stationMap = new Map();
+
+// Overlays
+let overlays = [];
+
+// Track selected callsign
+let trackCallsign = null;
+let trackHistory  = [];
+
+// Picking mode
+let pickingMode = false;
+
+// Map layers
+let map, layers = {}, tileLayer, rangeCircle;
+let wsGW = null, wsYC = null;
+let refreshTimer = null;
+let settings = {};
+let messages = [];
+
+// UTC clock
+setInterval(() => {
+  document.getElementById('utc-clock').textContent =
+    new Date().toUTCString().slice(17,22) + 'Z';
+}, 1000);
+
+// ══════════════════════════════════════════════════
+// Settings
+// ══════════════════════════════════════════════════
+function loadSettings() {
+  try { settings = JSON.parse(localStorage.getItem('fc_tactical_v2') || '{}'); } catch(e) { settings = {}; }
+  const d = (id, val) => { const el = document.getElementById(id); if(el) el.value = settings[id] ?? val; };
+  d('s-callsign', 'W8EOC');
+  d('s-lat', 42.3153);
+  d('s-lon', -88.4473);
+
+  // Attempt to load live GPS position on startup
+  loadGPSPosition();
+  d('s-gw-port', 8080);
+  d('s-yc-port', 8082);
+  d('s-refresh', 30);
+  d('s-tiles', 'osm');
+  d('s-age-fresh', 15);
+  d('s-range-km', 50);
+  d('s-symbols', 1);
+  d('s-labels', 1);
+  d('aprsfi-key', '');
+}
+
+function saveSettings() {
+  const g = id => document.getElementById(id)?.value;
+  Object.assign(settings, {
+    's-callsign': g('s-callsign'),
+    's-lat': g('s-lat'),
+    's-lon': g('s-lon'),
+    's-gw-port': g('s-gw-port'),
+    's-yc-port': g('s-yc-port'),
+    's-refresh': g('s-refresh'),
+    's-tiles': g('s-tiles'),
+    's-age-fresh': g('s-age-fresh'),
+    's-range-km': g('s-range-km'),
+    's-symbols': g('s-symbols'),
+    's-labels': g('s-labels'),
+    'aprsfi-key': g('aprsfi-key'),
+  });
+  localStorage.setItem('fc_tactical_v2', JSON.stringify(settings));
+  updateSourceURLs();
+}
+
+function gwPort() { return parseInt(document.getElementById('s-gw-port')?.value) || 8080; }
+function ycPort() { return parseInt(document.getElementById('s-yc-port')?.value) || 8082; }
+
+function updateSourceURLs() {
+  document.getElementById('gw-url').textContent  = `http://localhost:${gwPort()}/api/stations`;
+  document.getElementById('gw-ws-url').textContent= `ws://localhost:${gwPort()}/ws`;
+  document.getElementById('yc-url').textContent  = `http://localhost:${ycPort()}/api/stations`;
+  document.getElementById('yc-ws-url').textContent= `ws://localhost:${ycPort()}/ws/aprs`;
+}
+
+// ══════════════════════════════════════════════════
+// Map init
+// ══════════════════════════════════════════════════
+// Tile sources managed by FC_TILES (lib/tiles.js)
+// Handles offline MBTiles + online fallback automatically
+
+// ── Live GPS position ─────────────────────────────────────────────────────
+async function loadGPSPosition() {
+  try {
+    const res = await fetch('http://192.168.50.1:5050/api/position',
+                            { signal: AbortSignal.timeout(3000) });
+    const pos = await res.json();
+    if (pos.fix && pos.lat && pos.lon) {
+      // Update settings inputs with live GPS coordinates
+      const latEl = document.getElementById('s-lat');
+      const lonEl = document.getElementById('s-lon');
+      if (latEl) latEl.value = pos.lat.toFixed(6);
+      if (lonEl) lonEl.value = pos.lon.toFixed(6);
+      saveSettings();
+      updateStationMarker();
+      // Show GPS fix status near callsign
+      const hdr = document.getElementById('utc-clock');
+      if (hdr) hdr.title = `GPS: ${pos.lat.toFixed(4)}, ${pos.lon.toFixed(4)} (${pos.mode_str})`;
+      console.log(`GPS fix: ${pos.lat}, ${pos.lon} [${pos.mode_str}]`);
+    }
+  } catch(e) {
+    // No GPS or server not running — keep configured coords
+  }
+}
+
+// Poll GPS every 30 seconds and update station marker if moved
+setInterval(loadGPSPosition, 30000);
+
+function initMap() {
+  loadSettings();
+  const lat = parseFloat(document.getElementById('s-lat')?.value) || 42.3153;
+  const lon = parseFloat(document.getElementById('s-lon')?.value) || -88.4473;
+  map = L.map('map', { zoomControl:true }).setView([lat, lon], 11);
+
+  // Create named layer groups
+  layers.gw    = L.layerGroup().addTo(map);  // Graywolf stations
+  layers.yc    = L.layerGroup().addTo(map);  // YAAC stations
+  layers.is    = L.layerGroup().addTo(map);  // APRS-IS stations
+  layers.ov    = L.layerGroup().addTo(map);  // Manual overlays
+  layers.me    = L.layerGroup().addTo(map);  // My station
+  layers.range = L.layerGroup();             // Range ring (off by default)
+  layers.track = L.layerGroup().addTo(map);  // Track history
+
+  // Set up tile layers via FC_TILES (offline + online sources)
+  FC_TILES.buildLayerControl(map, { statusElementId: 'tileStatus' }).then(result => {
+    // Layer control added to map by FC_TILES
+    document.getElementById('tileStatus') &&
+      (document.getElementById('tileStatus').textContent = 
+        FC_TILES.getStatus().availableOffline.length > 0
+          ? `📁 ${FC_TILES.getStatus().availableOffline.length} offline tileset(s) loaded`
+          : '🌐 Online tiles');
+  });
+  updateStationMarker();
+  updateRangeRing();
+  loadOverlays();
+  updateSourceURLs();
+
+  // Map click — pick mode or deselect track
+  map.on('click', e => {
+    if (pickingMode) {
+      document.getElementById('ov-lat').value = e.latlng.lat.toFixed(5);
+      document.getElementById('ov-lon').value = e.latlng.lng.toFixed(5);
+      pickingMode = false;
+      document.body.classList.remove('picking');
+      activateTab('overlays');
+    }
+  });
+
+  refreshAll();
+  resetTimer();
+  connectWebSockets();
+}
+
+function changeTiles() {
+  // Tile layer is managed by FC_TILES buildLayerControl — no-op here
+  // Users switch layers via the Leaflet layer control (top-right corner)
+}
+
+function toggleLayer(name) {
+  if (!layers[name]) return;
+  const btn = document.getElementById('btn-' + name);
+  const strip = document.getElementById('strip-' + name);
+  if (map.hasLayer(layers[name])) {
+    map.removeLayer(layers[name]);
+    btn?.classList.remove('active');
+    strip?.classList.add('disabled');
+  } else {
+    map.addLayer(layers[name]);
+    btn?.classList.add('active');
+    strip?.classList.remove('disabled');
+  }
+}
+
+// ══════════════════════════════════════════════════
+// APRS symbol table → emoji
+// ══════════════════════════════════════════════════
+const APRS_SYMBOLS = {
+  '/!':'🚨', '/"':'🔵', '/#':'📡', '/$':'☎️', '/%':'💻', '/&':'⛽',
+  "/'": '✈️', '/(':  '📱', '/)':'⭕', '/*':'❄️', '/+':'🏥', '/,':'🏠',
+  '/-':'🏠', '/.':'⬛', '//':'🚗', '/0':'⭕', '/1':'⭕', '/2':'⭕',
+  '/3':'⭕', '/4':'⭕', '/5':'⭕', '/6':'⭕', '/7':'⭕', '/8':'⭕',
+  '/9':'⭕', '/:':'🔥', '/;':'🏕️', '/<':'🚵', '/=':'🚂', '/>':'🚗',
+  '/?':'🤔', '/@':'🌀', '/A':'🚑', '/B':'🚲', '/C':'💡', '/D':'📡',
+  '/E':'📧', '/F':'🚒', '/G':'📡', '/H':'🏨', '/I':'💡', '/J':'🔵',
+  '/K':'🏫', '/L':'💡', '/M':'🔴', '/N':'📡', '/O':'🎈', '/P':'🚔',
+  '/Q':'🔴', '/R':'📡', '/S':'🚀', '/T':'📡', '/U':'🚌', '/V':'🚐',
+  '/W':'🌡️', '/X':'✈️', '/Y':'⛵', '/Z':'🪟', '/[':'👤', '/\\':'📡',
+  '/]':'📮', '/^':'✈️', '/_':'🌦️', '/`':'📡', '/a':'🚑', '/b':'🚲',
+  '/d':'🌊', '/e':'✈️', '/f':'🚒', '/g':'🎈', '/h':'🚁', '/i':'📱',
+  '/j':'⚡', '/k':'🚛', '/l':'💡', '/m':'📡', '/n':'🔵', '/o':'⭕',
+  '/p':'🐾', '/q':'🌐', '/r':'📡', '/s':'🚢', '/t':'📡', '/u':'🚌',
+  '/v':'🚐', '/w':'🌊', '/x':'✈️', '/y':'⛵',
+};
+
+function aprsEmoji(symbolTable, symbolCode) {
+  const key = (symbolTable || '/') + (symbolCode || '>');
+  return APRS_SYMBOLS[key] || '📍';
+}
+
+function stationTypeFromSymbol(symbolTable, symbolCode) {
+  const code = (symbolCode || '>').toUpperCase();
+  if (code === '_') return 'WX';
+  if (code === '#') return 'DIGI';
+  if (code === '&') return 'IGATE';
+  if (['>','K','V','U','j'].includes(code)) return 'MOBILE';
+  if (['-','H','A','B'].includes(code)) return 'FIXED';
+  return 'OTHER';
+}
+
+// ══════════════════════════════════════════════════
+// Normalize station records from each source
+// ══════════════════════════════════════════════════
+function normalizeGW(r) {
+  // Graywolf uses: callsign, lat, lon, comment, last_seen/timestamp, speed, course, altitude
+  return {
+    callsign:    r.callsign || r.call || '?',
+    lat:         parseFloat(r.lat || r.latitude || 0),
+    lon:         parseFloat(r.lon || r.longitude || 0),
+    comment:     r.comment || r.status || '',
+    lastHeard:   r.last_seen || r.timestamp || r.lastHeard || null,
+    speed:       r.speed || null,       // mph (Graywolf) or knots (YAAC)
+    course:      r.course || null,
+    altitude:    r.altitude || null,    // feet
+    symbolTable: r.symbol_table || r.symbolTable || '/',
+    symbolCode:  r.symbol_code  || r.symbolCode  || '>',
+    path:        r.path || '',
+    type:        r.type || stationTypeFromSymbol(r.symbolTable, r.symbolCode),
+    power:       r.power || null,
+    source:      'gw',
+    _sources:    new Set(['gw']),
+  };
+}
+
+function normalizeYC(r) {
+  // YAAC uses: callsign, latitude, longitude, symbolTable, symbolCode, course, speed(knots), altitude(ft), comment, lastHeard, type, path
+  const speedKts = parseFloat(r.speed || 0);
+  return {
+    callsign:    r.callsign || '?',
+    lat:         parseFloat(r.latitude || r.lat || 0),
+    lon:         parseFloat(r.longitude || r.lon || 0),
+    comment:     r.comment || r.status || '',
+    lastHeard:   r.lastHeard || r.last_seen || null,
+    speed:       speedKts ? Math.round(speedKts * 1.15078) : null,  // knots → mph
+    course:      r.course || null,
+    altitude:    r.altitude || null,
+    symbolTable: r.symbolTable || r.symbol_table || '/',
+    symbolCode:  r.symbolCode  || r.symbol_code  || '>',
+    path:        r.path || '',
+    type:        r.type || stationTypeFromSymbol(r.symbolTable, r.symbolCode),
+    power:       r.power || null,
+    freq:        r.freq || null,
+    height:      r.height || null,
+    gain:        r.gain || null,
+    source:      'yc',
+    _sources:    new Set(['yc']),
+  };
+}
+
+function normalizeIS(r) {
+  // aprs.fi format
+  return {
+    callsign:    r.name || r.callsign || '?',
+    lat:         parseFloat(r.lat || 0),
+    lon:         parseFloat(r.lng || r.lon || 0),
+    comment:     r.comment || '',
+    lastHeard:   r.lasttime ? new Date(parseInt(r.lasttime)*1000).toISOString() : null,
+    speed:       r.speed ? Math.round(parseFloat(r.speed)) : null,
+    course:      r.course || null,
+    altitude:    r.altitude || null,
+    symbolTable: r.symbol ? r.symbol[0] : '/',
+    symbolCode:  r.symbol ? r.symbol[1] : '>',
+    path:        r.path || '',
+    type:        r.type || 'OTHER',
+    source:      'is',
+    _sources:    new Set(['is']),
+  };
+}
+
+// ══════════════════════════════════════════════════
+// Merge sources — deduplicate by callsign
+// ══════════════════════════════════════════════════
+function mergeStations() {
+  stationMap.clear();
+
+  const addAll = (records, normFn) => {
+    for (const r of records) {
+      const n = normFn(r);
+      if (!n.lat || !n.lon || !n.callsign || n.callsign === '?') continue;
+      if (stationMap.has(n.callsign)) {
+        const existing = stationMap.get(n.callsign);
+        // Merge sources
+        n._sources.forEach(s => existing._sources.add(s));
+        // Keep most recent lastHeard
+        if (n.lastHeard && (!existing.lastHeard || new Date(n.lastHeard) > new Date(existing.lastHeard))) {
+          existing.lastHeard = n.lastHeard;
+          existing.lat  = n.lat;
+          existing.lon  = n.lon;
+          existing.speed  = n.speed ?? existing.speed;
+          existing.course = n.course ?? existing.course;
+        }
+        // Merge comments
+        if (!existing.comment && n.comment) existing.comment = n.comment;
+        // Merge symbol from YAAC if GW has blank
+        if (!existing.symbolCode && n.symbolCode) {
+          existing.symbolTable = n.symbolTable;
+          existing.symbolCode  = n.symbolCode;
+        }
+      } else {
+        stationMap.set(n.callsign, n);
+      }
+    }
+  };
+
+  addAll(rawGW, normalizeGW);
+  addAll(rawYC, normalizeYC);
+  addAll(rawIS, normalizeIS);
+
+  // Update merge stats
+  let both=0, gwOnly=0, ycOnly=0, isOnly=0;
+  for (const s of stationMap.values()) {
+    const srcs = s._sources;
+    if (srcs.has('gw') && srcs.has('yc')) both++;
+    else if (srcs.has('gw') && !srcs.has('yc') && !srcs.has('is')) gwOnly++;
+    else if (srcs.has('yc') && !srcs.has('gw') && !srcs.has('is')) ycOnly++;
+    else if (srcs.has('is') && !srcs.has('gw') && !srcs.has('yc')) isOnly++;
+  }
+  document.getElementById('merge-total').textContent = stationMap.size;
+  document.getElementById('merge-both').textContent  = both;
+  document.getElementById('merge-gw-only').textContent = gwOnly;
+  document.getElementById('merge-yc-only').textContent = ycOnly;
+  document.getElementById('merge-is-only').textContent = isOnly;
+  document.getElementById('stn-count').textContent = stationMap.size;
+  updateBadge('stn-badge', stationMap.size);
+}
+
+// ══════════════════════════════════════════════════
+// Station age & color
+// ══════════════════════════════════════════════════
+function ageMins(lastHeard) {
+  if (!lastHeard) return 9999;
+  return (Date.now() - new Date(lastHeard).getTime()) / 60000;
+}
+
+function ageColor(lastHeard) {
+  const a = ageMins(lastHeard);
+  const thresh = parseInt(document.getElementById('s-age-fresh')?.value) || 15;
+  if (a < thresh)    return '#39ff14';
+  if (a < thresh*4)  return '#f5a623';
+  return '#888';
+}
+
+function srcBorderColor(sources) {
+  if (sources.size > 1) return '#ffffff';
+  if (sources.has('gw')) return '#39ff14';
+  if (sources.has('yc')) return '#60aaff';
+  if (sources.has('is')) return '#c850ff';
+  return '#888';
+}
+
+// ══════════════════════════════════════════════════
+// Render APRS markers on map
+// ══════════════════════════════════════════════════
+function renderAPRS() {
+  // Clear per-source layers
+  layers.gw.clearLayers();
+  layers.yc.clearLayers();
+  layers.is.clearLayers();
+
+  const showSymbols = (document.getElementById('s-symbols')?.value || '1') === '1';
+  const showLabels  = (document.getElementById('s-labels')?.value  || '1') === '1';
+
+  for (const [cs, s] of stationMap.entries()) {
+    const fillColor  = ageColor(s.lastHeard);
+    const border     = srcBorderColor(s._sources);
+    const emoji      = showSymbols ? aprsEmoji(s.symbolTable, s.symbolCode) : null;
+
+    const labelHtml = showLabels
+      ? `<div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;font-family:monospace;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000">${cs}</div>`
+      : '';
+
+    const iconHtml = emoji
+      ? `<div style="position:relative;display:inline-block">
+           ${labelHtml}
+           <div style="font-size:18px;line-height:1;filter:drop-shadow(0 1px 4px rgba(0,0,0,0.9));background:rgba(0,0,0,0.2);border-radius:3px;padding:1px;border:1px solid ${border}">${emoji}</div>
+         </div>`
+      : `<div style="position:relative">
+           ${labelHtml}
+           <div style="width:12px;height:12px;border-radius:50%;background:${fillColor};border:2px solid ${border};box-shadow:0 0 6px ${fillColor}44"></div>
+         </div>`;
+
+    const icon = L.divIcon({ html: iconHtml, iconSize:[emoji?24:12, emoji?24:12], iconAnchor:[emoji?12:6, emoji?12:6], className:'' });
+
+    // Build popup
+    const srcLabels = [...s._sources].map(src =>
+      `<span style="background:${src==='gw'?'rgba(26,122,58,0.10)':src==='yc'?'rgba(96,170,255,0.15)':'rgba(91,45,140,0.10)'};color:${src==='gw'?'#39ff14':src==='yc'?'#60aaff':'#c850ff'};border:1px solid;border-radius:3px;padding:1px 5px;font-family:var(--font-hd);font-size:9px">${src.toUpperCase()}</span>`
+    ).join(' ');
+
+    const age = ageMins(s.lastHeard);
+    const ageStr = age > 9000 ? 'Unknown' : age < 1 ? '&lt;1 min ago' : `${Math.round(age)} min ago`;
+
+    const popup = `<div class="stn-popup">
+      <div class="pcall">${cs} ${srcLabels}</div>
+      ${[
+        ['Symbol', emoji || '—'],
+        ['Type', s.type || '—'],
+        ['Comment', s.comment || '—'],
+        ['Speed', s.speed != null ? s.speed+' mph' : '—'],
+        ['Course', s.course != null ? s.course+'°' : '—'],
+        ['Altitude', s.altitude != null ? s.altitude+' ft' : '—'],
+        ['Path', s.path || '—'],
+        s.freq ? ['Freq', s.freq+' MHz'] : null,
+        ['Last heard', s.lastHeard ? `${new Date(s.lastHeard).toUTCString().slice(5,22)} UTC (${ageStr})` : '—'],
+      ].filter(Boolean).map(([k,v])=>`<div class="prow"><span class="pk">${k}</span><span class="pv">${v}</span></div>`).join('')}
+      <div style="margin-top:8px;display:flex;gap:6px">
+        <button onclick="trackStation('${cs}')" style="background:rgba(245,166,35,0.1);border:1px solid var(--amber);border-radius:3px;color:var(--eoc);padding:3px 8px;font-size:10px;cursor:pointer">🛤 Track</button>
+        <button onclick="sendMsgTo('${cs}')" style="background:rgba(26,122,58,0.06);border:1px solid #39ff14;border-radius:3px;color:#39ff14;padding:3px 8px;font-size:10px;cursor:pointer">✉ Message</button>
+      </div>
+    </div>`;
+
+    // Place on the correct layer (primary source)
+    const targetLayer = s._sources.has('gw') ? layers.gw : s._sources.has('yc') ? layers.yc : layers.is;
+    L.marker([s.lat, s.lon], {icon}).addTo(targetLayer).bindPopup(popup);
+  }
+}
+
+// ══════════════════════════════════════════════════
+// Station list sidebar
+// ══════════════════════════════════════════════════
+function renderStationList() {
+  const q       = (document.getElementById('stn-search')?.value || '').toLowerCase();
+  const srcFilt = document.getElementById('stn-filter-src')?.value || '';
+  const typFilt = document.getElementById('stn-filter-type')?.value || '';
+
+  const all = [...stationMap.values()].filter(s => {
+    if (q && !s.callsign.toLowerCase().includes(q) && !(s.comment||'').toLowerCase().includes(q)) return false;
+    if (srcFilt && !s._sources.has(srcFilt)) return false;
+    if (typFilt && (s.type||'').toUpperCase() !== typFilt) return false;
+    return true;
+  }).sort((a,b) => ageMins(a.lastHeard) - ageMins(b.lastHeard));
+
+  const list = document.getElementById('stn-list');
+  if (!all.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:20px;text-align:center">No stations match filter</div>';
+    return;
+  }
+
+  list.innerHTML = all.map(s => {
+    const color   = ageColor(s.lastHeard);
+    const emoji   = aprsEmoji(s.symbolTable, s.symbolCode);
+    const age     = ageMins(s.lastHeard);
+    const ageStr  = age > 9000 ? '?' : age < 1 ? '&lt;1m' : `${Math.round(age)}m`;
+    const srcBadges = [...s._sources].map(src =>
+      `<span class="stn-src-badge src-${src}">${src.toUpperCase()}</span>`
+    ).join('');
+    const motion  = s.speed ? ` · ${s.speed}mph ${s.course!=null?s.course+'°':''}` : '';
+    const tracked = (trackCallsign === s.callsign) ? ' style="background:rgba(245,166,35,0.1)"' : '';
+    return `<div class="stn-item"${tracked} onclick="panToStation('${s.callsign}')">
+      <div class="stn-symbol">${emoji}</div>
+      <div style="flex:1;min-width:0">
+        <div class="stn-call">${s.callsign}${srcBadges}</div>
+        <div class="stn-sub">${esc(s.comment || s.type || '')}${motion}</div>
+        <div class="stn-sub" style="color:${color}">${ageStr} ago ${s.lat ? `· ${s.lat.toFixed(4)},${s.lon.toFixed(4)}` : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function panToStation(cs) {
+  const s = stationMap.get(cs);
+  if (s && s.lat && s.lon) { map.setView([s.lat, s.lon], 14); }
+}
+
+// ══════════════════════════════════════════════════
+// Track station history
+// ══════════════════════════════════════════════════
+function toggleTrack() {
+  if (trackCallsign) {
+    trackCallsign = null;
+    trackHistory  = [];
+    layers.track.clearLayers();
+    document.getElementById('btn-track').classList.remove('active');
+    document.getElementById('btn-track').textContent = '🛤 Track';
+  } else {
+    alert('Click a station popup → Track to follow it.');
+  }
+}
+
+function trackStation(cs) {
+  trackCallsign = cs;
+  document.getElementById('btn-track').classList.add('active');
+  document.getElementById('btn-track').textContent = `🛤 ${cs}`;
+  map.closePopup();
+}
+
+function updateTrackHistory() {
+  if (!trackCallsign) return;
+  const s = stationMap.get(trackCallsign);
+  if (!s || !s.lat || !s.lon) return;
+  const last = trackHistory[trackHistory.length - 1];
+  if (!last || last[0] !== s.lat || last[1] !== s.lon) {
+    trackHistory.push([s.lat, s.lon, s.lastHeard]);
+    layers.track.clearLayers();
+    if (trackHistory.length > 1) {
+      L.polyline(trackHistory.map(p=>[p[0],p[1]]), {color:'#f5a623', weight:2, opacity:0.7, dashArray:'5,5'}).addTo(layers.track);
+    }
+    trackHistory.forEach((p, i) => {
+      if (i === trackHistory.length - 1) return;
+      L.circleMarker([p[0],p[1]], {radius:3, color:'#f5a623', fillColor:'#f5a623', fillOpacity:0.5, weight:1}).addTo(layers.track);
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════
+// WebSocket — live APRS frame streaming
+// ══════════════════════════════════════════════════
+function connectWebSockets() {
+  connectWS('gw', `ws://localhost:${gwPort()}/ws`, 'gw-ws-dot', 'gw-ws-status');
+  connectWS('yc', `ws://localhost:${ycPort()}/ws/aprs`, 'yc-ws-dot', 'yc-ws-status');
+}
+
+function connectWS(name, url, dotId, statusId) {
+  let ws;
+  try {
+    ws = new WebSocket(url);
+    ws.onopen = () => {
+      document.getElementById(dotId).style.background = '#39ff14';
+      document.getElementById(statusId).textContent = 'Connected';
+    };
+    ws.onmessage = (evt) => {
+      try {
+        const pkt = JSON.parse(evt.data);
+        // Live update — normalize and merge single packet
+        const normFn = name === 'gw' ? normalizeGW : normalizeYC;
+        const n = normFn(pkt);
+        if (n.lat && n.lon && n.callsign !== '?') {
+          if (stationMap.has(n.callsign)) {
+            const ex = stationMap.get(n.callsign);
+            ex._sources.add(name);
+            ex.lastHeard = n.lastHeard || ex.lastHeard;
+            ex.lat = n.lat; ex.lon = n.lon;
+            if (n.comment) ex.comment = n.comment;
+          } else {
+            stationMap.set(n.callsign, n);
+          }
+          updateTrackHistory();
+          renderAPRS();
+          renderStationList();
+          // Flash count
+          document.getElementById('stn-count').textContent = stationMap.size;
+          updateBadge('stn-badge', stationMap.size);
+        }
+        // Check for message packet
+        if (pkt.type === 'message' || pkt.messageType === 'message' || pkt.to) {
+          ingestMessage(pkt, name);
+        }
+      } catch(e) {}
+    };
+    ws.onerror = () => {
+      document.getElementById(dotId).style.background = 'var(--red)';
+      document.getElementById(statusId).textContent = 'Error';
+    };
+    ws.onclose = () => {
+      document.getElementById(dotId).style.background = 'var(--muted)';
+      document.getElementById(statusId).textContent = 'Disconnected — retry in 30s';
+      setTimeout(() => connectWS(name, url, dotId, statusId), 30000);
+    };
+  } catch(e) {
+    document.getElementById(dotId).style.background = 'var(--muted)';
+    document.getElementById(statusId).textContent = 'Unavailable';
+  }
+}
+
+// ══════════════════════════════════════════════════
+// REST poll — Graywolf
+// ══════════════════════════════════════════════════
+async function pollGraywolf() {
+  const url = `http://localhost:${gwPort()}/api/stations`;
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    rawGW = Array.isArray(data) ? data : (data.stations || data.results || []);
+    document.getElementById('gw-dot').style.background = '#39ff14';
+    document.getElementById('gw-count').textContent = rawGW.length;
+    document.getElementById('strip-gw-dot').style.background = '#39ff14';
+    document.getElementById('strip-gw-n').textContent = rawGW.length;
+
+    // Also try to fetch messages
+    try {
+      const mr = await fetch(`http://localhost:${gwPort()}/api/messages`, { signal: AbortSignal.timeout(3000) });
+      if (mr.ok) { const md = await mr.json(); (md.messages || md || []).forEach(m => ingestMessage(m, 'gw')); }
+    } catch(e) {}
+
+  } catch(e) {
+    document.getElementById('gw-dot').style.background = 'var(--red)';
+    document.getElementById('strip-gw-dot').style.background = 'var(--red)';
+    document.getElementById('strip-gw-n').textContent = 'ERR';
+    rawGW = [];
+  }
+}
+
+// ══════════════════════════════════════════════════
+// REST poll — YAAC
+// ══════════════════════════════════════════════════
+async function pollYAAC() {
+  const url = `http://localhost:${ycPort()}/api/stations`;
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    rawYC = Array.isArray(data) ? data : (data.stations || data.results || []);
+    document.getElementById('yc-dot').style.background = '#60aaff';
+    document.getElementById('yc-count').textContent = rawYC.length;
+    document.getElementById('strip-yc-dot').style.background = '#60aaff';
+    document.getElementById('strip-yc-n').textContent = rawYC.length;
+
+    // YAAC messages
+    try {
+      const mr = await fetch(`http://localhost:${ycPort()}/api/messages`, { signal: AbortSignal.timeout(3000) });
+      if (mr.ok) { const md = await mr.json(); (md.messages || md || []).forEach(m => ingestMessage(m, 'yc')); }
+    } catch(e) {}
+
+  } catch(e) {
+    document.getElementById('yc-dot').style.background = 'var(--muted)';
+    document.getElementById('strip-yc-dot').style.background = 'var(--muted)';
+    document.getElementById('strip-yc-n').textContent = '—';
+    rawYC = [];
+  }
+}
+
+// ══════════════════════════════════════════════════
+// APRS-IS poll via aprs.fi
+// ══════════════════════════════════════════════════
+async function pollAPRSIS() {
+  const key = document.getElementById('aprsfi-key')?.value?.trim();
+  if (!key) {
+    document.getElementById('is-status').textContent = 'No API key (optional)';
+    document.getElementById('is-dot').style.background = 'var(--muted)';
+    return;
+  }
+  const lat = parseFloat(document.getElementById('s-lat')?.value) || 42.3153;
+  const lon = parseFloat(document.getElementById('s-lon')?.value) || -88.4473;
+  const url = `https://api.aprs.fi/api/get?name=&what=loc&apikey=${key}&format=json&lat=${lat}&lng=${lon}&distance=100`;
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    rawIS = (data.entries || []);
+    document.getElementById('is-dot').style.background = '#c850ff';
+    document.getElementById('is-count').textContent = rawIS.length;
+    document.getElementById('is-status').textContent = `${rawIS.length} stations via aprs.fi`;
+    document.getElementById('strip-is-dot').style.background = '#c850ff';
+    document.getElementById('strip-is-n').textContent = rawIS.length;
+  } catch(e) {
+    document.getElementById('is-dot').style.background = 'var(--red)';
+    document.getElementById('is-status').textContent = 'APRS-IS error: ' + e.message;
+    rawIS = [];
+  }
+}
+
+// ══════════════════════════════════════════════════
+// Main refresh
+// ══════════════════════════════════════════════════
+async function refreshAll() {
+  await Promise.allSettled([pollGraywolf(), pollYAAC(), pollAPRSIS()]);
+  mergeStations();
+  renderAPRS();
+  renderStationList();
+  updateTrackHistory();
+  document.getElementById('strip-time').textContent = new Date().toUTCString().slice(17,22) + 'Z';
+}
+
+function resetTimer() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  const sec = parseInt(document.getElementById('s-refresh')?.value) || 30;
+  if (sec > 0) refreshTimer = setInterval(refreshAll, sec * 1000);
+}
+
+// ══════════════════════════════════════════════════
+// Messages
+// ══════════════════════════════════════════════════
+let seenMsgIds = new Set();
+
+function ingestMessage(m, src) {
+  const id = m.id || m.msgId || (m.from + m.to + m.body);
+  if (seenMsgIds.has(id)) return;
+  seenMsgIds.add(id);
+  messages.unshift({
+    from: m.from || m.callsign || '?',
+    to:   m.to || m.addressee || '',
+    body: m.body || m.message || m.text || '',
+    time: m.time || m.timestamp || new Date().toISOString(),
+    src,
+    id,
+    read: false,
+  });
+  if (messages.length > 100) messages.pop();
+  renderMessages();
+}
+
+function renderMessages() {
+  const unread = messages.filter(m => !m.read).length;
+  updateBadge('msg-badge', unread || messages.length);
+
+  const myCS = document.getElementById('s-callsign')?.value?.toUpperCase() || '';
+
+  document.getElementById('msg-list').innerHTML = messages.length
+    ? messages.map((m, i) => {
+        const isForMe = m.to.toUpperCase() === myCS;
+        return `<div class="msg-item ${isForMe && !m.read ? 'msg-unread' : ''}" onclick="markRead(${i})">
+          <div class="mfrom">${esc(m.from)} <span class="mto">→ ${esc(m.to)}</span>
+            <span style="margin-left:6px;font-size:8px;padding:1px 4px;border-radius:2px;background:${m.src==='gw'?'rgba(26,122,58,0.10)':'rgba(96,170,255,0.15)'};color:${m.src==='gw'?'#39ff14':'#60aaff'};font-family:var(--font-hd)">${m.src.toUpperCase()}</span>
+          </div>
+          <div class="mbody">${esc(m.body)}</div>
+          <div class="mtime">${new Date(m.time).toUTCString().slice(5,22)} UTC</div>
+        </div>`;
+      }).join('')
+    : '<div style="color:var(--muted);font-size:12px;padding:20px;text-align:center">No APRS messages received</div>';
+}
+
+function markRead(i) { messages[i].read = true; renderMessages(); }
+
+async function sendMessage() {
+  const to   = document.getElementById('msg-to').value.trim().toUpperCase();
+  const body = document.getElementById('msg-body').value.trim();
+  const via  = document.getElementById('msg-via').value;
+  const port = via === 'gw' ? gwPort() : ycPort();
+  const stat = document.getElementById('msg-status');
+
+  if (!to || !body) { stat.textContent = 'To callsign and message required'; return; }
+  if (body.length > 67) { stat.textContent = 'Message too long (max 67 chars)'; return; }
+
+  stat.textContent = 'Sending…';
+  try {
+    const r = await fetch(`http://localhost:${port}/api/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, message: body }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (r.ok) {
+      stat.textContent = `✓ Sent via ${via === 'gw' ? 'Graywolf' : 'YAAC'}`;
+      document.getElementById('msg-body').value = '';
+      // Echo in our messages list
+      ingestMessage({ from: document.getElementById('s-callsign').value || 'LOCAL', to, body, time: new Date().toISOString(), src: via }, via);
+    } else {
+      stat.textContent = `Send failed (HTTP ${r.status})`;
+    }
+  } catch(e) {
+    stat.textContent = `Send error — is ${via === 'gw' ? 'Graywolf' : 'YAAC'} running?`;
+  }
+}
+
+function sendMsgTo(cs) {
+  document.getElementById('msg-to').value = cs;
+  activateTab('messages');
+  document.getElementById('msg-body').focus();
+}
+
+// ══════════════════════════════════════════════════
+// My station marker
+// ══════════════════════════════════════════════════
+function updateStationMarker() {
+  layers.me.clearLayers();
+  const lat  = parseFloat(document.getElementById('s-lat')?.value) || 42.3153;
+  const lon  = parseFloat(document.getElementById('s-lon')?.value) || -88.4473;
+  const call = document.getElementById('s-callsign')?.value || 'W8EOC';
+  const icon = L.divIcon({
+    html: `<div style="position:relative">
+      <div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;font-family:monospace;color:#60aaff;white-space:nowrap;text-shadow:0 0 3px #000">${esc(call)}</div>
+      <div style="width:14px;height:14px;background:#60aaff;border:2px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(96,170,255,0.8)"></div>
+    </div>`,
+    iconSize:[14,14], iconAnchor:[7,7], className:''
+  });
+  L.marker([lat,lon],{icon}).addTo(layers.me)
+   .bindPopup(`<div class="stn-popup"><div class="pcall">⬡ ${esc(call)}</div><div class="prow"><span class="pk">Type</span><span class="pv">My Station</span></div><div class="prow"><span class="pk">Lat/Lon</span><span class="pv">${lat.toFixed(4)}, ${lon.toFixed(4)}</span></div></div>`);
+}
+
+function goToStation() {
+  const lat = parseFloat(document.getElementById('s-lat')?.value) || 42.3153;
+  const lon = parseFloat(document.getElementById('s-lon')?.value) || -88.4473;
+  map.setView([lat, lon], 12);
+}
+
+// ══════════════════════════════════════════════════
+// Range ring
+// ══════════════════════════════════════════════════
+function updateRangeRing() {
+  layers.range.clearLayers();
+  const lat = parseFloat(document.getElementById('s-lat')?.value) || 42.3153;
+  const lon = parseFloat(document.getElementById('s-lon')?.value) || -88.4473;
+  const km  = parseInt(document.getElementById('s-range-km')?.value) || 50;
+  L.circle([lat,lon], { radius: km*1000, color:'#f5a623', fillColor:'#f5a623', fillOpacity:0.03, weight:1, dashArray:'6,4' }).addTo(layers.range);
+}
+
+// ══════════════════════════════════════════════════
+// Overlays
+// ══════════════════════════════════════════════════
+const OV_ICONS = { eoc:'🏛', shelter:'🏠', staging:'🚐', command:'🎯', medical:'🏥', repeater:'📡', fire:'🔥', police:'🚔', custom:'📌' };
+
+function loadOverlays() {
+  try { overlays = JSON.parse(localStorage.getItem('fc_tactical_overlays') || '[]'); } catch(e) { overlays=[]; }
+  renderOverlays();
+}
+
+function saveOverlays() {
+  localStorage.setItem('fc_tactical_overlays', JSON.stringify(overlays));
+  fetch(`${FC_API}/mapstate`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({overlays}) }).catch(()=>{});
+}
+
+function renderOverlays() {
+  layers.ov.clearLayers();
+  updateBadge('ov-badge', overlays.length);
+  document.getElementById('ov-list').innerHTML = overlays.length
+    ? overlays.map((o,i)=>`
+        <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--line);font-size:11px">
+          <span>${OV_ICONS[o.type]||'📌'}</span>
+          <span style="flex:1;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o.label)}</span>
+          <button onclick="panTo(${o.lat},${o.lon})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px" title="Pan to">📍</button>
+          <button onclick="removeOverlay(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px" title="Remove">✕</button>
+        </div>`).join('')
+    : '<div style="color:var(--muted);font-size:11px;text-align:center;padding:10px">No markers placed</div>';
+
+  overlays.forEach(o => {
+    const icon = L.divIcon({
+      html:`<div style="font-size:22px;line-height:1;filter:drop-shadow(0 1px 4px rgba(0,0,0,0.9))">${OV_ICONS[o.type]||'📌'}</div>`,
+      iconSize:[24,24], iconAnchor:[12,22], className:''
+    });
+    L.marker([o.lat,o.lon],{icon}).addTo(layers.ov)
+     .bindPopup(`<div class="stn-popup"><div class="pcall">${OV_ICONS[o.type]||'📌'} ${esc(o.label)}</div>${o.notes?`<div class="prow"><span class="pk">Notes</span><span class="pv">${esc(o.notes)}</span></div>`:''}</div>`);
+  });
+}
+
+function addOverlay() {
+  const label = document.getElementById('ov-label').value.trim();
+  const lat   = parseFloat(document.getElementById('ov-lat').value);
+  const lon   = parseFloat(document.getElementById('ov-lon').value);
+  if (!label) { alert('Label required'); return; }
+  if (isNaN(lat)||isNaN(lon)) { alert('Valid lat/lon required'); return; }
+  overlays.push({ label, lat, lon, type: document.getElementById('ov-type').value, notes: document.getElementById('ov-notes').value.trim(), added: new Date().toISOString() });
+  ['ov-label','ov-lat','ov-lon','ov-notes'].forEach(id => document.getElementById(id).value='');
+  saveOverlays(); renderOverlays();
+}
+
+function removeOverlay(i) { overlays.splice(i,1); saveOverlays(); renderOverlays(); }
+function clearOverlays() { if(!confirm('Clear all markers?')) return; overlays=[]; saveOverlays(); renderOverlays(); }
+
+function pickOnMap() {
+  pickingMode = true;
+  document.body.classList.add('picking');
+}
+
+function panTo(lat,lon) { map.setView([lat,lon],14); }
+
+// ══════════════════════════════════════════════════
+// KML export
+// ══════════════════════════════════════════════════
+function exportKML() {
+  const placemarks = [...stationMap.values()].filter(s=>s.lat&&s.lon).map(s=>`
+  <Placemark>
+    <name>${esc(s.callsign)}</name>
+    <description>${esc(s.comment||'')} — Sources: ${[...s._sources].join(',')}</description>
+    <Point><coordinates>${s.lon},${s.lat},0</coordinates></Point>
+  </Placemark>`).join('');
+  const ovPlacemarks = overlays.map(o=>`
+  <Placemark>
+    <name>${esc(o.label)}</name>
+    <description>${esc(o.notes||o.type)}</description>
+    <Point><coordinates>${o.lon},${o.lat},0</coordinates></Point>
+  </Placemark>`).join('');
+  const kml = `<?xml version="1.0"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Incident Management Tactical ${new Date().toISOString()}</name>${placemarks}${ovPlacemarks}</Document></kml>`;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([kml],{type:'application/vnd.google-earth.kml+xml'}));
+  a.download = `fieldcomms-tactical-${new Date().toISOString().slice(0,10)}.kml`;
+  a.click();
+}
+
+// ══════════════════════════════════════════════════
+// Utilities
+// ══════════════════════════════════════════════════
+function activateTab(name) {
+  document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  const tabBtn = document.getElementById('tab-'+name);
+  const tabContent = document.getElementById('tc-'+name);
+  if (tabBtn) tabBtn.classList.add('active');
+  if (tabContent) tabContent.classList.add('active');
+}
+
+function updateBadge(id, count) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = count > 99 ? '99+' : count;
+}
+
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function openGraywolf() { window.open(`http://localhost:${gwPort()}`, '_blank'); }
+function openYAAC()     { window.open(`http://localhost:${ycPort()}`, '_blank'); }
+function showYAACSetup(){ document.getElementById('yaac-modal').style.display='flex'; }
+
+initMap();
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

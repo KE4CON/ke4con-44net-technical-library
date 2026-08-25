@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Observer Mode — Incident Management</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.observer-banner { background: var(--panel2); border-bottom: 2px solid var(--purple); padding: 8px 16px; display: flex; align-items: center; gap: 12px; }
+.refresh-bar { height: 4px; background: var(--line); margin-bottom: 0; }
+.refresh-fill { height: 4px; background: var(--purple); transition: width 15s linear; width: 100%; }
+.prec-EMERGENCY { background: #fde8e8; border-left:4px solid var(--red); }
+.prec-PRIORITY  { background:#3a1500; border-left:4px solid var(--amber); }
+.prec-WELFARE   { background: #d4f0de; border-left:4px solid var(--green); }
+.prec-ROUTINE   { border-left:4px solid var(--line); }
+</style>
+</head>
+<body>
+
+<div class="observer-banner">
+  <span style="font-size:18px">👁</span>
+  <div>
+    <div style="font-family:var(--font-hd);font-size:14px;letter-spacing:2px;color:var(--purple)">OBSERVER MODE — READ ONLY</div>
+    <div style="font-size:11px;color:var(--muted)" id="netDesc">Loading…</div>
+  </div>
+  <div style="margin-left:auto;text-align:right">
+    <div style="font-family:var(--font-hd);font-size:18px;color:var(--green)" id="clock">--:--:-- UTC</div>
+    <div style="font-size:10px;color:var(--muted)">Auto-refresh in <span id="countdown">15</span>s</div>
+  </div>
+</div>
+
+<!-- Refresh bar -->
+<div class="refresh-bar"><div class="refresh-fill" id="refreshFill"></div></div>
+
+<!-- Net picker (if no net selected) -->
+<div class="page-wrap" id="netPicker" style="display:none">
+  <div style="font-family:var(--font-hd);font-size:16px;margin-bottom:16px">Select a Net to Observe</div>
+  <div id="netPickerList" style="display:flex;flex-direction:column;gap:8px"></div>
+</div>
+
+<!-- Net view -->
+<div class="page-wrap" id="netView" style="display:none">
+  <!-- Header -->
+  <div class="panel" style="margin-bottom:14px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div id="netName" style="font-family:var(--font-hd);font-size:20px"></div>
+      <div id="netMeta" style="font-size:11px;color:var(--muted)"></div>
+    </div>
+    <div style="text-align:right">
+      <div class="badge badge-purple" id="netStatusBadge">ACTIVE</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px" id="lastUpdated"></div>
+    </div>
+  </div>
+
+  <!-- Drill banner -->
+  <div id="drillBanner" class="drill-banner" style="display:none">⚠ DRILL / EXERCISE — NOT ACTUAL EMERGENCY ⚠</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <!-- Station table -->
+    <div>
+      <div style="font-family:var(--font-hd);font-size:11px;letter-spacing:1px;color:var(--muted);margin-bottom:8px">
+        STATIONS LOGGED (<span id="entryCount">0</span>)
+      </div>
+      <div id="stationTable" style="display:flex;flex-direction:column;gap:6px">
+        <div style="color:var(--muted);text-align:center;padding:20px">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Traffic log -->
+    <div>
+      <div style="font-family:var(--font-hd);font-size:11px;letter-spacing:1px;color:var(--muted);margin-bottom:8px">
+        TRAFFIC LOG (<span id="trafficCount">0</span>)
+      </div>
+      <div id="trafficLog" style="display:flex;flex-direction:column;gap:6px">
+        <div style="color:var(--muted);text-align:center;padding:20px">No traffic</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = "http://192.168.50.1:5050";
+let netId = new URLSearchParams(location.search).get("net");
+let refreshTimer = null;
+let countdownTimer = null;
+let countdown = 15;
+
+// Clock
+function updateClock() {
+  const now = new Date();
+  const t = now.toUTCString().slice(17,25);
+  document.getElementById("clock").textContent = t + " UTC";
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// Countdown
+function startCountdown() {
+  countdown = 15;
+  clearInterval(countdownTimer);
+  // Reset bar animation
+  const fill = document.getElementById("refreshFill");
+  fill.style.transition = "none";
+  fill.style.width = "100%";
+  setTimeout(() => {
+    fill.style.transition = "width 15s linear";
+    fill.style.width = "0%";
+  }, 50);
+
+  countdownTimer = setInterval(() => {
+    countdown--;
+    document.getElementById("countdown").textContent = countdown;
+    if (countdown <= 0) {
+      clearInterval(countdownTimer);
+      loadNet();
+    }
+  }, 1000);
+}
+
+async function loadNets() {
+  try {
+    const r = await fetch(`${API}/api/nets`);
+    const nets = await r.json();
+    document.getElementById("netPicker").style.display = "";
+    document.getElementById("netPickerList").innerHTML =
+      nets.map(n =>
+        `<a href="?net=${n.id}" style="display:block" class="panel2" onclick="">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer" onclick="window.location='?net=${n.id}'">
+            <div>
+              <div style="font-weight:bold">${n.name}</div>
+              <div style="font-size:11px;color:var(--muted)">${n.type} · ${n.entry_count} entries</div>
+            </div>
+            <div>
+              <span class="badge ${n.active?'badge-green':'badge-gray'}">${n.active?'ACTIVE':'CLOSED'}</span>
+              ${n.starcom?'<span class="badge badge-blue" style="margin-left:4px">STARCOM</span>':''}
+              ${n.drill?'<span class="badge badge-amber" style="margin-left:4px">DRILL</span>':''}
+            </div>
+          </div>
+        </a>`
+      ).join("") || '<div style="color:var(--muted);text-align:center;padding:20px">No nets found</div>';
+  } catch(e) {
+    document.getElementById("netPicker").innerHTML = '<div class="panel" style="color:var(--red)">Cannot reach API server at 192.168.50.1:5050</div>';
+  }
+}
+
+async function loadNet() {
+  if (!netId) { loadNets(); return; }
+  document.getElementById("netPicker").style.display = "none";
+  document.getElementById("netView").style.display = "";
+
+  try {
+    const r = await fetch(`${API}/api/nets/${netId}`);
+    if (!r.ok) { alert("Net not found"); return; }
+    const net = await r.json();
+
+    document.getElementById("netName").textContent = net.name;
+    document.getElementById("netMeta").textContent = `${net.type} · ID: ${net.id}${net.starcom?" · STARCOM":""}`;
+    document.getElementById("netDesc").textContent = net.name + (net.starcom?" (Starcom)":"");
+    document.getElementById("drillBanner").style.display = net.drill?"":"none";
+    document.title = `Observer: ${net.name}`;
+
+    const badge = document.getElementById("netStatusBadge");
+    badge.textContent = net.active?"ACTIVE":"CLOSED";
+    badge.className = `badge ${net.active?"badge-green":"badge-gray"}`;
+
+    document.getElementById("lastUpdated").textContent =
+      "Updated " + new Date().toUTCString().slice(17,22) + " UTC";
+
+    const entries = net.entries || [];
+    const traffic = net.traffic || [];
+    document.getElementById("entryCount").textContent  = entries.length;
+    document.getElementById("trafficCount").textContent = traffic.length;
+
+    // Station table
+    const st = document.getElementById("stationTable");
+    st.innerHTML = entries.length === 0 ?
+      '<div style="color:var(--muted);text-align:center;padding:20px">No stations logged</div>' :
+      [...entries].reverse().map(e => {
+        const prec = e.precedence || "ROUTINE";
+        return `<div class="panel2 prec-${prec}" style="padding:10px 14px">
+          <div style="display:flex;gap:10px;align-items:baseline">
+            <strong style="font-size:14px">${e.callsign||"?"}</strong>
+            ${e.name?`<span style="color:var(--muted);font-size:12px">${e.name}</span>`:""}
+            <span class="badge badge-${prec==="EMERGENCY"?"red":prec==="PRIORITY"?"amber":"gray"}" style="font-size:10px">${e.status||""}</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted)">
+            ${(e.timestamp||"").slice(11,19)} UTC
+            ${e.location?` · ${e.location}`:""}
+          </div>
+          ${e.remarks?`<div style="font-size:12px;color:var(--dim);margin-top:4px">${e.remarks}</div>`:""}
+        </div>`;
+      }).join("");
+
+    // Traffic
+    const tl = document.getElementById("trafficLog");
+    tl.innerHTML = traffic.length === 0 ?
+      '<div style="color:var(--muted);text-align:center;padding:20px">No traffic</div>' :
+      [...traffic].reverse().map(t =>
+        `<div class="panel" style="padding:10px 14px">
+          <div><strong>${t.from_call||"?"}</strong> → <strong>${t.to||"?"}</strong></div>
+          <div style="font-size:11px;color:var(--muted)">${(t.timestamp||"").slice(11,19)} UTC · ${t.type||""}</div>
+          ${t.note?`<div style="font-size:12px;color:var(--dim)">${t.note}</div>`:""}
+        </div>`
+      ).join("");
+
+  } catch(e) {
+    document.getElementById("netView").innerHTML = `<div class="panel" style="color:var(--red)">Error loading net: ${e}</div>`;
+  }
+
+  startCountdown();
+}
+
+loadNet();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ICS-214 Activity Log — Incident Management</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.main-wrap { max-width:900px; margin:0 auto; padding:20px 16px; }
+.page-header { background:var(--panel); border:1px solid var(--amber); border-radius:8px; padding:14px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.page-header h1 { font-family:var(--font-hd); font-size:16px; color:var(--eoc); letter-spacing:2px; margin:0; }
+.form-card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:20px; margin-bottom:16px; }
+.form-card h2 { font-family:var(--font-hd); font-size:11px; letter-spacing:0.2em; color:var(--eoc); margin:0 0 14px; display:flex; align-items:center; gap:10px; }
+.form-card h2::after { content:''; flex:1; height:1px; background:var(--line); }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+.full { grid-column:1/-1; }
+.form-group { display:flex; flex-direction:column; gap:4px; }
+.form-group label { font-size:11px; color:var(--muted); }
+
+/* Activity log entry row */
+.entry-row { display:flex; gap:8px; padding:8px 0; border-bottom:1px solid var(--line); align-items:flex-start; }
+.entry-row:last-child { border-bottom:none; }
+.entry-time { font-family:var(--font-hd); font-size:11px; min-width:55px; padding-top:8px; color:var(--eoc); }
+.entry-text { flex:1; }
+.entry-text input { width:100%; box-sizing:border-box; }
+.entry-actions { display:flex; gap:4px; padding-top:4px; }
+
+/* Personnel table */
+.pers-table { width:100%; border-collapse:collapse; font-size:12px; }
+.pers-table th { background:var(--panel2); color:var(--muted); padding:6px 10px; text-align:left; font-weight:normal; }
+.pers-table td { padding:6px 10px; border-top:1px solid var(--line); }
+.pers-table input { width:100%; box-sizing:border-box; font-size:11px; padding:3px 6px; }
+
+/* ICS-214 print form */
+.ics-form { background:#fff; color:#000; font-family:'Arial',sans-serif; font-size:12px; display:none; margin-bottom:16px; border:1px solid #000; }
+.ics-form.show { display:block; }
+.ics-hdr { border-bottom:2px solid #000; display:flex; align-items:stretch; }
+.ics-hdr-title { flex:1; padding:8px 12px; }
+.ics-hdr-title div:first-child { font-size:16px; font-weight:bold; }
+.ics-hdr-title div:last-child { font-size:11px; }
+.ics-hdr-num { border-left:1px solid #000; padding:8px 12px; min-width:80px; }
+.ics-field-row { display:flex; border-bottom:1px solid #000; }
+.ics-field-row:last-child { border-bottom:none; }
+.ics-field { padding:5px 10px; border-right:1px solid #000; }
+.ics-field:last-child { border-right:none; }
+.ics-field .lbl { font-size:9px; text-transform:uppercase; color:#555; margin-bottom:2px; }
+.ics-field .val { font-size:12px; min-height:16px; }
+.act-table { width:100%; border-collapse:collapse; }
+.act-table th { background:#e0e0e0; padding:5px 8px; font-size:10px; text-align:left; border:1px solid #ccc; }
+.act-table td { padding:5px 8px; border:1px solid #ccc; font-size:11px; min-height:20px; vertical-align:top; }
+.pers-print-table { width:100%; border-collapse:collapse; }
+.pers-print-table th { background:#e0e0e0; padding:5px 8px; font-size:10px; text-align:left; border:1px solid #ccc; }
+.pers-print-table td { padding:5px 8px; border:1px solid #ccc; font-size:11px; }
+
+@media print {
+  .nav-bar,.page-header,.form-card,.action-bar,#form-section,#log-section { display:none !important; }
+  .ics-form { display:block !important; }
+  body { background:white; }
+}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="index.html" class="nav-logo">⬡ Incident Management</a>
+  <div class="nav-links">
+    <a href="index.html">Dashboard</a>
+    <a href="ics213.html">ICS-213</a>
+    <a href="ics214.html" class="active">ICS-214</a>
+    <a href="ics309.html">ICS-309</a>
+  </div>
+  <div class="nav-right">
+    <span id="utc-clock" style="font-family:var(--font-hd);color:var(--green);font-size:13px;letter-spacing:1px;"></span>
+  </div>
+</nav>
+
+<div class="main-wrap">
+  <div class="page-header">
+    <div>
+      <h1>📋 ICS-214 ACTIVITY LOG</h1>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;">Unit/Resource Activity Log for incident documentation</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" onclick="clearForm()">↺ New</button>
+      <button class="btn btn-secondary" onclick="autoTimestamp()">⏰ Add Entry Now</button>
+    </div>
+  </div>
+
+  <div id="form-section">
+    <!-- Header -->
+    <div class="form-card">
+      <h2>1. Incident & Unit Information</h2>
+      <div class="grid-3">
+        <div class="form-group full">
+          <label>Incident Name</label>
+          <input type="text" id="f-incident" placeholder="Operation Winter Storm 2026">
+        </div>
+        <div class="form-group">
+          <label>Operational Period Date From</label>
+          <input type="text" id="f-op-from" placeholder="Jun 7, 2026">
+        </div>
+        <div class="form-group">
+          <label>To</label>
+          <input type="text" id="f-op-to" placeholder="Jun 8, 2026">
+        </div>
+        <div class="form-group">
+          <label>Time From</label>
+          <input type="text" id="f-op-time-from" placeholder="0600">
+        </div>
+        <div class="form-group">
+          <label>Unit Name / Designator</label>
+          <input type="text" id="f-unit-name" placeholder="ARES Communications Unit">
+        </div>
+        <div class="form-group">
+          <label>Unit Leader Name</label>
+          <input type="text" id="f-leader-name" placeholder="John Smith W8XYZ">
+        </div>
+        <div class="form-group">
+          <label>Unit Leader Position</label>
+          <input type="text" id="f-leader-pos" placeholder="Communications Unit Leader (COML)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Personnel -->
+    <div class="form-card">
+      <h2>2. Personnel Assigned to This Period</h2>
+      <table class="pers-table">
+        <thead>
+          <tr>
+            <th>Name</th><th>ICS Position</th><th>Affiliation</th>
+            <th style="width:36px;"></th>
+          </tr>
+        </thead>
+        <tbody id="pers-body"></tbody>
+      </table>
+      <div style="margin-top:8px;">
+        <button class="btn btn-secondary" onclick="addPersonnel()" style="font-size:11px;">+ Add Person</button>
+      </div>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="form-card">
+      <h2>3. Activity Log</h2>
+      <div id="activity-list"></div>
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="addEntry()" style="font-size:11px;">+ Add Entry</button>
+        <button class="btn btn-secondary" onclick="autoTimestamp()" style="font-size:11px;">⏰ Add Timestamped Entry</button>
+      </div>
+    </div>
+
+    <!-- Prep -->
+    <div class="form-card">
+      <h2>4. Prepared By</h2>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Prepared By (Name)</label>
+          <input type="text" id="f-prep-name">
+        </div>
+        <div class="form-group">
+          <label>Position / Title</label>
+          <input type="text" id="f-prep-pos">
+        </div>
+        <div class="form-group">
+          <label>Date / Time Prepared</label>
+          <input type="text" id="f-prep-dt">
+        </div>
+      </div>
+    </div>
+
+    <div class="action-bar" style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="generateForm()">📄 Generate Form</button>
+      <button class="btn btn-secondary" onclick="autofillDT()">⏰ Auto-fill Dates</button>
+    </div>
+  </div>
+
+  <!-- Print form -->
+  <div class="ics-form" id="ics-form">
+    <div class="ics-hdr">
+      <div class="ics-hdr-title">
+        <div>ICS 214</div>
+        <div>ACTIVITY LOG</div>
+      </div>
+      <div class="ics-hdr-num">
+        <div style="font-size:9px;text-transform:uppercase;color:#666;">Page</div>
+        <div style="font-size:13px;">1 of 1</div>
+      </div>
+    </div>
+
+    <div class="ics-field-row">
+      <div class="ics-field" style="flex:3;">
+        <div class="lbl">1. Incident Name</div>
+        <div class="val" id="p-incident"></div>
+      </div>
+      <div class="ics-field" style="flex:2;">
+        <div class="lbl">2. Operational Period</div>
+        <div class="val" id="p-op-period"></div>
+      </div>
+    </div>
+
+    <div class="ics-field-row">
+      <div class="ics-field" style="flex:2;">
+        <div class="lbl">3. Name (Unit / Resource)</div>
+        <div class="val" id="p-unit-name"></div>
+      </div>
+      <div class="ics-field" style="flex:2;">
+        <div class="lbl">Unit Leader</div>
+        <div class="val" id="p-leader-name"></div>
+      </div>
+      <div class="ics-field" style="flex:2;">
+        <div class="lbl">Position</div>
+        <div class="val" id="p-leader-pos"></div>
+      </div>
+    </div>
+
+    <div class="ics-field-row">
+      <div class="ics-field" style="flex:1;">
+        <div class="lbl">4. Personnel Assigned This Period</div>
+        <table class="pers-print-table" id="p-pers-table">
+          <thead><tr><th>Name</th><th>ICS Position</th><th>Affiliation</th></tr></thead>
+          <tbody id="p-pers-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="ics-field-row">
+      <div class="ics-field" style="flex:1;">
+        <div class="lbl">5. Activity Log</div>
+        <table class="act-table">
+          <thead><tr><th style="width:80px;">Time (UTC)</th><th>Notable Activities</th></tr></thead>
+          <tbody id="p-act-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="ics-field-row">
+      <div class="ics-field" style="flex:2;">
+        <div class="lbl">6. Prepared By (Name, Position)</div>
+        <div class="val" id="p-prep"></div>
+      </div>
+      <div class="ics-field" style="flex:1;">
+        <div class="lbl">Date / Time</div>
+        <div class="val" id="p-prep-dt"></div>
+      </div>
+    </div>
+
+    <div style="padding:4px 10px;font-size:9px;color:#666;background:#f9f9f9;border-top:1px solid #ccc;">
+      ICS 214 | Printed: <span id="p-print-time"></span>
+    </div>
+  </div>
+
+  <div id="preview-actions" style="display:none;margin-bottom:20px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="window.print()">🖨 Print Form</button>
+      <button class="btn btn-secondary" onclick="saveLocal()">💾 Save</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('form-section').style.display='block';document.getElementById('ics-form').classList.remove('show');document.getElementById('preview-actions').style.display='none';">← Edit</button>
+    </div>
+  </div>
+
+  <div id="log-section" style="display:none;"></div>
+</div>
+
+<script>
+const API='http://192.168.50.1:5050';
+let personnel=[];
+let activities=[];
+
+setInterval(()=>{ document.getElementById('utc-clock').textContent=new Date().toUTCString().slice(17,22)+'Z'; },1000);
+
+function addPersonnel(name='',pos='',aff=''){
+  personnel.push({name,pos,aff});
+  renderPersonnel();
+}
+function removePersonnel(i){personnel.splice(i,1);renderPersonnel();}
+function renderPersonnel(){
+  const tbody=document.getElementById('pers-body');
+  tbody.innerHTML=personnel.map((p,i)=>`<tr>
+    <td><input type="text" value="${esc(p.name)}" oninput="personnel[${i}].name=this.value" placeholder="Name"></td>
+    <td><input type="text" value="${esc(p.pos)}" oninput="personnel[${i}].pos=this.value" placeholder="COML, NET, etc."></td>
+    <td><input type="text" value="${esc(p.aff)}" oninput="personnel[${i}].aff=this.value" placeholder="ARES, EMA…"></td>
+    <td><button class="btn btn-danger" onclick="removePersonnel(${i})" style="padding:3px 6px;font-size:10px;">✕</button></td>
+  </tr>`).join('');
+}
+
+function addEntry(time='',text=''){
+  activities.push({time,text});
+  renderActivities();
+}
+function autoTimestamp(){
+  const now=new Date();
+  const t=String(now.getUTCHours()).padStart(2,'0')+String(now.getUTCMinutes()).padStart(2,'0')+'Z';
+  addEntry(t,'');
+  // Focus last text input
+  setTimeout(()=>{const inputs=document.querySelectorAll('#activity-list .entry-text input');if(inputs.length)inputs[inputs.length-1].focus();},50);
+}
+function removeEntry(i){activities.splice(i,1);renderActivities();}
+function renderActivities(){
+  const list=document.getElementById('activity-list');
+  list.innerHTML=activities.map((a,i)=>`<div class="entry-row">
+    <div class="entry-time">${a.time||'——'}</div>
+    <div class="entry-text">
+      <input type="text" value="${esc(a.text)}" oninput="activities[${i}].text=this.value" placeholder="Describe notable activity…">
+    </div>
+    <div class="entry-actions">
+      <button class="btn btn-danger" onclick="removeEntry(${i})" style="padding:3px 6px;font-size:10px;">✕</button>
+    </div>
+  </div>`).join('') || '<div style="color:var(--muted);font-size:12px;padding:12px 0;">No entries. Use the buttons below to add activity entries.</div>';
+}
+
+function autofillDT(){
+  const now=new Date();
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dateStr=months[now.getUTCMonth()]+' '+now.getUTCDate()+', '+now.getUTCFullYear();
+  if(!document.getElementById('f-op-from').value) document.getElementById('f-op-from').value=dateStr;
+  document.getElementById('f-prep-dt').value=dateStr+' '+String(now.getUTCHours()).padStart(2,'0')+String(now.getUTCMinutes()).padStart(2,'0')+'Z';
+}
+
+function generateForm(){
+  const f=id=>document.getElementById(id).value.trim();
+  const set=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val||''; };
+
+  const opPeriod=[f('f-op-from'),f('f-op-to')].filter(Boolean).join(' – ')+(f('f-op-time-from')?' '+f('f-op-time-from'):'');
+
+  set('p-incident',f('f-incident'));
+  set('p-op-period',opPeriod);
+  set('p-unit-name',f('f-unit-name'));
+  set('p-leader-name',f('f-leader-name'));
+  set('p-leader-pos',f('f-leader-pos'));
+  set('p-prep',[f('f-prep-name'),f('f-prep-pos')].filter(Boolean).join(', '));
+  set('p-prep-dt',f('f-prep-dt'));
+  document.getElementById('p-print-time').textContent=new Date().toUTCString().slice(0,25);
+
+  // Personnel
+  const persTbody=document.getElementById('p-pers-body');
+  persTbody.innerHTML=personnel.length ? personnel.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.pos)}</td><td>${esc(p.aff)}</td></tr>`).join('') : '<tr><td colspan="3" style="color:#999;">—</td></tr>';
+
+  // Activities
+  const actTbody=document.getElementById('p-act-body');
+  actTbody.innerHTML=activities.length ? activities.map(a=>`<tr><td style="white-space:nowrap;">${esc(a.time)}</td><td>${esc(a.text)}</td></tr>`).join('') : '<tr><td colspan="2" style="color:#999;">No entries.</td></tr>';
+
+  document.getElementById('ics-form').classList.add('show');
+  document.getElementById('preview-actions').style.display='block';
+  document.getElementById('form-section').style.display='none';
+  document.getElementById('ics-form').scrollIntoView({behavior:'smooth'});
+}
+
+function saveLocal(){
+  const data={incident:document.getElementById('f-incident').value,personnel,activities,saved_at:new Date().toISOString()};
+  fetch(`${API}/api/forms`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).catch(()=>{});
+  localStorage.setItem('fc_ics214_last',JSON.stringify(data));
+  alert('Form saved.');
+}
+
+function clearForm(){
+  ['f-incident','f-op-from','f-op-to','f-op-time-from','f-unit-name','f-leader-name','f-leader-pos','f-prep-name','f-prep-pos','f-prep-dt'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  personnel=[]; activities=[];
+  renderPersonnel(); renderActivities();
+  document.getElementById('ics-form').classList.remove('show');
+  document.getElementById('preview-actions').style.display='none';
+  document.getElementById('form-section').style.display='block';
+}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// Try to restore last session
+const last=localStorage.getItem('fc_ics214_last');
+if(last){const d=JSON.parse(last);personnel=d.personnel||[];activities=d.activities||[];}
+
+// ── Winlink form import hook (opened from winlink-import.html?import=1) ────────
+function applyWinlinkImport(){
+  if(!new URLSearchParams(location.search).has('import')) return false;
+  let data; try{ data=JSON.parse(sessionStorage.getItem('fc_winlink_import')||'null'); }catch(e){ data=null; }
+  if(!data || data.formType!=='ics214' || !data.fields) return false;
+  const f=data.fields;
+  const setv=(id,val)=>{ const el=document.getElementById(id); if(el && val!=null) el.value=val; };
+  setv('f-incident',f.incident);
+  setv('f-unit-name',f.unit_name);
+  setv('f-leader-name',f.leader_name); setv('f-leader-pos',f.leader_pos);
+  setv('f-op-from',f.op_from);  setv('f-op-to',f.op_to);  setv('f-op-time-from',f.time_from);
+  setv('f-prep-name',f.prep_name); setv('f-prep-pos',f.prep_pos);
+  // Activities: split on newlines; try to peel a leading time token off each line
+  personnel=[]; activities=[];
+  if(f.activities){
+    f.activities.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).forEach(line=>{
+      const m=line.match(/^(\d{3,4}Z?|\d{1,2}:\d{2})\s+(.*)$/);
+      if(m) activities.push({time:m[1],text:m[2]}); else activities.push({time:'',text:line});
+    });
+  }
+  if(f.personnel){
+    f.personnel.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).forEach(line=>{
+      const parts=line.split(/\s*[,|;]\s*/);
+      personnel.push({name:parts[0]||line, pos:parts[1]||'', aff:parts[2]||''});
+    });
+  }
+  if(!personnel.length) personnel=[{name:'',pos:'',aff:''}];
+  if(!activities.length) activities=[{time:'',text:''}];
+  sessionStorage.removeItem('fc_winlink_import');
+  return true;
+}
+
+const _imported = applyWinlinkImport();
+
+// Auto-add 3 personnel rows and 5 activity rows if empty
+if(!personnel.length){addPersonnel();addPersonnel();addPersonnel();}
+else renderPersonnel();
+if(!activities.length){addEntry();addEntry();addEntry();addEntry();addEntry();}
+else renderActivities();
+
+if(_imported){ generateForm(); }
+
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

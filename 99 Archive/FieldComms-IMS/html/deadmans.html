@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dead Man's Switch — Incident Management</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.main-wrap { max-width: 900px; margin: 0 auto; padding: 20px 16px; }
+
+.dms-hero {
+  background: linear-gradient(135deg, var(--panel) 0%, var(--bg) 100%);
+  border: 1px solid var(--line); border-radius: 10px; padding: 20px;
+  margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+}
+.dms-hero h1 { font-family: var(--font-hd); font-size: 18px; letter-spacing: 2px; margin: 0 0 4px; }
+.dms-hero p { font-size: 12px; color: var(--muted); margin: 0; }
+
+.state-ring {
+  width: 120px; height: 120px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+  border: 4px solid var(--line); position: relative; flex-shrink: 0;
+  transition: border-color 0.5s, box-shadow 0.5s;
+}
+.state-ring.disarmed { border-color: var(--green); box-shadow: 0 0 20px rgba(80,200,80,0.3); }
+.state-ring.armed    { border-color: var(--eoc-lt); box-shadow: 0 0 20px rgba(245,166,35,0.4); }
+.state-ring.warning  { border-color: var(--red); box-shadow: 0 0 30px rgba(220,60,60,0.5); animation: pulse-ring 1.5s ease-in-out infinite; }
+.state-ring.triggered { border-color: var(--red); box-shadow: 0 0 40px rgba(220,60,60,0.8); animation: pulse-ring 0.5s ease-in-out infinite; }
+
+@keyframes pulse-ring { 0%,100%{box-shadow:0 0 20px rgba(220,60,60,0.4);} 50%{box-shadow:0 0 50px rgba(220,60,60,0.9);} }
+
+.state-icon { font-size: 32px; line-height: 1; }
+.state-label { font-family: var(--font-hd); font-size: 11px; letter-spacing: 1.5px; margin-top: 4px; }
+.state-label.disarmed { color: var(--green); }
+.state-label.armed    { color: var(--amber); }
+.state-label.warning  { color: var(--red); }
+.state-label.triggered { color: var(--red); }
+
+.net-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-bottom: 20px; }
+
+.net-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
+}
+.net-card.armed    { border-left: 4px solid var(--amber); }
+.net-card.warning  { border-left: 4px solid var(--red); animation: pulse-border 1.5s infinite; }
+.net-card.triggered { border-left: 4px solid var(--red); animation: pulse-border 0.5s infinite; }
+.net-card.disarmed { border-left: 4px solid var(--green); }
+
+@keyframes pulse-border { 0%,100%{border-left-color:var(--red);} 50%{border-left-color:#ff8888;} }
+
+.net-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.net-name { font-family: var(--font-hd); font-size: 14px; letter-spacing: 0.5px; }
+.net-state-badge {
+  font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: bold; text-transform: uppercase;
+}
+.nb-disarmed  { background: rgba(80,200,80,0.2); color: var(--green); }
+.nb-armed     { background: rgba(245,166,35,0.2); color: var(--amber); }
+.nb-warning   { background: rgba(220,60,60,0.2); color: var(--red); }
+.nb-triggered { background: rgba(220,60,60,0.4); color: #fff; }
+
+.progress-bar { height: 6px; background: var(--line); border-radius: 3px; margin: 8px 0; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; transition: width 1s linear; }
+
+.timer-display { font-family: var(--font-hd); font-size: 28px; text-align: center; margin: 8px 0; }
+
+.detail-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.detail-row .val { color: var(--txt); }
+
+.net-actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+
+/* Config panel */
+.config-panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
+  margin-bottom: 20px;
+}
+.config-panel h2 { font-family: var(--font-hd); font-size: 13px; color: var(--amber); letter-spacing: 1px; margin: 0 0 12px; }
+.config-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.form-group { display: flex; flex-direction: column; gap: 3px; }
+.form-group label { font-size: 11px; color: var(--muted); }
+
+/* Alert bar */
+.alert-bar {
+  background: var(--red); color: #fff; font-family: var(--font-hd);
+  padding: 12px 20px; text-align: center; letter-spacing: 2px;
+  display: none; position: sticky; top: 56px; z-index: 100;
+  animation: flash 0.5s infinite;
+}
+.alert-bar.show { display: block; }
+@keyframes flash { 0%,100%{background:var(--red);} 50%{background:#ff0000;} }
+
+.empty-state { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+
+/* Timeline */
+.timeline { display: flex; flex-direction: column; gap: 4px; }
+.tl-item { display: flex; gap: 10px; font-size: 11px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.tl-time { color: var(--muted); min-width: 55px; font-family: var(--font-hd); }
+.tl-msg { color: var(--txt); }
+.tl-net { color: var(--amber); min-width: 80px; }
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="index.html" class="nav-logo">⬡ Incident Management</a>
+  <div class="nav-links">
+    <a href="index.html">Dashboard</a>
+    <a href="netcontrol.html">Net Control</a>
+    <a href="deadmans.html" class="active">Dead Man's Switch</a>
+  </div>
+  <div class="nav-right">
+    <span id="utc-clock" style="font-family:var(--font-hd);color:var(--green);font-size:13px;letter-spacing:1px;"></span>
+  </div>
+</nav>
+
+<div class="alert-bar" id="alert-bar">
+  ⚠ DEAD MAN'S SWITCH TRIGGERED — NET INACTIVITY ALARM ⚠
+</div>
+
+<div class="main-wrap">
+  <div class="dms-hero">
+    <div>
+      <h1>⏱ DEAD MAN'S SWITCH</h1>
+      <p>Monitors net check-in activity. Arms when a net goes live. Triggers an alarm if no activity is logged within the threshold.</p>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted);">
+        States: <span style="color:var(--green);">DISARMED</span> →
+                <span style="color:var(--eoc);">ARMED</span> →
+                <span style="color:var(--red);">WARNING (75%)</span> →
+                <span style="color:var(--red);">TRIGGERED</span>
+      </div>
+    </div>
+    <div id="global-ring" class="state-ring disarmed">
+      <div class="state-icon" id="global-icon">✓</div>
+      <div class="state-label disarmed" id="global-label">ALL CLEAR</div>
+    </div>
+  </div>
+
+  <div class="config-panel">
+    <h2>DEFAULT CONFIGURATION</h2>
+    <div class="config-grid">
+      <div class="form-group">
+        <label>Default Threshold (minutes)</label>
+        <input type="number" id="cfg-threshold" value="30" min="1" max="480">
+      </div>
+      <div class="form-group">
+        <label>Warning at (% of threshold)</label>
+        <input type="number" id="cfg-warning-pct" value="75" min="50" max="95">
+      </div>
+      <div class="form-group">
+        <label>Poll Interval (seconds)</label>
+        <input type="number" id="cfg-poll" value="15" min="5" max="60">
+      </div>
+      <div class="form-group">
+        <label>Alert Sound</label>
+        <select id="cfg-sound">
+          <option value="beep">Beep</option>
+          <option value="alarm">Alarm</option>
+          <option value="none">None (visual only)</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:10px;">
+      <button class="btn btn-secondary" onclick="saveConfig()">Save Defaults</button>
+    </div>
+  </div>
+
+  <div style="font-family:var(--font-hd);font-size:11px;letter-spacing:0.2em;color:var(--eoc);margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+    MONITORED NETS
+    <div style="flex:1;height:1px;background:var(--line);"></div>
+    <span style="color:var(--muted);font-size:10px;" id="last-refresh">—</span>
+  </div>
+
+  <div class="net-grid" id="net-grid">
+    <div class="empty-state">Loading DMS state from server…</div>
+  </div>
+
+  <div style="font-family:var(--font-hd);font-size:11px;letter-spacing:0.2em;color:var(--eoc);margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+    ACTIVITY LOG
+    <div style="flex:1;height:1px;background:var(--line);"></div>
+    <button class="btn btn-secondary" onclick="clearLog()" style="font-size:10px;padding:3px 8px;">Clear</button>
+  </div>
+
+  <div class="config-panel">
+    <div class="timeline" id="timeline">
+      <div class="tl-item"><div class="tl-time">—</div><div class="tl-msg" style="color:var(--muted);">No activity logged yet.</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://192.168.50.1:5050';
+let dmsState = {};
+let config = {};
+let log = [];
+let pollTimer = null;
+let audioCtx = null;
+
+setInterval(()=>{ document.getElementById('utc-clock').textContent = new Date().toUTCString().slice(17,22)+'Z'; },1000);
+
+function loadConfig() {
+  const saved = localStorage.getItem('fc_dms_config');
+  config = saved ? JSON.parse(saved) : { threshold:30, warning_pct:75, poll:15, sound:'beep' };
+  document.getElementById('cfg-threshold').value = config.threshold;
+  document.getElementById('cfg-warning-pct').value = config.warning_pct;
+  document.getElementById('cfg-poll').value = config.poll;
+  document.getElementById('cfg-sound').value = config.sound;
+}
+
+function saveConfig() {
+  config.threshold = parseInt(document.getElementById('cfg-threshold').value)||30;
+  config.warning_pct = parseInt(document.getElementById('cfg-warning-pct').value)||75;
+  config.poll = parseInt(document.getElementById('cfg-poll').value)||15;
+  config.sound = document.getElementById('cfg-sound').value;
+  localStorage.setItem('fc_dms_config', JSON.stringify(config));
+  resetPoll();
+  addLog('SYSTEM', 'Configuration updated');
+}
+
+async function fetchState() {
+  try {
+    const r = await fetch(`${API}/api/dms`);
+    if(r.ok) {
+      const data = await r.json();
+      const prev = JSON.stringify(dmsState);
+      dmsState = data;
+      if(JSON.stringify(dmsState)!==prev) renderAll();
+      document.getElementById('last-refresh').textContent = 'Updated ' + new Date().toUTCString().slice(17,22)+'Z';
+    }
+  } catch {
+    document.getElementById('last-refresh').textContent = 'Server offline';
+  }
+}
+
+function renderAll() {
+  renderGlobal();
+  renderNets();
+  checkAlerts();
+}
+
+function renderGlobal() {
+  const nets = dmsState.nets || {};
+  const states = Object.values(nets).map(n=>n.state||'disarmed');
+  let worst = 'disarmed';
+  if(states.includes('triggered')) worst='triggered';
+  else if(states.includes('warning')) worst='warning';
+  else if(states.includes('armed')) worst='armed';
+
+  const icons = {disarmed:'✓',armed:'⚡',warning:'⚠',triggered:'🚨'};
+  const labels = {disarmed:'ALL CLEAR',armed:'MONITORING',warning:'WARNING',triggered:'TRIGGERED'};
+
+  const ring = document.getElementById('global-ring');
+  ring.className = 'state-ring ' + worst;
+  document.getElementById('global-icon').textContent = icons[worst];
+  const lbl = document.getElementById('global-label');
+  lbl.className = 'state-label ' + worst;
+  lbl.textContent = labels[worst];
+}
+
+function renderNets() {
+  const nets = dmsState.nets || {};
+  const grid = document.getElementById('net-grid');
+
+  if(!Object.keys(nets).length) {
+    grid.innerHTML = `<div class="empty-state">
+      📡 No active nets being monitored.<br>
+      <small>Open a net in Net Control and arm the Dead Man's Switch to begin monitoring.</small>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = Object.entries(nets).map(([netId, n]) => {
+    const state = n.state || 'disarmed';
+    const threshold = n.threshold_minutes || config.threshold;
+    const lastActivity = n.last_activity ? new Date(n.last_activity) : null;
+    const elapsed = lastActivity ? (Date.now()-lastActivity.getTime())/1000/60 : 0; // minutes
+    const pct = Math.min((elapsed/threshold)*100, 100);
+    const remaining = Math.max(threshold-elapsed, 0);
+
+    const fillColors = {disarmed:'var(--green)',armed:'var(--amber)',warning:'var(--red)',triggered:'var(--red)'};
+    const fillColor = fillColors[state];
+
+    return `<div class="net-card ${state}">
+      <div class="net-header">
+        <div class="net-name">${esc(n.name||netId)}</div>
+        <span class="net-state-badge nb-${state}">${state}</span>
+      </div>
+      <div class="timer-display" style="color:${fillColor};">${formatTime(remaining*60)}</div>
+      <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:-6px;">remaining of ${threshold} min threshold</div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:${pct}%;background:${fillColor};"></div>
+      </div>
+      <div class="detail-row">
+        <span>Last activity</span>
+        <span class="val">${lastActivity ? lastActivity.toUTCString().slice(17,22)+'Z' : '—'}</span>
+      </div>
+      <div class="detail-row">
+        <span>Elapsed</span>
+        <span class="val">${elapsed.toFixed(1)} min</span>
+      </div>
+      <div class="detail-row">
+        <span>Warning at</span>
+        <span class="val">${Math.round(threshold*(config.warning_pct/100))} min (${config.warning_pct}%)</span>
+      </div>
+      ${n.triggered_at ? `<div class="detail-row"><span>Triggered</span><span class="val" style="color:var(--red);">${new Date(n.triggered_at).toUTCString().slice(17,22)+'Z'}</span></div>` : ''}
+      <div class="net-actions">
+        ${state==='disarmed' ? `<button class="btn btn-secondary" onclick="armNet('${netId}')" style="font-size:11px;flex:1;">⚡ Arm</button>` : ''}
+        ${state!=='disarmed' ? `<button class="btn btn-secondary" onclick="resetNet('${netId}')" style="font-size:11px;flex:1;">↺ Reset</button>` : ''}
+        ${state!=='disarmed' ? `<button class="btn btn-danger" onclick="disarmNet('${netId}')" style="font-size:11px;flex:1;">✕ Disarm</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function checkAlerts() {
+  const nets = dmsState.nets || {};
+  const triggered = Object.values(nets).some(n=>n.state==='triggered');
+  const alertBar = document.getElementById('alert-bar');
+  if(triggered) {
+    alertBar.classList.add('show');
+    playAlarm();
+  } else {
+    alertBar.classList.remove('show');
+  }
+}
+
+async function armNet(netId) {
+  try {
+    await fetch(`${API}/api/dms/arm`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({net_id:netId,threshold:config.threshold})});
+    addLog(netId,'Armed DMS'); fetchState();
+  } catch { alert('Could not reach DMS server.'); }
+}
+
+async function resetNet(netId) {
+  try {
+    await fetch(`${API}/api/dms/reset`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({net_id:netId})});
+    addLog(netId,'DMS reset'); fetchState();
+  } catch { alert('Could not reach DMS server.'); }
+}
+
+async function disarmNet(netId) {
+  if(!confirm('Disarm Dead Man\'s Switch for this net?')) return;
+  try {
+    await fetch(`${API}/api/dms/disarm`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({net_id:netId})});
+    addLog(netId,'DMS disarmed'); fetchState();
+  } catch { alert('Could not reach DMS server.'); }
+}
+
+function formatTime(seconds) {
+  const m = Math.floor(seconds/60);
+  const s = Math.floor(seconds%60);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+function addLog(net, msg) {
+  const now = new Date().toUTCString().slice(17,22)+'Z';
+  log.unshift({time:now, net, msg});
+  if(log.length>50) log=log.slice(0,50);
+  renderLog();
+}
+
+function renderLog() {
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = log.map(l=>`<div class="tl-item">
+    <div class="tl-time">${l.time}</div>
+    <div class="tl-net">${esc(l.net)}</div>
+    <div class="tl-msg">${esc(l.msg)}</div>
+  </div>`).join('') || '<div class="tl-item"><div class="tl-msg" style="color:var(--muted);">No activity logged yet.</div></div>';
+}
+
+function clearLog() { log=[]; renderLog(); }
+
+function playAlarm() {
+  if(config.sound==='none') return;
+  try {
+    if(!audioCtx) audioCtx = new AudioContext();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.frequency.setValueAtTime(config.sound==='alarm'?880:440, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.5);
+    osc.start(); osc.stop(audioCtx.currentTime+0.5);
+  } catch {}
+}
+
+function resetPoll() {
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(fetchState, (parseInt(document.getElementById('cfg-poll').value)||15)*1000);
+  // 1-second tick to keep countdown timers live without hitting the API
+  setInterval(() => { if(Object.keys(dmsState.nets||{}).length) renderNets(); }, 1000);
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+loadConfig();
+fetchState();
+resetPoll();
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

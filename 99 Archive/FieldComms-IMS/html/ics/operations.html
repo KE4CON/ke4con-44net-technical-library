@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — ICS Operations</title>
+<link rel="stylesheet" href="../theme.css">
+<style>
+.page-header{background: linear-gradient(135deg, var(--eoc) 0%, var(--eoc-lt) 100%);border-bottom:2px solid var(--red);padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.page-header a{color: rgba(255,255,255,0.7);text-decoration:none;font-size:13px;}
+.page-header a:hover{color: #fff;}
+.page-title{font-family:var(--font-hd);font-size:18px;color:var(--red);letter-spacing:2px;}
+.ics-nav{background:var(--panel2);border-bottom:1px solid var(--line);padding:0;display:flex;overflow-x:auto;}
+.ics-nav a{display:flex;align-items:center;gap:6px;padding:11px 18px;text-decoration:none;color:var(--muted);font-family:var(--font-hd);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;border-bottom:3px solid transparent;transition:color 0.15s,border-color 0.15s;}
+.ics-nav a:hover{color:var(--txt);}
+.ics-nav a.active{color:var(--red);border-bottom-color:var(--red);}
+.container{max-width:1200px;margin:0 auto;padding:20px 20px 40px;}
+.sec-label{font-family:var(--font-hd);font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--red);padding:16px 0 8px;display:flex;align-items:center;gap:10px;}
+.sec-label::after{content:'';flex:1;height:1px;background: var(--line);}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;}
+.panel-title{font-family:var(--font-hd);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--red);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+
+/* T-Card board */
+.tcard-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;min-height:300px;}
+.tcard-col{min-width:200px;flex:0 0 200px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;}
+.tcard-col-title{font-family:var(--font-hd);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;text-align:center;}
+.tcard-stack{display:flex;flex-direction:column;gap:6px;min-height:200px;}
+.tcard-stack.drag-over{background:rgba(26,58,107,0.08);border:2px dashed var(--eoc-lt);border-radius:6px;}
+.tcard{cursor:grab;} .tcard:active{cursor:grabbing;opacity:0.7;}
+.tcard-col-title::after{content:attr(data-count);margin-left:6px;
+  font-size:10px;background:var(--panel);border-radius:8px;padding:1px 5px;}
+
+.tcard{
+  background: var(--input-bg);border:2px solid var(--line);border-radius:6px;padding:10px;
+  cursor:pointer;transition:border-color 0.15s;position:relative;
+}
+.tcard:hover{border-color: var(--eoc-lt);}
+.tcard.avail{border-color:var(--green);}
+.tcard.assign{border-color: var(--eoc-lt);}
+.tcard.outofserv{border-color:var(--red);}
+.tcard.stagg{border-color:var(--blue);}
+.tcard-id{font-family:var(--font-hd);font-size:14px;color:var(--eoc);}
+.tcard-type{font-size:10px;color:var(--muted);margin-bottom:4px;}
+.tcard-name{font-size:11px;color:var(--txt);}
+.tcard-assign{font-size:10px;color:var(--muted);margin-top:4px;}
+
+/* Resource table */
+#resTable{width:100%;border-collapse:collapse;font-size:12px;}
+#resTable th{text-align:left;padding:7px 8px;color:var(--red);font-family:var(--font-hd);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--line);background:var(--panel);position:sticky;top:0;}
+#resTable td{padding:7px 8px;border-bottom:1px solid var(--line);color:var(--txt);}
+#resTable tr:hover td{background:var(--panel);}
+.status-chip{padding:2px 7px;border-radius:3px;font-size:10px;font-family:var(--font-hd);letter-spacing:0.05em;}
+.chip-av{background:rgba(26,122,58,0.10);color:var(--green);border:1px solid var(--green);}
+.chip-as{background:rgba(26,58,107,0.10);color:var(--eoc);border:1px solid var(--amber);}
+.chip-os{background:rgba(184,32,32,0.10);color:var(--red);border:1px solid var(--red);}
+.chip-st{background:rgba(26,58,107,0.10);color:var(--blue);border:1px solid var(--blue);}
+
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:50;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--panel);border:2px solid var(--red);border-radius:10px;width:min(500px,95vw);padding:24px;position:relative;max-height:85vh;overflow-y:auto;}
+.modal-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;}
+.modal-close:hover{color:var(--txt);}
+.modal-title{font-family:var(--font-hd);font-size:18px;color:var(--red);margin-bottom:16px;}
+.field{margin-bottom:10px;}
+.field label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;}
+.field input,.field select,.field textarea{width:100%;box-sizing:border-box;background:var(var(--input-bg);border:1px solid var(--line);border-radius:4px;color:var(--txt);padding:7px 10px;font-size:13px;}
+.field input:focus,.field select:focus{outline:none;border-color:var(--red);}
+.two-f{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+.tab-bar{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:16px;}
+.tab{background:none;border:none;border-bottom:3px solid transparent;color:var(--muted);font-family:var(--font-hd);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;padding:10px 16px;cursor:pointer;transition:color 0.15s,border-color 0.15s;}
+.tab:hover{color:var(--txt);}
+.tab.active{color:var(--red);border-bottom-color:var(--red);}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+</style>
+</head>
+<body>
+<div class="page-header">
+  <a href="../index.html">⌂ Home</a>
+  <span style="color:var(--line)">›</span>
+  <a href="index.html">ICS Platform</a>
+  <span style="color:var(--line)">›</span>
+  <span class="page-title">🔴 OPERATIONS</span>
+  <span style="margin-left:auto">
+    <button class="btn" onclick="openAddResource()" style="border-color:var(--red);color:var(--red)">+ Add Resource</button>
+  </span>
+</div>
+<nav class="ics-nav">
+  <a href="index.html">🏛 Overview</a>
+  <a href="command.html">⭐ Command</a>
+  <a href="operations.html" class="active">🔴 Operations</a>
+  <a href="planning.html">📋 Planning</a>
+  <a href="logistics.html">🟢 Logistics</a>
+  <a href="finance.html">💜 Finance</a>
+  <a href="planningp.html">🅿 Planning P</a>
+</nav>
+
+<div class="container">
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('tboard')">T-Card Board</button>
+    <button class="tab" onclick="showTab('reslist')">Resource List</button>
+    <button class="tab" onclick="showTab('assignments')">Assignments</button>
+  </div>
+
+  <!-- T-CARD BOARD -->
+  <div class="tab-pane active" id="tab-tboard">
+    <div class="panel">
+      <div class="panel-title">
+        T-Card Resource Status Board
+        <div style="display:flex;gap:6px;font-size:11px;color:var(--muted)">
+          <span style="color:var(--green)">● Available</span>
+          <span style="color:var(--eoc)">● Assigned</span>
+          <span style="color:var(--blue)">● Staged</span>
+          <span style="color:var(--red)">● Out of Service</span>
+        </div>
+      </div>
+      <div class="tcard-board" id="tcardBoard">
+        <div class="tcard-col" id="col-available">
+          <div class="tcard-col-title">Available</div>
+          <div class="tcard-stack" id="stack-available"
+             ondragover="dragOver(event)" ondragleave="dragLeave(event)"
+             ondrop="drop(event,'available')"></div>
+        </div>
+        <div class="tcard-col" id="col-staged">
+          <div class="tcard-col-title">Staged</div>
+          <div class="tcard-stack" id="stack-staged"
+             ondragover="dragOver(event)" ondragleave="dragLeave(event)"
+             ondrop="drop(event,'staged')"></div>
+        </div>
+        <div class="tcard-col" id="col-assigned">
+          <div class="tcard-col-title">Assigned</div>
+          <div class="tcard-stack" id="stack-assigned"
+             ondragover="dragOver(event)" ondragleave="dragLeave(event)"
+             ondrop="drop(event,'assigned')"></div>
+        </div>
+        <div class="tcard-col" id="col-out_of_service">
+          <div class="tcard-col-title">Out of Service</div>
+          <div class="tcard-stack" id="stack-out_of_service"
+             ondragover="dragOver(event)" ondragleave="dragLeave(event)"
+             ondrop="drop(event,'out_of_service')"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESOURCE LIST -->
+  <div class="tab-pane" id="tab-reslist">
+    <div style="overflow-x:auto">
+      <table id="resTable">
+        <thead>
+          <tr>
+            <th>Resource ID</th><th>Type</th><th>Name / Description</th>
+            <th>Capability</th><th>Status</th><th>Assignment</th><th>Contact</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="resBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ASSIGNMENTS -->
+  <div class="tab-pane" id="tab-assignments">
+    <div class="panel">
+      <div class="panel-title">
+        Current Assignments (ICS-204)
+        <button class="btn btn-sm" onclick="openAddAssignment()" style="border-color:var(--red);color:var(--red)">+ Add Assignment</button>
+      </div>
+      <div id="assignmentList"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Add Resource Modal -->
+<div class="modal-bg" id="addResModal" onclick="if(event.target===this)closeAddRes()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAddRes()">✕</button>
+    <div class="modal-title">Add Resource</div>
+    <div class="two-f">
+      <div class="field"><label>Resource ID *</label><input type="text" id="rId" placeholder="E-101"></div>
+      <div class="field"><label>Type *</label>
+        <select id="rType">
+          <option value="engine">Engine / Vehicle</option>
+          <option value="crew">Crew / Team</option>
+          <option value="personnel">Individual</option>
+          <option value="helicopter">Helicopter</option>
+          <option value="equipment">Equipment</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Name / Description *</label><input type="text" id="rName" placeholder="Engine 101 — F-250 Brush Truck"></div>
+    <div class="two-f">
+      <div class="field"><label>Capability</label><input type="text" id="rCap" placeholder="Type III, 5 persons"></div>
+      <div class="field"><label>Status</label>
+        <select id="rStatus">
+          <option value="available">Available</option>
+          <option value="staged">Staged</option>
+          <option value="assigned">Assigned</option>
+          <option value="out_of_service">Out of Service</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Assignment / Location</label><input type="text" id="rAssign" placeholder="Division A — Sector 3"></div>
+    <div class="field"><label>Contact / Callsign</label><input type="text" id="rContact" placeholder="W8ABC / Ch 2"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-sm" onclick="closeAddRes()" style="background:var(--panel2)">Cancel</button>
+      <button class="btn" onclick="saveResource()" style="border-color:var(--red);color:var(--red)">Add Resource</button>
+    </div>
+  </div>
+</div>
+
+<!-- Resource detail / status change -->
+<div class="modal-bg" id="resDetailModal" onclick="if(event.target===this)closeResDetail()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeResDetail()">✕</button>
+    <div class="modal-title" id="rdTitle"></div>
+    <div id="rdContent"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn btn-sm" onclick="setStatus('available')" style="border-color:var(--green);color:var(--green)">Available</button>
+      <button class="btn btn-sm" onclick="setStatus('staged')" style="border-color:var(--blue);color:var(--blue)">Staged</button>
+      <button class="btn btn-sm" onclick="setStatus('assigned')" style="border-color: var(--eoc-lt);color:var(--eoc)">Assigned</button>
+      <button class="btn btn-sm" onclick="setStatus('out_of_service')" style="border-color:var(--red);color:var(--red)">Out of Service</button>
+      <button class="btn btn-sm" onclick="deleteRes()" style="border-color:var(--red);color:var(--red);margin-left:auto">🗑 Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://192.168.50.1:5055/api/ics';
+const STORE = 'ics_resources';
+let resources = [], selectedId = null;
+
+function uid(){ return 'R' + Date.now().toString(36).toUpperCase(); }
+
+function load(){
+  try{ resources = JSON.parse(localStorage.getItem(STORE) || '[]'); }catch(e){ resources=[]; }
+  if(!resources.length) loadFromServer();
+  else render();
+}
+
+async function loadFromServer(){
+  try{
+    const res = await fetch(`${API}/resources`);
+    const data = await res.json();
+    if(Array.isArray(data.resources) && data.resources.length){
+      resources = data.resources;
+      localStorage.setItem(STORE, JSON.stringify(resources));
+    }
+  }catch(e){}
+  render();
+}
+
+// ── T-card drag-and-drop ──────────────────────────────────────────────
+let _dragId = null;
+function dragStart(e, id) { _dragId = id; e.dataTransfer.effectAllowed = 'move'; }
+function dragOver(e)  { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function dragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function drop(e, newStatus) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!_dragId) return;
+  const r = resources.find(x => x.id === _dragId);
+  if (r && r.status !== newStatus) {
+    r.status = newStatus;
+    r.updated = new Date().toISOString();
+    save();
+    render();
+  }
+  _dragId = null;
+}
+
+function save(){
+  localStorage.setItem(STORE, JSON.stringify(resources));
+}
+
+function render(){
+  renderBoard();
+  renderTable();
+  renderAssignments();
+}
+
+const statusClass = { available:'avail', staged:'stagg', assigned:'assign', out_of_service:'outofserv' };
+const chipClass   = { available:'chip-av', staged:'chip-st', assigned:'chip-as', out_of_service:'chip-os' };
+const statusLabel = { available:'Available', staged:'Staged', assigned:'Assigned', out_of_service:'Out of Service' };
+const typeIcons   = { engine:'🚒', crew:'👥', personnel:'👤', helicopter:'🚁', equipment:'🔧', other:'📦' };
+
+function renderBoard(){
+  ['available','staged','assigned','out_of_service'].forEach(s => {
+    const count = resources.filter(r => r.status === s).length;
+    const titleEl = document.querySelector(`#col-${s} .tcard-col-title`);
+    if(titleEl) titleEl.dataset.count = count;
+    document.getElementById(`stack-${s}`).innerHTML =
+      resources.filter(r => r.status === s).map(r => `
+        <div class="tcard ${statusClass[r.status]||''}"
+             draggable="true"
+             ondragstart="dragStart(event,'${r.id}')"
+             onclick="showResDetail('${r.id}')"
+             title="Click to view · Drag to move column">
+          <div class="tcard-type">${typeIcons[r.type]||'📦'} ${r.type||'Resource'}</div>
+          <div class="tcard-id">${r.resource_id||r.id}</div>
+          <div class="tcard-name">${r.name}</div>
+          ${r.assignment ? `<div class="tcard-assign">→ ${r.assignment}</div>` : ''}
+        </div>`).join('') ||
+      `<div style="text-align:center;padding:20px;color:var(--muted);font-size:11px">None</div>`;
+  });
+}
+
+function renderTable(){
+  document.getElementById('resBody').innerHTML = resources.map(r => `
+    <tr onclick="showResDetail('${r.id}')" style="cursor:pointer">
+      <td style="font-family:var(--font-hd);color:var(--eoc)">${r.resource_id||r.id}</td>
+      <td>${typeIcons[r.type]||'📦'} ${r.type||'—'}</td>
+      <td>${r.name}</td>
+      <td style="font-size:11px;color:var(--muted)">${r.capability||'—'}</td>
+      <td><span class="status-chip ${chipClass[r.status]||''}">${statusLabel[r.status]||r.status}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${r.assignment||'—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${r.contact||'—'}</td>
+      <td><button class="btn btn-sm" onclick="event.stopPropagation();showResDetail('${r.id}')">Edit</button></td>
+    </tr>`).join('') ||
+    '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">No resources added yet</td></tr>';
+}
+
+function renderAssignments(){
+  const assigned = resources.filter(r => r.status === 'assigned');
+  document.getElementById('assignmentList').innerHTML = assigned.length
+    ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <tr style="border-bottom:1px solid var(--line)">
+          <th style="text-align:left;padding:6px 8px;color:var(--red);font-size:10px;font-family:var(--font-hd);text-transform:uppercase">Resource</th>
+          <th style="text-align:left;padding:6px 8px;color:var(--red);font-size:10px;font-family:var(--font-hd);text-transform:uppercase">Type</th>
+          <th style="text-align:left;padding:6px 8px;color:var(--red);font-size:10px;font-family:var(--font-hd);text-transform:uppercase">Assignment</th>
+          <th style="text-align:left;padding:6px 8px;color:var(--red);font-size:10px;font-family:var(--font-hd);text-transform:uppercase">Contact</th>
+        </tr>
+        ${assigned.map(r => `<tr style="border-bottom:1px solid var(--line)">
+          <td style="padding:7px 8px;font-family:var(--font-hd);color:var(--eoc)">${r.resource_id||r.id}</td>
+          <td style="padding:7px 8px;color:var(--txt)">${r.name}</td>
+          <td style="padding:7px 8px;color:var(--eoc)">${r.assignment||'—'}</td>
+          <td style="padding:7px 8px;color:var(--muted)">${r.contact||'—'}</td>
+        </tr>`).join('')}
+      </table>`
+    : '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">No resources currently assigned</div>';
+}
+
+function openAddResource(){ document.getElementById('addResModal').classList.add('open'); }
+function closeAddRes(){ document.getElementById('addResModal').classList.remove('open'); }
+
+function saveResource(){
+  const name = document.getElementById('rName').value.trim();
+  if(!name){ alert('Name required'); return; }
+  resources.push({
+    id: uid(),
+    resource_id: document.getElementById('rId').value.trim() || uid(),
+    type: document.getElementById('rType').value,
+    name,
+    capability: document.getElementById('rCap').value.trim(),
+    status: document.getElementById('rStatus').value,
+    assignment: document.getElementById('rAssign').value.trim(),
+    contact: document.getElementById('rContact').value.trim(),
+  });
+  ['rId','rName','rCap','rAssign','rContact'].forEach(id=>document.getElementById(id).value='');
+  save(); closeAddRes(); render();
+}
+
+function showResDetail(id){
+  selectedId = id;
+  const r = resources.find(x => x.id === id);
+  if(!r) return;
+  document.getElementById('rdTitle').textContent = `${r.resource_id||r.id} — ${r.name}`;
+  document.getElementById('rdContent').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Type</label><span style="font-size:13px;color:var(--txt)">${typeIcons[r.type]} ${r.type}</span></div>
+      <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Status</label><span class="status-chip ${chipClass[r.status]}">${statusLabel[r.status]||r.status}</span></div>
+      <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Capability</label><span style="font-size:12px;color:var(--txt)">${r.capability||'—'}</span></div>
+      <div><label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">Contact</label><span style="font-size:12px;color:var(--txt)">${r.contact||'—'}</span></div>
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px">Assignment / Location</label>
+      <input type="text" id="rdAssignInput" value="${r.assignment||''}" placeholder="Division / Sector" style="width:100%;box-sizing:border-box;background:var(var(--input-bg);border:1px solid var(--line);border-radius:4px;color:var(--txt);padding:7px 10px;font-size:13px">
+    </div>
+    <button class="btn btn-sm" onclick="updateAssignment()" style="border-color: var(--eoc-lt);color:var(--eoc)">Update Assignment</button>
+  `;
+  document.getElementById('resDetailModal').classList.add('open');
+}
+
+function closeResDetail(){ document.getElementById('resDetailModal').classList.remove('open'); selectedId=null; }
+
+function updateAssignment(){
+  if(!selectedId) return;
+  const r = resources.find(x=>x.id===selectedId);
+  if(r) r.assignment = document.getElementById('rdAssignInput').value.trim();
+  save(); render(); closeResDetail();
+}
+
+function setStatus(s){
+  if(!selectedId) return;
+  const r = resources.find(x=>x.id===selectedId);
+  if(r) r.status = s;
+  save(); render(); closeResDetail();
+}
+
+function deleteRes(){
+  if(!selectedId || !confirm('Delete this resource?')) return;
+  resources = resources.filter(x=>x.id!==selectedId);
+  save(); render(); closeResDetail();
+}
+
+function showTab(id){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function openAddAssignment(){openAddResource();}
+
+window.addEventListener('load', load);
+</script>
+
+<script src="../lib/identity.js"></script>
+</body>
+</html>

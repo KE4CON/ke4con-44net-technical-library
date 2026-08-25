@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — Print Center</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.page-header {
+  background: linear-gradient(135deg, var(--eoc) 0%, var(--eoc-lt) 100%);
+  border-bottom: 2px solid var(--eoc);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.page-header a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; }
+.page-header a:hover { color: #fff; }
+.page-title { font-family: var(--font-hd); font-size: 18px; color: var(--eoc); letter-spacing: 2px; }
+
+.container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+
+.sec-label {
+  font-family: var(--font-hd); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--eoc); padding: 16px 0 8px;
+  display: flex; align-items: center; gap: 10px;
+}
+.sec-label::after { content:''; flex:1; height:1px; background: var(--line); }
+
+.print-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+
+.print-card {
+  background: var(--input-bg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 16px; display: flex; flex-direction: column; gap: 8px;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative; overflow: hidden;
+}
+.print-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background: var(--card-color, var(--eoc));
+}
+.print-card:hover { border-color: var(--card-color, var(--eoc)); background: var(--panel2); }
+
+.pc-icon { font-size: 28px; }
+.pc-name { font-family: var(--font-hd); font-size: 13px; color: var(--txt); letter-spacing: 0.5px; }
+.pc-desc { font-size: 11px; color: var(--muted); line-height: 1.4; flex: 1; }
+.pc-actions { display: flex; gap: 6px; margin-top: 4px; }
+.pc-actions a {
+  flex: 1; text-align: center; text-decoration: none;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 4px;
+  color: var(--muted); font-size: 11px; padding: 5px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.pc-actions a:hover { border-color: var(--eoc-lt); color: var(--amber); }
+.pc-actions a.primary {
+  background: rgba(245,166,35,0.1); border-color: var(--eoc-lt); color: var(--amber);
+}
+
+/* Preview pane */
+.preview-container {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  overflow: hidden; margin-top: 16px;
+}
+.preview-header {
+  background: var(--panel2); border-bottom: 1px solid var(--line);
+  padding: 10px 16px; display: flex; justify-content: space-between; align-items: center;
+}
+.preview-title { font-family: var(--font-hd); font-size: 12px; color: var(--amber); }
+iframe#previewFrame {
+  width: 100%; height: 600px; border: none;
+  background: white;
+}
+
+/* Quick print form */
+.qp-panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px;
+}
+.form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.form-row .field { flex: 1; min-width: 140px; }
+.field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
+.field input, .field select, .field textarea {
+  width: 100%; box-sizing: border-box;
+  background: var(var(--input-bg); border: 1px solid var(--line); border-radius: 4px;
+  color: var(--txt); padding: 7px 10px; font-size: 13px;
+}
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--eoc-lt); }
+.field textarea { min-height: 80px; resize: vertical; }
+
+/* Cover sheet */
+#coverPreview {
+  display: none;
+  background: white; color: #000; padding: 32px 40px;
+  font-family: 'Arial', sans-serif; font-size: 13px; line-height: 1.6;
+  border: 1px solid var(--line); border-radius: 4px; margin-top: 12px;
+}
+#coverPreview h1 { font-size: 20px; margin: 0 0 4px; }
+#coverPreview h2 { font-size: 14px; font-weight: normal; color: #555; margin: 0 0 20px; }
+#coverPreview table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+#coverPreview td { padding: 6px 8px; border-bottom: 1px solid #ccc; font-size: 12px; }
+#coverPreview td:first-child { font-weight: bold; width: 160px; }
+#coverPreview .divider { border-top: 2px solid #000; margin: 20px 0; }
+
+@media print {
+  .page-header, .tab-bar, .pc-actions, .preview-header .btn, .sec-label { display: none !important; }
+  body { background: white; color: black; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <a href="index.html">⌂ Home</a>
+  <span style="color:var(--line)">›</span>
+  <span class="page-title">🖨 PRINT CENTER</span>
+</div>
+
+<div class="container">
+
+  <!-- Quick Forms -->
+  <div class="sec-label">📋 ICS / NTS Forms</div>
+  <div class="print-grid">
+    <div class="print-card" style="--card-color:var(--eoc)">
+      <div class="pc-icon">📋</div>
+      <div class="pc-name">ICS-213 General Message</div>
+      <div class="pc-desc">Standard written message form for inter-agency communications.</div>
+      <div class="pc-actions">
+        <a href="ics213.html" class="primary">Open Form</a>
+        <a href="ics213.html" target="previewFrame" onclick="showPreview('ICS-213 General Message')">Preview</a>
+      </div>
+    </div>
+    <div class="print-card" style="--card-color:var(--eoc)">
+      <div class="pc-icon">📋</div>
+      <div class="pc-name">ICS-214 Activity Log</div>
+      <div class="pc-desc">Unit activity log; record of events, personnel, resources used.</div>
+      <div class="pc-actions">
+        <a href="ics214.html" class="primary">Open Form</a>
+        <a href="ics214.html" target="previewFrame" onclick="showPreview('ICS-214 Activity Log')">Preview</a>
+      </div>
+    </div>
+    <div class="print-card" style="--card-color:var(--eoc)">
+      <div class="pc-icon">📋</div>
+      <div class="pc-name">ICS-309 Communications Log</div>
+      <div class="pc-desc">Blank communications log for manual entry of message traffic during an activation.</div>
+      <div class="pc-actions">
+        <a href="ics309.html" class="primary">Open Form</a>
+        <a href="ics309.html" target="previewFrame" onclick="showPreview('ICS-309 Communications Log')">Preview</a>
+      </div>
+    </div>
+    <div class="print-card" style="--card-color:var(--green)">
+      <div class="pc-icon">📻</div>
+      <div class="pc-name">NTS Radiogram</div>
+      <div class="pc-desc">ARRL National Traffic System radiogram with preamble, address, and text.</div>
+      <div class="pc-actions">
+        <a href="nts.html" class="primary">Open Form</a>
+        <a href="nts.html" target="previewFrame" onclick="showPreview('NTS Radiogram')">Preview</a>
+      </div>
+    </div>
+    <div class="print-card" style="--card-color:var(--blue)">
+      <div class="pc-icon">✅</div>
+      <div class="pc-name">Pre-Flight Checklist</div>
+      <div class="pc-desc">GO/CAUTION/NO-GO 7-section deployment readiness checklist.</div>
+      <div class="pc-actions">
+        <a href="preflight.html" class="primary">Open Form</a>
+        <a href="preflight.html" target="previewFrame" onclick="showPreview('Pre-Flight Checklist')">Preview</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reference Cards -->
+  <div class="sec-label">📖 Reference Cards</div>
+  <div class="print-grid">
+    <div class="print-card" style="--card-color:#c850ff">
+      <div class="pc-icon">🔤</div>
+      <div class="pc-name">Phonetic Alphabet</div>
+      <div class="pc-desc">NATO phonetic alphabet with pronunciation guide. Print as pocket card.</div>
+      <div class="pc-actions">
+        <a href="cheatsheets.html#phonetic" class="primary">Open</a>
+        <a href="cheatsheets.html" target="previewFrame" onclick="showPreview('Cheat Sheets')">Preview</a>
+      </div>
+    </div>
+    <div class="print-card" style="--card-color:#c850ff">
+      <div class="pc-icon">📡</div>
+      <div class="pc-name">Q-Codes &amp; Prowords</div>
+      <div class="pc-desc">Complete Q-code and procedure word reference for nets and HF.</div>
+      <div class="pc-actions">
+        <a href="cheatsheets.html" class="primary">Open</a>
+        <a href="cheatsheets.html" target="previewFrame" onclick="showPreview('Cheat Sheets — Q-Codes')">Preview</a>
+      </div>
+    </div>
+    <div class="print-card" style="--card-color:#c850ff">
+      <div class="pc-icon">🏛</div>
+      <div class="pc-name">ICS Structure &amp; Forms</div>
+      <div class="pc-desc">ICS org chart, key forms reference, and NTS precedence guide.</div>
+      <div class="pc-actions">
+        <a href="cheatsheets.html" class="primary">Open</a>
+        <a href="cheatsheets.html" target="previewFrame" onclick="showPreview('Cheat Sheets — ICS')">Preview</a>
+      </div>
+    </div>
+    <div class="print-card" style="--card-color:#c850ff">
+      <div class="pc-icon">🔊</div>
+      <div class="pc-name">CTCSS / DCS &amp; Signal Reports</div>
+      <div class="pc-desc">Full CTCSS tone table, common DCS codes, and RST / FM signal report guide.</div>
+      <div class="pc-actions">
+        <a href="cheatsheets.html" class="primary">Open</a>
+        <a href="cheatsheets.html" target="previewFrame" onclick="showPreview('Cheat Sheets — CTCSS')">Preview</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Net Logs / Operations -->
+  <div class="sec-label">📻 Operations</div>
+  <div class="print-grid">
+    <div class="print-card" style="--card-color:var(--eoc)">
+      <div class="pc-icon">🎙</div>
+      <div class="pc-name">Net Control Log (ICS-309)</div>
+      <div class="pc-desc">Export active net log as a printable ICS-309 Communications Log.</div>
+      <div class="pc-actions">
+        <a href="netcontrol.html" class="primary">Go to Net Control</a>
+      </div>
+    </div>
+    <div class="print-card" style="--card-color:var(--eoc)">
+      <div class="pc-icon">🚔</div>
+      <div class="pc-name">Starcom Net Log (ICS-309)</div>
+      <div class="pc-desc">Export Starcom net log as a printable ICS-309 Communications Log.</div>
+      <div class="pc-actions">
+        <a href="starcom.html" class="primary">Go to Starcom</a>
+      </div>
+    </div>
+    <div class="print-card" style="--card-color:var(--green)">
+      <div class="pc-icon">👥</div>
+      <div class="pc-name">Roster / Member Directory</div>
+      <div class="pc-desc">Print the full membership roster with contact and certification info.</div>
+      <div class="pc-actions">
+        <a href="roster.html" class="primary">Go to Roster</a>
+        <a href="roster.html" target="previewFrame" onclick="showPreview('Roster')">Preview</a>
+      </div>
+    </div>
+    <div class="print-card" style="--card-color:var(--blue)">
+      <div class="pc-icon">🧰</div>
+      <div class="pc-name">Resource Board</div>
+      <div class="pc-desc">Print current equipment/vehicle/personnel resource status board.</div>
+      <div class="pc-actions">
+        <a href="resources.html" class="primary">Go to Resources</a>
+        <a href="resources.html" target="previewFrame" onclick="showPreview('Resource Board')">Preview</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cover Sheet Generator -->
+  <div class="sec-label">📄 Incident Cover Sheet Generator</div>
+  <div class="qp-panel">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">
+      Generate a printable cover sheet for your incident packet.
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>Incident Name</label>
+        <input type="text" id="csIncident" placeholder="Winter Storm Alpha">
+      </div>
+      <div class="field">
+        <label>Incident Number</label>
+        <input type="text" id="csNumber" placeholder="2026-001">
+      </div>
+      <div class="field">
+        <label>Date / Time</label>
+        <input type="text" id="csDate" id="csDate">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>Incident Commander</label>
+        <input type="text" id="csIC" placeholder="Jane Smith W8ABC">
+      </div>
+      <div class="field">
+        <label>Agency</label>
+        <input type="text" id="csAgency" placeholder="Franklin County ARES">
+      </div>
+      <div class="field">
+        <label>Operational Period</label>
+        <input type="text" id="csOpPeriod" placeholder="1 — 0800–2000">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>Location / Jurisdiction</label>
+        <input type="text" id="csLocation" placeholder="Columbus, Ohio">
+      </div>
+      <div class="field">
+        <label>Net Frequency</label>
+        <input type="text" id="csFreq" placeholder="146.940 MHz / 100.0 Hz">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field" style="flex:2">
+        <label>Situation Summary</label>
+        <textarea id="csSummary" placeholder="Brief description of the incident and current situation…"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn" onclick="generateCover()">📄 Generate Cover Sheet</button>
+      <button class="btn btn-sm" onclick="printCover()" style="background:var(--panel2)">🖨 Print</button>
+      <button class="btn btn-sm" onclick="clearCover()" style="background:var(--panel2)">✕ Clear</button>
+    </div>
+
+    <div id="coverPreview">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <h1 id="cv-incident">INCIDENT NAME</h1>
+          <h2 id="cv-agency">Agency</h2>
+        </div>
+        <div style="text-align:right;font-size:12px">
+          <div id="cv-number" style="font-weight:bold"></div>
+          <div id="cv-date"></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <table>
+        <tr><td>Incident Commander</td><td id="cv-ic"></td></tr>
+        <tr><td>Operational Period</td><td id="cv-op"></td></tr>
+        <tr><td>Location</td><td id="cv-location"></td></tr>
+        <tr><td>Net Frequency</td><td id="cv-freq"></td></tr>
+      </table>
+      <div class="divider"></div>
+      <div style="font-weight:bold;margin-bottom:6px">Situation Summary</div>
+      <div id="cv-summary" style="white-space:pre-wrap"></div>
+      <div class="divider"></div>
+      <div style="font-size:11px;color:#888;text-align:center">
+        Generated by Incident Management System · <span id="cv-generated"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Frame -->
+  <div class="preview-container" id="previewContainer" style="display:none">
+    <div class="preview-header">
+      <span class="preview-title" id="previewTitle">Preview</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" onclick="document.getElementById('previewFrame').contentWindow.print()">🖨 Print</button>
+        <button class="btn btn-sm" onclick="closePreview()" style="background:var(--panel2)">✕ Close</button>
+      </div>
+    </div>
+    <iframe id="previewFrame" name="previewFrame"></iframe>
+  </div>
+
+</div>
+
+<script>
+document.getElementById('csDate').value = new Date().toLocaleString('en-US', {
+  month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false
+}) + ' Z';
+
+function showPreview(title) {
+  document.getElementById('previewContainer').style.display = '';
+  document.getElementById('previewTitle').textContent = title;
+  setTimeout(() => document.getElementById('previewContainer').scrollIntoView({ behavior:'smooth' }), 100);
+}
+
+function closePreview() {
+  document.getElementById('previewContainer').style.display = 'none';
+  document.getElementById('previewFrame').src = 'about:blank';
+}
+
+function generateCover() {
+  const get = id => document.getElementById(id).value.trim();
+  document.getElementById('cv-incident').textContent = get('csIncident') || 'INCIDENT NAME';
+  document.getElementById('cv-agency').textContent = get('csAgency') || 'Agency';
+  document.getElementById('cv-number').textContent = get('csNumber') ? `Incident #${get('csNumber')}` : '';
+  document.getElementById('cv-date').textContent = get('csDate');
+  document.getElementById('cv-ic').textContent = get('csIC') || '—';
+  document.getElementById('cv-op').textContent = get('csOpPeriod') || '—';
+  document.getElementById('cv-location').textContent = get('csLocation') || '—';
+  document.getElementById('cv-freq').textContent = get('csFreq') || '—';
+  document.getElementById('cv-summary').textContent = get('csSummary') || '—';
+  document.getElementById('cv-generated').textContent = new Date().toISOString().slice(0,19).replace('T',' ') + ' UTC';
+  document.getElementById('coverPreview').style.display = 'block';
+  document.getElementById('coverPreview').scrollIntoView({ behavior:'smooth' });
+}
+
+function printCover() {
+  const el = document.getElementById('coverPreview');
+  if (el.style.display === 'none') { generateCover(); }
+  const w = window.open('', '_blank', 'width=800,height=1000');
+  w.document.write(`<html><head><title>Incident Cover Sheet</title>
+    <style>body{font-family:Arial,sans-serif;font-size:13px;padding:32px 40px;color:#000}
+    h1{font-size:20px;margin:0 0 4px}h2{font-size:14px;font-weight:normal;color:#555;margin:0 0 20px}
+    table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    td{padding:6px 8px;border-bottom:1px solid #ccc;font-size:12px}
+    td:first-child{font-weight:bold;width:160px}
+    .divider{border-top:2px solid #000;margin:20px 0}
+    </style></head><body>${el.innerHTML}
+<script src="/lib/identity.js"></script>
+</body></html>`);
+  w.document.close();
+  w.print();
+}
+
+function clearCover() {
+  ['csIncident','csNumber','csAgency','csOpPeriod','csLocation','csFreq','csSummary','csIC'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('coverPreview').style.display = 'none';
+}
+</script>
+</body>
+</html>

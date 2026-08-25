@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Resource Board — Incident Management</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.top-bar {
+  background: var(--panel); border-bottom: 2px solid var(--eoc);
+  padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.top-bar h1 { font-family: var(--font-hd); font-size: 18px; color: var(--amber); letter-spacing: 2px; margin: 0; }
+.top-bar .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.main-wrap { max-width: 1400px; margin: 0 auto; padding: 16px; }
+
+.filter-bar {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 12px 16px; margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+}
+.filter-bar label { font-size: 12px; color: var(--muted); }
+.filter-bar select, .filter-bar input { padding: 5px 10px; font-size: 12px; }
+
+.resource-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;
+}
+.res-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 14px; display: flex; flex-direction: column; gap: 8px; position: relative;
+}
+.res-card.available    { border-left: 4px solid var(--green); }
+.res-card.assigned     { border-left: 4px solid var(--amber); }
+.res-card.staging      { border-left: 4px solid var(--blue,#2d6ab4); }
+.res-card.out_of_service { border-left: 4px solid var(--red); }
+.res-card.demobilized  { border-left: 4px solid var(--muted,#4a6080); }
+
+.res-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.res-name { font-family: var(--font-hd); font-size: 14px; color: var(--txt); letter-spacing: 0.5px; }
+.res-type-badge { font-size: 10px; padding: 2px 8px; border-radius: 3px; background: var(--panel2); color: var(--muted); white-space: nowrap; }
+
+.res-fields { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 12px; }
+.res-fields .lbl { color: var(--muted); }
+.res-fields .val { color: var(--txt); }
+
+.res-status-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.status-pill {
+  font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: bold; text-transform: uppercase;
+}
+.status-pill.available     { background: rgba(80,200,80,0.2);   color: var(--green); }
+.status-pill.assigned      { background: rgba(245,166,35,0.2);  color: var(--amber); }
+.status-pill.staging       { background: rgba(45,106,180,0.15); color: var(--blue,#2d6ab4); }
+.status-pill.out_of_service{ background: rgba(220,60,60,0.2);   color: var(--red); }
+.status-pill.demobilized   { background: rgba(74,96,128,0.15);  color: var(--muted); }
+/* clickable badge cursor */
+.status-pill { cursor: pointer; user-select: none; transition: opacity 0.15s; }
+.status-pill:hover { opacity: 0.75; }
+
+.res-actions { display: flex; gap: 6px; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line); }
+.res-actions button { flex: 1; padding: 5px; font-size: 11px; }
+
+.section-header {
+  font-family: var(--font-hd); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--amber); padding: 12px 0 6px; display: flex; align-items: center; gap: 10px;
+}
+.section-header::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+.stats-strip {
+  display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.stat-box {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 18px; text-align: center; min-width: 100px;
+}
+.stat-box .num { font-family: var(--font-hd); font-size: 28px; }
+.stat-box .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+.stat-box .num.green { color: var(--green); }
+.stat-box .num.amber { color: var(--eoc-lt); }
+.stat-box .num.red   { color: var(--red); }
+
+/* Modal */
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.2); z-index: 200;
+  display: none; align-items: center; justify-content: center;
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: var(--bg); border: 1px solid var(--amber); border-radius: 10px;
+  padding: 24px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+}
+.modal h2 { font-family: var(--font-hd); color: var(--amber); margin: 0 0 16px; font-size: 16px; letter-spacing: 1px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-grid .full { grid-column: 1/-1; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 11px; color: var(--muted); }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="index.html" class="nav-logo">⬡ Incident Management</a>
+  <div class="nav-links">
+    <a href="index.html">Dashboard</a>
+    <a href="netcontrol.html">Net Control</a>
+    <a href="roster.html">Roster</a>
+    <a href="resources.html" class="active">Resources</a>
+    <a href="tactical.html">Tactical</a>
+  </div>
+  <div class="nav-right">
+    <span id="utc-clock" style="font-family:var(--font-hd);color:var(--green);font-size:13px;letter-spacing:1px;"></span>
+  </div>
+</nav>
+
+<div class="top-bar">
+  <div>
+    <h1>📦 RESOURCE BOARD</h1>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px;">Equipment, vehicles, personnel and materials tracking</div>
+  </div>
+  <div class="actions">
+    <button class="btn btn-secondary" onclick="exportCSV()">⬇ Export CSV</button>
+    <button class="btn btn-secondary" onclick="importCSV()">⬆ Import CSV</button>
+    <button class="btn btn-primary" onclick="openAddModal()">+ Add Resource</button>
+  </div>
+</div>
+
+<div class="main-wrap">
+  <div class="stats-strip" id="stats-strip">
+    <div class="stat-box"><div class="num green"  id="st-avail">0</div><div class="lbl">Available</div></div>
+    <div class="stat-box"><div class="num amber"  id="st-assign">0</div><div class="lbl">Assigned</div></div>
+    <div class="stat-box"><div class="num" style="color:var(--blue,#2d6ab4)" id="st-stage">0</div><div class="lbl">Staging</div></div>
+    <div class="stat-box"><div class="num red"    id="st-oos">0</div><div class="lbl">Out of Service</div></div>
+    <div class="stat-box"><div class="num" style="color:var(--muted)" id="st-demob">0</div><div class="lbl">Demobilized</div></div>
+    <div class="stat-box"><div class="num" id="st-total" style="color:var(--txt)">0</div><div class="lbl">Total</div></div>
+  </div>
+
+  <div class="filter-bar">
+    <label>Type:</label>
+    <select id="filter-type" onchange="renderAll()">
+      <option value="">All Types</option>
+      <option>Personnel</option>
+      <option>Vehicle</option>
+      <option>Radio</option>
+      <option>Generator</option>
+      <option>Antenna</option>
+      <option>Computer/Tablet</option>
+      <option>Medical</option>
+      <option>Shelter/Tent</option>
+      <option>Repeater</option>
+      <option>Other</option>
+    </select>
+    <label>Status:</label>
+    <select id="filter-status" onchange="renderAll()">
+      <option value="">All Status</option>
+      <option value="available">Available</option>
+      <option value="assigned">Assigned</option>
+      <option value="staging">Staging</option>
+      <option value="out_of_service">Out of Service</option>
+      <option value="demobilized">Demobilized</option>
+    </select>
+    <label>Search:</label>
+    <input type="text" id="filter-search" placeholder="name, owner, location…" oninput="renderAll()" style="width:200px;">
+    <button class="btn btn-secondary" style="margin-left:auto;" onclick="clearFilters()">Clear</button>
+  </div>
+
+  <div id="resource-container"></div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-bg" id="res-modal">
+  <div class="modal">
+    <h2 id="modal-title">ADD RESOURCE</h2>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Resource Name / Description *</label>
+        <input type="text" id="r-name" placeholder="e.g. IC-7300 HF Radio">
+      </div>
+      <div class="form-group">
+        <label>Type *</label>
+        <select id="r-type">
+          <option>Personnel</option>
+          <option>Vehicle</option>
+          <option>Radio</option>
+          <option>Generator</option>
+          <option>Antenna</option>
+          <option>Computer/Tablet</option>
+          <option>Medical</option>
+          <option>Shelter/Tent</option>
+          <option>Repeater</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="r-status">
+          <option value="available">Available</option>
+          <option value="assigned">Assigned</option>
+          <option value="staging">Staging</option>
+          <option value="out_of_service">Out of Service</option>
+          <option value="demobilized">Demobilized</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Owner / Callsign</label>
+        <input type="text" id="r-owner" placeholder="W8XYZ">
+      </div>
+      <div class="form-group">
+        <label>Quantity</label>
+        <input type="number" id="r-qty" value="1" min="1">
+      </div>
+      <div class="form-group full">
+        <label>Current Location</label>
+        <input type="text" id="r-location" placeholder="e.g. EOC Room B">
+      </div>
+      <div class="form-group">
+        <label>Assigned To</label>
+        <input type="text" id="r-assigned-to" placeholder="Name or callsign">
+      </div>
+      <div class="form-group">
+        <label>Assignment / Task</label>
+        <input type="text" id="r-assignment" placeholder="e.g. Shelter comms">
+      </div>
+      <div class="form-group full">
+        <label>Notes</label>
+        <textarea id="r-notes" rows="3" placeholder="Condition, special requirements, etc."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Identifier / Serial #</label>
+        <input type="text" id="r-serial" placeholder="Optional">
+      </div>
+      <div class="form-group">
+        <label>Contact / Phone</label>
+        <input type="text" id="r-contact" placeholder="Optional">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveResource()">Save Resource</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="csv-import-input" accept=".csv" style="display:none" onchange="handleCSVImport(event)">
+
+<script>
+const API = 'http://192.168.50.1:5050';
+const STATUS_LABEL = {
+  available:     'Available',
+  assigned:      'Assigned',
+  staging:       'Staging',
+  out_of_service:'Out of Service',
+  demobilized:   'Demobilized',
+};
+let resources = [];
+let editingId = null;
+
+const TYPES = [
+  {label:'Personnel', icon:'👤'},
+  {label:'Vehicle', icon:'🚗'},
+  {label:'Radio', icon:'📻'},
+  {label:'Generator', icon:'⚡'},
+  {label:'Antenna', icon:'📡'},
+  {label:'Computer/Tablet', icon:'💻'},
+  {label:'Medical', icon:'🏥'},
+  {label:'Shelter/Tent', icon:'⛺'},
+  {label:'Repeater', icon:'🗼'},
+  {label:'Other', icon:'📦'},
+];
+const TYPE_ICONS = Object.fromEntries(TYPES.map(t=>[t.label,t.icon]));
+
+// UTC clock
+setInterval(()=>{
+  document.getElementById('utc-clock').textContent = new Date().toUTCString().slice(17,22)+'Z';
+},1000);
+
+async function loadResources() {
+  try {
+    const r = await fetch(`${API}/resources`);
+    if(r.ok) resources = await r.json();
+  } catch {
+    const saved = localStorage.getItem('fc_resources');
+    if(saved) resources = JSON.parse(saved);
+  }
+  renderAll();
+}
+
+function save() {
+  localStorage.setItem('fc_resources', JSON.stringify(resources));
+  fetch(`${API}/resources`, {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(resources)
+  }).catch(()=>{});
+}
+
+function updateStats() {
+  const avail = resources.filter(r=>r.status==='available').length;
+  const assign = resources.filter(r=>r.status==='assigned').length;
+  const stage = resources.filter(r=>r.status==='staging').length;
+  const oos   = resources.filter(r=>r.status==='out_of_service').length;
+  const demob = resources.filter(r=>r.status==='demobilized').length;
+  document.getElementById('st-avail').textContent = avail;
+  document.getElementById('st-assign').textContent = assign;
+  document.getElementById('st-stage').textContent = stage;
+  document.getElementById('st-oos').textContent   = oos;
+  document.getElementById('st-demob').textContent = demob;
+  document.getElementById('st-total').textContent = resources.length;
+}
+
+function filtered() {
+  const type = document.getElementById('filter-type').value;
+  const status = document.getElementById('filter-status').value;
+  const search = document.getElementById('filter-search').value.toLowerCase();
+  return resources.filter(r => {
+    if(type && r.type !== type) return false;
+    if(status && r.status !== status) return false;
+    if(search && !`${r.name} ${r.owner} ${r.location} ${r.notes}`.toLowerCase().includes(search)) return false;
+    return true;
+  });
+}
+
+function renderAll() {
+  updateStats();
+  const list = filtered();
+  const container = document.getElementById('resource-container');
+
+  if(list.length === 0) {
+    container.innerHTML = `<div class="empty-state">📦 No resources found.<br><small>Add resources using the button above.</small></div>`;
+    return;
+  }
+
+  // Group by type
+  const groups = {};
+  list.forEach(r => {
+    if(!groups[r.type]) groups[r.type] = [];
+    groups[r.type].push(r);
+  });
+
+  container.innerHTML = Object.entries(groups).map(([type, items])=>`
+    <div class="section-header">${TYPE_ICONS[type]||'📦'} ${type} <span style="color:var(--muted);font-size:10px;">(${items.length})</span></div>
+    <div class="resource-grid" style="margin-bottom:16px;">
+      ${items.map(renderCard).join('')}
+    </div>
+  `).join('');
+}
+
+function renderCard(r) {
+  return `<div class="res-card ${r.status}" id="card-${r.id}">
+    <div class="res-header">
+      <div class="res-name">${TYPE_ICONS[r.type]||'📦'} ${esc(r.name)}</div>
+      <div class="res-type-badge">${esc(r.type)}</div>
+    </div>
+    <div class="res-fields">
+      ${r.owner ? `<span class="lbl">Owner</span><span class="val">${esc(r.owner)}</span>` : ''}
+      ${r.qty > 1 ? `<span class="lbl">Qty</span><span class="val">${r.qty}</span>` : ''}
+      ${r.location ? `<span class="lbl">Location</span><span class="val">${esc(r.location)}</span>` : ''}
+      ${r.assigned_to ? `<span class="lbl">Assigned</span><span class="val">${esc(r.assigned_to)}</span>` : ''}
+      ${r.assignment ? `<span class="lbl">Task</span><span class="val">${esc(r.assignment)}</span>` : ''}
+      ${r.serial ? `<span class="lbl">ID/Serial</span><span class="val">${esc(r.serial)}</span>` : ''}
+      ${r.contact ? `<span class="lbl">Contact</span><span class="val">${esc(r.contact)}</span>` : ''}
+    </div>
+    ${r.notes ? `<div style="font-size:11px;color:var(--muted);font-style:italic;">${esc(r.notes)}</div>` : ''}
+    <div class="res-status-row">
+      <span class="status-pill ${r.status}" onclick="cycleStatus('${r.id}')" title="Click to cycle status">${STATUS_LABEL[r.status]||r.status}</span>
+      <span style="font-size:11px;color:var(--dim);">${r.updated ? 'Updated ' + timeAgo(r.updated) : ''}</span>
+    </div>
+    <div class="res-actions">
+      <button class="btn btn-secondary" onclick="openEditModal('${r.id}')">✏ Edit</button>
+      <button class="btn btn-danger" onclick="deleteResource('${r.id}')">✕</button>
+    </div>
+  </div>`;
+}
+
+function cycleStatus(id) {
+  const r = resources.find(x=>x.id===id);
+  if(!r) return;
+  const cycle = ['available','assigned','staging','out_of_service','demobilized'];
+  r.status = cycle[(cycle.indexOf(r.status)+1) % cycle.length];
+  r.updated = new Date().toISOString();
+  save(); renderAll();
+}
+
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'ADD RESOURCE';
+  clearForm();
+  document.getElementById('res-modal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const r = resources.find(x=>x.id===id);
+  if(!r) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'EDIT RESOURCE';
+  document.getElementById('r-name').value = r.name||'';
+  document.getElementById('r-type').value = r.type||'Other';
+  document.getElementById('r-status').value = r.status||'available';
+  document.getElementById('r-owner').value = r.owner||'';
+  document.getElementById('r-qty').value = r.qty||1;
+  document.getElementById('r-location').value = r.location||'';
+  document.getElementById('r-assigned-to').value = r.assigned_to||'';
+  document.getElementById('r-assignment').value = r.assignment||'';
+  document.getElementById('r-notes').value = r.notes||'';
+  document.getElementById('r-serial').value = r.serial||'';
+  document.getElementById('r-contact').value = r.contact||'';
+  document.getElementById('res-modal').classList.add('open');
+}
+
+function clearForm() {
+  ['r-name','r-owner','r-location','r-assigned-to','r-assignment','r-notes','r-serial','r-contact'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+  document.getElementById('r-type').value='Radio';
+  document.getElementById('r-status').value='available';
+  document.getElementById('r-qty').value=1;
+}
+
+function closeModal() {
+  document.getElementById('res-modal').classList.remove('open');
+  editingId = null;
+}
+
+function saveResource() {
+  const name = document.getElementById('r-name').value.trim();
+  if(!name) { alert('Resource name is required.'); return; }
+
+  const obj = {
+    id: editingId || 'res-' + Date.now(),
+    name,
+    type: document.getElementById('r-type').value,
+    status: document.getElementById('r-status').value,
+    owner: document.getElementById('r-owner').value.trim(),
+    qty: parseInt(document.getElementById('r-qty').value)||1,
+    location: document.getElementById('r-location').value.trim(),
+    assigned_to: document.getElementById('r-assigned-to').value.trim(),
+    assignment: document.getElementById('r-assignment').value.trim(),
+    notes: document.getElementById('r-notes').value.trim(),
+    serial: document.getElementById('r-serial').value.trim(),
+    contact: document.getElementById('r-contact').value.trim(),
+    updated: new Date().toISOString(),
+  };
+
+  if(editingId) {
+    const idx = resources.findIndex(r=>r.id===editingId);
+    if(idx>=0) resources[idx]=obj;
+  } else {
+    resources.push(obj);
+  }
+  save(); renderAll(); closeModal();
+}
+
+function deleteResource(id) {
+  if(!confirm('Delete this resource?')) return;
+  resources = resources.filter(r=>r.id!==id);
+  save(); renderAll();
+}
+
+function clearFilters() {
+  document.getElementById('filter-type').value='';
+  document.getElementById('filter-status').value='';
+  document.getElementById('filter-search').value='';
+  renderAll();
+}
+
+function exportCSV() {
+  const cols = ['id','name','type','status','owner','qty','location','assigned_to','assignment','notes','serial','contact','updated'];
+  const rows = [cols.join(','), ...resources.map(r => cols.map(c=>`"${(r[c]||'').toString().replace(/"/g,'""')}"`).join(','))];
+  const blob = new Blob([rows.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='resources.csv'; a.click();
+}
+
+function importCSV() { document.getElementById('csv-import-input').click(); }
+
+function handleCSVImport(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const lines = ev.target.result.trim().split('\n');
+    const headers = lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+    const imported = lines.slice(1).map(line => {
+      const vals = line.match(/(".*?"|[^,]+)/g)||[];
+      const obj = {};
+      headers.forEach((h,i)=>{ obj[h]=(vals[i]||'').replace(/^"|"$/g,''); });
+      if(!obj.id) obj.id='res-'+Date.now()+Math.random();
+      return obj;
+    });
+    imported.forEach(imp => {
+      const existing = resources.findIndex(r=>r.id===imp.id);
+      if(existing>=0) resources[existing]=imp; else resources.push(imp);
+    });
+    save(); renderAll();
+    alert(`Imported ${imported.length} resource(s).`);
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+function timeAgo(iso) {
+  const d = (Date.now()-new Date(iso).getTime())/1000;
+  if(d<60) return 'just now';
+  if(d<3600) return Math.floor(d/60)+'m ago';
+  if(d<86400) return Math.floor(d/3600)+'h ago';
+  return Math.floor(d/86400)+'d ago';
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Close modal on background click
+document.getElementById('res-modal').addEventListener('click', e=>{
+  if(e.target===document.getElementById('res-modal')) closeModal();
+});
+
+loadResources();
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

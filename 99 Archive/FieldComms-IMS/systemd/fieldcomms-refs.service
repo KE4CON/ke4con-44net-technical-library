@@ -1,0 +1,18 @@
+[Unit]
+Description=FieldComms Reference Library Server (Port 5056)
+After=network.target
+
+[Service]
+Type=simple
+User=fieldcomms
+Group=fieldcomms
+WorkingDirectory=/opt/fieldcomms
+ExecStart=/opt/fieldcomms/venv/bin/python /opt/fieldcomms/python/reference_server.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fieldcomms-refs
+
+[Install]
+WantedBy=multi-user.target

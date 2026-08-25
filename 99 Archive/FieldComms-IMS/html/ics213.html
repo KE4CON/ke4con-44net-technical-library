@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ICS-213 General Message — Incident Management</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.main-wrap { max-width: 860px; margin: 0 auto; padding: 20px 16px; }
+.page-header { background:var(--panel); border:1px solid var(--amber); border-radius:8px; padding:14px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.page-header h1 { font-family:var(--font-hd); font-size:16px; color:var(--eoc); letter-spacing:2px; margin:0; }
+
+.form-card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:20px; margin-bottom:16px; }
+.form-card h2 { font-family:var(--font-hd); font-size:11px; letter-spacing:0.2em; color:var(--eoc); margin:0 0 14px; display:flex; align-items:center; gap:10px; }
+.form-card h2::after { content:''; flex:1; height:1px; background:var(--line); }
+
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+.full { grid-column:1/-1; }
+.form-group { display:flex; flex-direction:column; gap:4px; }
+.form-group label { font-size:11px; color:var(--muted); }
+.form-group input, .form-group select, .form-group textarea { font-size:13px; }
+
+/* Print-style ICS form */
+.ics-form {
+  background:#fff; color:#000; border:1px solid #000;
+  font-family:'Arial',sans-serif; font-size:12px;
+  display:none; margin-bottom:16px;
+}
+.ics-form.show { display:block; }
+
+.ics-header { background:#fff; border-bottom:2px solid #000; display:flex; align-items:stretch; }
+.ics-header-left { flex:1; padding:8px 12px; }
+.ics-header-title { font-size:16px; font-weight:bold; text-align:center; }
+.ics-header-sub { font-size:11px; text-align:center; margin-top:2px; }
+.ics-header-right { border-left:1px solid #000; padding:8px 12px; display:flex; flex-direction:column; justify-content:center; }
+.ics-header-right .field-label { font-size:9px; text-transform:uppercase; color:#666; }
+.ics-header-right .field-val { font-size:13px; font-weight:bold; }
+
+.ics-row { display:flex; border-bottom:1px solid #000; }
+.ics-row:last-child { border-bottom:none; }
+.ics-cell { padding:6px 10px; border-right:1px solid #000; }
+.ics-cell:last-child { border-right:none; }
+.ics-cell .label { font-size:9px; text-transform:uppercase; color:#555; margin-bottom:2px; }
+.ics-cell .val { font-size:12px; min-height:18px; }
+.ics-msg-body { min-height:120px; white-space:pre-wrap; }
+.ics-sig-row { display:flex; min-height:50px; }
+.ics-sig-row .sig-block { flex:1; padding:6px 10px; border-right:1px solid #000; }
+.ics-sig-row .sig-block:last-child { border-right:none; }
+.ics-sig-row .sig-label { font-size:9px; text-transform:uppercase; color:#555; }
+.ics-sig-row .sig-line { border-bottom:1px solid #000; margin:8px 0 4px; min-height:20px; }
+
+.log-table { width:100%; border-collapse:collapse; font-size:12px; }
+.log-table th { background:var(--panel2); color:var(--muted); padding:7px 10px; text-align:left; font-weight:normal; }
+.log-table td { padding:7px 10px; border-top:1px solid var(--line); }
+.log-table tr:hover td { background:var(--panel2); }
+
+@media print {
+  .nav-bar,.page-header,.form-card,.action-bar,#form-section,#log-section { display:none !important; }
+  .ics-form { display:block !important; border:1px solid #000; }
+  body { background:white; }
+}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="index.html" class="nav-logo">⬡ Incident Management</a>
+  <div class="nav-links">
+    <a href="index.html">Dashboard</a>
+    <a href="netcontrol.html">Net Control</a>
+    <a href="nts.html">NTS Radiogram</a>
+    <a href="ics213.html" class="active">ICS-213</a>
+    <a href="ics214.html">ICS-214</a>
+    <a href="ics309.html">ICS-309</a>
+  </div>
+  <div class="nav-right">
+    <span id="utc-clock" style="font-family:var(--font-hd);color:var(--green);font-size:13px;letter-spacing:1px;"></span>
+  </div>
+</nav>
+
+<div class="main-wrap">
+  <div class="page-header">
+    <div>
+      <h1>📄 ICS-213 GENERAL MESSAGE</h1>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;">ICS General Message Form for interagency/intraagency communications</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" onclick="clearForm()">↺ New</button>
+    </div>
+  </div>
+
+  <div id="form-section">
+    <div class="form-card">
+      <h2>Incident & Routing</h2>
+      <div class="grid-3">
+        <div class="form-group full">
+          <label>Incident Name</label>
+          <input type="text" id="f-incident" placeholder="Operation Winter Storm 2026">
+        </div>
+        <div class="form-group">
+          <label>To (Name / Title)</label>
+          <input type="text" id="f-to-name" placeholder="Operations Section Chief">
+        </div>
+        <div class="form-group">
+          <label>To (Position / Agency)</label>
+          <input type="text" id="f-to-pos" placeholder="Franklin County EMA">
+        </div>
+        <div class="form-group">
+          <label>Message Number</label>
+          <input type="text" id="f-msg-num" placeholder="ICS-213-001">
+        </div>
+        <div class="form-group">
+          <label>From (Name / Title)</label>
+          <input type="text" id="f-from-name" placeholder="Communications Unit Leader">
+        </div>
+        <div class="form-group">
+          <label>From (Position / Agency)</label>
+          <input type="text" id="f-from-pos" placeholder="ARES / RACES">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="text" id="f-date" placeholder="Jun 7, 2026">
+        </div>
+        <div class="form-group">
+          <label>Time</label>
+          <input type="text" id="f-time" placeholder="0930 UTC">
+        </div>
+        <div class="form-group">
+          <label>Subject</label>
+          <input type="text" id="f-subject" placeholder="Communications Status Update">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h2>Message</h2>
+      <div class="form-group">
+        <label>Message Text</label>
+        <textarea id="f-message" rows="8" placeholder="Enter the message here. Be clear and concise. State who needs to take action, what action is needed, and by when."></textarea>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h2>Approved / Received</h2>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Approved By (Name)</label>
+          <input type="text" id="f-approved-name" placeholder="Incident Commander">
+        </div>
+        <div class="form-group">
+          <label>Approved By (Title / Position)</label>
+          <input type="text" id="f-approved-pos" placeholder="Incident Command">
+        </div>
+        <div class="form-group">
+          <label>Reply (if applicable)</label>
+          <textarea id="f-reply" rows="3" placeholder="Reply message (optional)"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Replied By (Name / Signature)</label>
+          <input type="text" id="f-replied-name">
+          <label style="margin-top:6px;">Reply Date / Time</label>
+          <input type="text" id="f-reply-dt">
+        </div>
+      </div>
+    </div>
+
+    <div class="action-bar" style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="generateForm()">📄 Generate Form</button>
+      <button class="btn btn-secondary" onclick="autofill()">⏰ Auto-fill Date/Time</button>
+    </div>
+  </div>
+
+  <!-- ICS-213 Print Form -->
+  <div class="ics-form" id="ics-form">
+    <div class="ics-header">
+      <div class="ics-header-left">
+        <div class="ics-header-title">ICS 213</div>
+        <div class="ics-header-sub">GENERAL MESSAGE</div>
+      </div>
+      <div class="ics-header-right">
+        <div class="field-label">1. Incident Name</div>
+        <div class="field-val" id="p-incident">—</div>
+      </div>
+    </div>
+
+    <div class="ics-row">
+      <div class="ics-cell" style="flex:2;">
+        <div class="label">2. To (Name and Position)</div>
+        <div class="val" id="p-to-name"></div>
+      </div>
+      <div class="ics-cell" style="flex:2;">
+        <div class="label">Position / Agency</div>
+        <div class="val" id="p-to-pos"></div>
+      </div>
+      <div class="ics-cell" style="flex:1;">
+        <div class="label">Message #</div>
+        <div class="val" id="p-msg-num"></div>
+      </div>
+    </div>
+
+    <div class="ics-row">
+      <div class="ics-cell" style="flex:2;">
+        <div class="label">3. From (Name and Position)</div>
+        <div class="val" id="p-from-name"></div>
+      </div>
+      <div class="ics-cell" style="flex:2;">
+        <div class="label">Position / Agency</div>
+        <div class="val" id="p-from-pos"></div>
+      </div>
+      <div class="ics-cell" style="flex:1;">
+        <div class="label">4. Date / Time</div>
+        <div class="val" id="p-datetime"></div>
+      </div>
+    </div>
+
+    <div class="ics-row">
+      <div class="ics-cell" style="flex:1;">
+        <div class="label">5. Subject</div>
+        <div class="val" id="p-subject"></div>
+      </div>
+    </div>
+
+    <div class="ics-row">
+      <div class="ics-cell" style="flex:1;">
+        <div class="label">6. Message</div>
+        <div class="val ics-msg-body" id="p-message" style="min-height:150px;"></div>
+      </div>
+    </div>
+
+    <div class="ics-row">
+      <div class="ics-cell" style="flex:2;">
+        <div class="label">7. Approved By (Signature)</div>
+        <div class="val" id="p-approved-name" style="min-height:30px;"></div>
+      </div>
+      <div class="ics-cell" style="flex:2;">
+        <div class="label">Position / Title</div>
+        <div class="val" id="p-approved-pos"></div>
+      </div>
+      <div class="ics-cell" style="flex:1;">
+        <div class="label">Date / Time</div>
+        <div class="val" id="p-approved-dt"></div>
+      </div>
+    </div>
+
+    <div class="ics-row" style="background:#f5f5f5;">
+      <div class="ics-cell" style="flex:1;">
+        <div class="label">8. Reply</div>
+        <div class="val ics-msg-body" id="p-reply" style="min-height:80px;"></div>
+      </div>
+    </div>
+
+    <div class="ics-sig-row">
+      <div class="sig-block">
+        <div class="sig-label">Replied By (Signature)</div>
+        <div class="sig-line" id="p-replied-name"></div>
+        <div class="sig-label">Name / Position</div>
+      </div>
+      <div class="sig-block">
+        <div class="sig-label">Date / Time</div>
+        <div class="sig-line" id="p-reply-dt"></div>
+      </div>
+    </div>
+
+    <div style="padding:6px 10px;font-size:9px;color:#666;background:#f9f9f9;border-top:1px solid #ccc;">
+      ICS 213, Page 1 of 1 &nbsp;|&nbsp; Printed: <span id="p-print-time"></span>
+    </div>
+  </div>
+
+  <div id="preview-actions" style="display:none;margin-bottom:20px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="window.print()">🖨 Print Form</button>
+      <button class="btn btn-secondary" onclick="saveToLog()">💾 Save to Log</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('form-section').style.display='block';document.getElementById('ics-form').classList.remove('show');document.getElementById('preview-actions').style.display='none';">← Edit</button>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div id="log-section">
+    <div style="font-family:var(--font-hd);font-size:11px;letter-spacing:0.2em;color:var(--eoc);margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+      SAVED ICS-213 MESSAGES
+      <div style="flex:1;height:1px;background:var(--line);"></div>
+      <button class="btn btn-secondary" onclick="clearSaved()" style="font-size:10px;padding:3px 8px;">Clear All</button>
+    </div>
+    <div class="form-card" style="padding:0;overflow:hidden;">
+      <table class="log-table">
+        <thead><tr><th>#</th><th>Subject</th><th>To</th><th>From</th><th>Date</th><th></th></tr></thead>
+        <tbody id="log-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted);">No messages saved.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://192.168.50.1:5050';
+let savedForms=JSON.parse(localStorage.getItem('fc_ics213_log')||'[]');
+let current=null;
+
+setInterval(()=>{ document.getElementById('utc-clock').textContent=new Date().toUTCString().slice(17,22)+'Z'; },1000);
+
+function autofill(){
+  const now=new Date();
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('f-date').value=months[now.getUTCMonth()]+' '+now.getUTCDate()+', '+now.getUTCFullYear();
+  document.getElementById('f-time').value=String(now.getUTCHours()).padStart(2,'0')+String(now.getUTCMinutes()).padStart(2,'0')+' UTC';
+  if(!document.getElementById('f-msg-num').value){
+    const n=savedForms.length+1;
+    document.getElementById('f-msg-num').value='ICS-213-'+String(n).padStart(3,'0');
+  }
+}
+
+function generateForm(){
+  const f=id=>document.getElementById(id).value.trim();
+  const dt=f('f-date')+(f('f-time')?' / '+f('f-time'):'');
+
+  const set=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val||''; };
+  set('p-incident',f('f-incident'));
+  set('p-to-name',f('f-to-name'));
+  set('p-to-pos',f('f-to-pos'));
+  set('p-msg-num',f('f-msg-num'));
+  set('p-from-name',f('f-from-name'));
+  set('p-from-pos',f('f-from-pos'));
+  set('p-datetime',dt);
+  set('p-subject',f('f-subject'));
+  set('p-message',f('f-message'));
+  set('p-approved-name',f('f-approved-name'));
+  set('p-approved-pos',f('f-approved-pos'));
+  set('p-approved-dt',dt);
+  set('p-reply',f('f-reply'));
+  set('p-replied-name',f('f-replied-name'));
+  set('p-reply-dt',f('f-reply-dt'));
+  document.getElementById('p-print-time').textContent=new Date().toUTCString().slice(0,25);
+
+  document.getElementById('ics-form').classList.add('show');
+  document.getElementById('preview-actions').style.display='block';
+  document.getElementById('form-section').style.display='none';
+  document.getElementById('ics-form').scrollIntoView({behavior:'smooth'});
+
+  current={number:f('f-msg-num'),subject:f('f-subject'),to:f('f-to-name'),from:f('f-from-name'),date:dt,saved_at:new Date().toISOString()};
+}
+
+function saveToLog(){
+  if(!current) return;
+  savedForms.unshift(current);
+  if(savedForms.length>50) savedForms=savedForms.slice(0,50);
+  localStorage.setItem('fc_ics213_log',JSON.stringify(savedForms));
+  fetch(`${API}/api/forms`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(current)}).catch(()=>{});
+  renderLog(); alert('Form saved to log.');
+}
+
+function renderLog(){
+  const tbody=document.getElementById('log-tbody');
+  if(!savedForms.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted);">No messages saved.</td></tr>';return;}
+  tbody.innerHTML=savedForms.map((g,i)=>`<tr>
+    <td style="font-family:var(--font-hd);font-size:11px;">${esc(g.number||'—')}</td>
+    <td>${esc(g.subject)}</td>
+    <td>${esc(g.to)}</td>
+    <td>${esc(g.from)}</td>
+    <td>${esc(g.date)}</td>
+    <td><button class="btn btn-danger" onclick="deleteForm(${i})" style="font-size:10px;padding:3px 6px;">✕</button></td>
+  </tr>`).join('');
+}
+
+function deleteForm(i){if(!confirm('Delete?'))return;savedForms.splice(i,1);localStorage.setItem('fc_ics213_log',JSON.stringify(savedForms));renderLog();}
+function clearSaved(){if(!confirm('Clear all saved ICS-213 forms?'))return;savedForms=[];localStorage.setItem('fc_ics213_log','[]');renderLog();}
+function clearForm(){
+  ['f-incident','f-to-name','f-to-pos','f-msg-num','f-from-name','f-from-pos','f-date','f-time','f-subject','f-message','f-approved-name','f-approved-pos','f-reply','f-replied-name','f-reply-dt'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('ics-form').classList.remove('show');
+  document.getElementById('preview-actions').style.display='none';
+  document.getElementById('form-section').style.display='block';
+  current=null;
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── Winlink form import hook (opened from winlink-import.html?import=1) ────────
+function applyWinlinkImport(){
+  if(!new URLSearchParams(location.search).has('import')) return;
+  let data; try{ data=JSON.parse(sessionStorage.getItem('fc_winlink_import')||'null'); }catch(e){ data=null; }
+  if(!data || data.formType!=='ics213' || !data.fields) return;
+  const f=data.fields;
+  const setv=(id,val)=>{ const el=document.getElementById(id); if(el && val!=null) el.value=val; };
+  setv('f-incident',f.incident);
+  setv('f-to-name',f.to_name);   setv('f-to-pos',f.to_pos);
+  setv('f-from-name',f.from_name); setv('f-from-pos',f.from_pos);
+  setv('f-msg-num',f.msg_num);
+  setv('f-date',f.date);         setv('f-time',f.time);
+  setv('f-subject',f.subject);   setv('f-message',f.message);
+  setv('f-approved-name',f.approved_name); setv('f-approved-pos',f.approved_pos);
+  setv('f-reply',f.reply);       setv('f-replied-name',f.replied_name); setv('f-reply-dt',f.reply_dt);
+  sessionStorage.removeItem('fc_winlink_import');
+  generateForm();   // jump straight to the print-ready ICS-213 view
+}
+
+renderLog();
+applyWinlinkImport();
+
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

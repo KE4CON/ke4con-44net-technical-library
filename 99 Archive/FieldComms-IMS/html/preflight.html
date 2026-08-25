@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Preflight Check — Incident Management</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.main-wrap { max-width: 900px; margin: 0 auto; padding: 20px 16px; }
+
+.verdict-banner {
+  border-radius: 10px; padding: 24px; text-align: center; margin-bottom: 20px;
+  border: 2px solid var(--line); transition: all 0.3s;
+}
+.verdict-banner.go       { background: rgba(80,200,80,0.12); border-color: var(--green); }
+.verdict-banner.caution  { background: rgba(26,58,107,0.08); border-color: var(--eoc-lt); }
+.verdict-banner.nogo     { background: rgba(220,60,60,0.12); border-color: var(--red); }
+.verdict-banner.pending  { background: var(--input-bg); border-color: var(--line); }
+
+.verdict-label {
+  font-family: var(--font-hd); font-size: 40px; letter-spacing: 6px; margin-bottom: 6px;
+}
+.verdict-label.go       { color: var(--green); text-shadow: 0 0 30px rgba(80,200,80,0.6); }
+.verdict-label.caution  { color: var(--amber); text-shadow: 0 0 30px rgba(245,166,35,0.6); }
+.verdict-label.nogo     { color: var(--red); text-shadow: 0 0 30px rgba(220,60,60,0.6); }
+.verdict-label.pending  { color: var(--muted); }
+
+.verdict-sub { font-size: 13px; color: var(--muted); }
+.verdict-score { font-family: var(--font-hd); font-size: 14px; margin-top: 8px; color: var(--txt); }
+
+.progress-bar { height: 8px; background: var(--line); border-radius: 4px; margin: 12px auto; max-width: 400px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 4px; transition: width 0.4s, background 0.4s; }
+
+.actions-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+
+.check-section {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  overflow: hidden; margin-bottom: 16px;
+}
+.section-hdr {
+  background: var(--panel2); padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+  user-select: none;
+}
+.section-hdr-left { display: flex; align-items: center; gap: 10px; }
+.section-icon { font-size: 18px; }
+.section-title { font-family: var(--font-hd); font-size: 13px; letter-spacing: 0.5px; }
+.section-progress { font-size: 11px; color: var(--muted); }
+.section-status { font-size: 12px; font-weight: bold; }
+.s-go     { color: var(--green); }
+.s-caution{ color: var(--amber); }
+.s-nogo   { color: var(--red); }
+.s-pending{ color: var(--dim); }
+
+.check-items { padding: 0 16px 12px; }
+.check-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--line);
+}
+.check-item:last-child { border-bottom: none; }
+.check-toggle { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; margin-top: 2px; }
+.toggle-btn {
+  width: 32px; height: 28px; border-radius: 4px; border: 1px solid var(--line);
+  cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; background: var(--panel2); color: var(--muted);
+}
+.toggle-btn.go-active     { background: rgba(80,200,80,0.2); border-color: var(--green); color: var(--green); }
+.toggle-btn.caution-active{ background: rgba(245,166,35,0.2); border-color: var(--eoc-lt); color: var(--amber); }
+.toggle-btn.nogo-active   { background: rgba(220,60,60,0.2); border-color: var(--red); color: var(--red); }
+.toggle-btn:hover { border-color: var(--eoc-lt); }
+
+.check-info { flex: 1; }
+.check-name { font-size: 13px; color: var(--txt); }
+.check-desc { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+.check-note { margin-top: 6px; }
+.check-note input { font-size: 11px; padding: 4px 8px; width: 100%; box-sizing: border-box; }
+
+.required-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); display: inline-block; margin-right: 4px; vertical-align: middle; }
+
+.print-section { display: none; }
+@media print {
+  .nav-bar, .actions-bar, .toggle-btn, .check-note input { display: none !important; }
+  .print-section { display: block; }
+  body { background: white; color: black; }
+}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="index.html" class="nav-logo">⬡ Incident Management</a>
+  <div class="nav-links">
+    <a href="index.html">Dashboard</a>
+    <a href="preflight.html" class="active">Preflight</a>
+    <a href="resources.html">Resources</a>
+  </div>
+  <div class="nav-right">
+    <span id="utc-clock" style="font-family:var(--font-hd);color:var(--green);font-size:13px;letter-spacing:1px;"></span>
+  </div>
+</nav>
+
+<div class="main-wrap">
+  <div class="verdict-banner pending" id="verdict-banner">
+    <div class="verdict-label pending" id="verdict-label">PREFLIGHT</div>
+    <div class="verdict-sub" id="verdict-sub">Complete all checklist items to receive your GO / NO-GO verdict</div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="main-progress" style="width:0%;background:var(--amber);"></div>
+    </div>
+    <div class="verdict-score" id="verdict-score">0 of 0 items checked</div>
+  </div>
+
+  <div class="actions-bar">
+    <button class="btn btn-secondary" onclick="resetAll()">↺ Reset All</button>
+    <button class="btn btn-secondary" onclick="window.print()">🖨 Print Report</button>
+    <button class="btn btn-secondary" onclick="exportReport()">⬇ Export JSON</button>
+    <button class="btn btn-primary" onclick="saveState()">💾 Save Progress</button>
+    <div style="margin-left:auto;font-size:11px;color:var(--muted);align-self:center;">
+      <span class="required-dot"></span>Red dot = GO required
+    </div>
+  </div>
+
+  <div id="checklist-container"></div>
+</div>
+
+<script>
+const API = 'http://192.168.50.1:5050';
+
+setInterval(()=>{ document.getElementById('utc-clock').textContent = new Date().toUTCString().slice(17,22)+'Z'; },1000);
+
+// Checklist definition
+const CHECKLIST = [
+  {
+    id:'power', icon:'⚡', title:'Power Systems',
+    items:[
+      {id:'mains-power', name:'Shore / Generator Power', desc:'Primary power source verified operational', required:true},
+      {id:'battery-backup', name:'Battery Backup / UPS', desc:'UPS charged and tested. Runtime ≥ 4 hours at load', required:true},
+      {id:'solar-panels', name:'Solar Panels (if applicable)', desc:'Panels connected, charge controller showing green', required:false},
+      {id:'fuel-supply', name:'Generator Fuel Supply', desc:'Fuel level >50%. Spare fuel on-site', required:false},
+      {id:'power-strips', name:'Power Distribution', desc:'All power strips, PDUs verified. No overloaded circuits', required:true},
+    ]
+  },
+  {
+    id:'comms', icon:'📻', title:'Communications Equipment',
+    items:[
+      {id:'hf-radio', name:'HF Radio', desc:'Transceiver powered on, frequency set, antenna connected', required:true},
+      {id:'vhf-radio', name:'VHF/UHF Radio', desc:'Primary VHF/UHF radio operational and programmed', required:true},
+      {id:'go-kit-radios', name:'Go-Kit Radios', desc:'Portable radios charged, programmed with tactical channels', required:true},
+      {id:'antenna-hf', name:'HF Antenna', desc:'Dipole/vertical deployed, SWR measured <2:1 on primary bands', required:true},
+      {id:'antenna-vhf', name:'VHF/UHF Antenna', desc:'Antenna properly mounted and connected', required:true},
+      {id:'repeater-access', name:'Repeater Access', desc:'Local repeaters accessible; CTCSS/DCS tones verified', required:false},
+      {id:'winlink', name:'Winlink Email', desc:'Winlink Express (Windows station) connected and message traffic test successful; Pat on Pi available as backup', required:false},
+      {id:'js8call', name:'JS8Call', desc:'JS8Call running on Windows laptop, web interface reachable at port 2442, frequency set, heartbeat configured', required:false},
+    ]
+  },
+  {
+    id:'computing', icon:'💻', title:'Computing & Software',
+    items:[
+      {id:'pi-boot', name:'Raspberry Pi / Server Boot', desc:'Incident Management server booted; all services showing green on dashboard', required:true},
+      {id:'fcc-db', name:'FCC Database', desc:'FCC callsign database present and accessible', required:true},
+      {id:'nginx', name:'Web Server (nginx)', desc:'nginx running; dashboard accessible at http://192.168.50.1/', required:true},
+      {id:'api-server', name:'API Server (:5050)', desc:'fcc-lookup API responding; test query successful', required:true},
+      {id:'health-monitor', name:'Health Monitor (:5051)', desc:'Health monitor running; no critical alerts', required:true},
+      {id:'graywolf', name:'Graywolf APRS (:8080)', desc:'Graywolf running and receiving APRS beacons', required:false},
+      {id:'kiwix', name:'Kiwix (:8081)', desc:'Kiwix running; Wikipedia, ARRL resources accessible offline', required:false},
+      {id:'wifi-ap', name:'WiFi AP (EMCOMM-NET)', desc:'SSID broadcasting; test device connected to 192.168.50.1', required:true},
+    ]
+  },
+  {
+    id:'personnel', icon:'👤', title:'Personnel & Staffing',
+    items:[
+      {id:'net-control', name:'Net Control Operator', desc:'Trained NCS operator identified and briefed', required:true},
+      {id:'alt-ncs', name:'Alternate NCS', desc:'Alternate NCS designated and briefed on procedures', required:false},
+      {id:'liaison', name:'Agency Liaison', desc:'Liaison with served agency established; contact info confirmed', required:false},
+      {id:'operators-briefed', name:'Operators Briefed', desc:'All operators briefed on frequencies, procedures, and ICS structure', required:true},
+      {id:'roster-check', name:'Roster Check-In', desc:'All activated operators checked into the Incident Management roster', required:true},
+    ]
+  },
+  {
+    id:'logistics', icon:'📦', title:'Logistics & Supplies',
+    items:[
+      {id:'food-water', name:'Food & Water', desc:'72-hour supply for all personnel', required:false},
+      {id:'first-aid', name:'First Aid Kit', desc:'First aid kit present and stocked', required:true},
+      {id:'weather-shelter', name:'Weather Protection', desc:'Tent/shelter adequate for conditions. Rain cover for equipment', required:false},
+      {id:'spare-fuses', name:'Spare Parts', desc:'Spare fuses, connectors, coax, batteries available', required:false},
+      {id:'lighting', name:'Lighting', desc:'Battery lanterns / headlamps available for night ops', required:false},
+      {id:'forms-printed', name:'Paper Backup Forms', desc:'ICS forms, net logs, FCC quick card printed and available', required:true},
+    ]
+  },
+  {
+    id:'safety', icon:'🛡', title:'Safety & Security',
+    items:[
+      {id:'lightning-ground', name:'Lightning Protection', desc:'All antennas grounded. Lightning arrestors installed on coax', required:true},
+      {id:'rf-safety', name:'RF Exposure', desc:'Safe RF exposure zones established; no bystanders near antennas during TX', required:true},
+      {id:'co-detector', name:'CO Detector (generator ops)', desc:'Carbon monoxide detector active near generator areas', required:false},
+      {id:'comms-plan', name:'Emergency Comms Plan', desc:'Frequencies, callsigns, and backup procedures documented', required:true},
+      {id:'contact-list', name:'Emergency Contact List', desc:'Phone list for key personnel, EOC, and served agency printed', required:true},
+    ]
+  },
+  {
+    id:'coordination', icon:'🤝', title:'Agency Coordination',
+    items:[
+      {id:'eoc-check', name:'EOC Check-In', desc:'Checked in with local EOC or served agency', required:true},
+      {id:'freqs-confirmed', name:'Frequencies Confirmed', desc:'Operating frequencies confirmed with EOC/IC', required:true},
+      {id:'icp-location', name:'ICP Location Known', desc:'Incident Command Post location and access route confirmed', required:false},
+      {id:'resource-request', name:'Resource Request Process', desc:'Process for requesting additional resources understood', required:false},
+      {id:'demob-plan', name:'Demobilization Plan', desc:'Demobilization criteria and process defined', required:false},
+    ]
+  },
+];
+
+let state = {}; // item_id -> 'go' | 'caution' | 'nogo' | null
+let notes = {}; // item_id -> string
+let sectionOpen = {};
+
+function loadState() {
+  const saved = localStorage.getItem('fc_preflight_state');
+  if(saved) { const d = JSON.parse(saved); state=d.state||{}; notes=d.notes||{}; }
+  CHECKLIST.forEach(s=>{ sectionOpen[s.id]=true; });
+}
+
+function saveState() {
+  localStorage.setItem('fc_preflight_state', JSON.stringify({state, notes, saved: new Date().toISOString()}));
+  alert('Preflight state saved.');
+}
+
+function resetAll() {
+  if(!confirm('Reset all checklist items?')) return;
+  state={}; notes={};
+  localStorage.removeItem('fc_preflight_state');
+  render();
+}
+
+function setItem(id, val) {
+  state[id] = state[id]===val ? null : val;
+  render();
+}
+
+function setNote(id, val) {
+  notes[id] = val;
+}
+
+function getVerdict() {
+  let total=0, checked=0, goCount=0, cautionCount=0, nogoCount=0, requiredFail=0;
+  CHECKLIST.forEach(section=>{
+    section.items.forEach(item=>{
+      total++;
+      const s = state[item.id];
+      if(s) checked++;
+      if(s==='go') goCount++;
+      if(s==='caution') cautionCount++;
+      if(s==='nogo') { nogoCount++; if(item.required) requiredFail++; }
+      if(item.required && !s) requiredFail++;
+    });
+  });
+
+  let verdict, sub;
+  if(checked===0) {
+    verdict='pending'; sub='Complete all checklist items to receive your GO / NO-GO verdict';
+  } else if(nogoCount>0) {
+    verdict='nogo'; sub=`${nogoCount} NO-GO item${nogoCount!==1?'s':''} identified — do not activate`;
+  } else if(requiredFail>0) {
+    verdict='nogo'; sub=`${requiredFail} required item${requiredFail!==1?'s':''} not confirmed — cannot activate`;
+  } else if(cautionCount>0) {
+    verdict='caution'; sub=`${cautionCount} item${cautionCount!==1?'s':''} require attention before activation`;
+  } else if(checked<total) {
+    verdict='caution'; sub=`${total-checked} item${total-checked!==1?'s':''} not yet checked — review before activating`;
+  } else {
+    verdict='go'; sub='All checklist items confirmed — cleared for activation';
+  }
+
+  return {verdict, sub, total, checked, goCount, cautionCount, nogoCount};
+}
+
+function getSectionStatus(section) {
+  let allGo=true, anyNogo=false, anyCaution=false, anyUnchecked=false;
+  section.items.forEach(item=>{
+    const s=state[item.id];
+    if(!s) { allGo=false; anyUnchecked=true; }
+    if(s==='nogo') { anyNogo=true; allGo=false; }
+    if(s==='caution') { anyCaution=true; allGo=false; }
+  });
+  if(anyNogo) return 'nogo';
+  if(anyCaution) return 'caution';
+  if(anyUnchecked) return 'pending';
+  return 'go';
+}
+
+function toggleSection(id) {
+  sectionOpen[id] = !sectionOpen[id];
+  document.getElementById('section-body-'+id).style.display = sectionOpen[id] ? 'block' : 'none';
+  document.getElementById('section-chevron-'+id).textContent = sectionOpen[id] ? '▾' : '▸';
+}
+
+function render() {
+  const v = getVerdict();
+
+  // Verdict banner
+  const banner = document.getElementById('verdict-banner');
+  const vlabel = document.getElementById('verdict-label');
+  const vsub = document.getElementById('verdict-sub');
+  banner.className = 'verdict-banner ' + v.verdict;
+  vlabel.className = 'verdict-label ' + v.verdict;
+  const verdictText = {pending:'PREFLIGHT',go:'GO',caution:'CAUTION',nogo:'NO-GO'};
+  vlabel.textContent = verdictText[v.verdict];
+  vsub.textContent = v.sub;
+
+  const pct = v.total>0 ? (v.checked/v.total)*100 : 0;
+  const fillColor = v.verdict==='go'?'var(--green)':v.verdict==='caution'?'var(--amber)':'var(--red)';
+  document.getElementById('main-progress').style.width = pct+'%';
+  document.getElementById('main-progress').style.background = v.verdict==='pending'?'var(--dim)':fillColor;
+  document.getElementById('verdict-score').textContent = `${v.checked} of ${v.total} items checked · ${v.goCount} GO · ${v.cautionCount} CAUTION · ${v.nogoCount} NO-GO`;
+
+  // Sections
+  const container = document.getElementById('checklist-container');
+  container.innerHTML = CHECKLIST.map(section=>{
+    const sStat = getSectionStatus(section);
+    const checked = section.items.filter(i=>state[i.id]).length;
+    const sStatLabels = {go:'✓ GO',caution:'⚠ CAUTION',nogo:'✕ NO-GO',pending:'—'};
+    const sStatClass = {go:'s-go',caution:'s-caution',nogo:'s-nogo',pending:'s-pending'};
+    const open = sectionOpen[section.id]!==false;
+
+    return `<div class="check-section">
+      <div class="section-hdr" onclick="toggleSection('${section.id}')">
+        <div class="section-hdr-left">
+          <span class="section-icon">${section.icon}</span>
+          <span class="section-title">${section.title}</span>
+          <span class="section-progress" style="color:var(--dim);">(${checked}/${section.items.length})</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="section-status ${sStatClass[sStat]}">${sStatLabels[sStat]}</span>
+          <span id="section-chevron-${section.id}" style="color:var(--muted);">${open?'▾':'▸'}</span>
+        </div>
+      </div>
+      <div class="check-items" id="section-body-${section.id}" style="display:${open?'block':'none'};">
+        ${section.items.map(item=>{
+          const s = state[item.id]||null;
+          return `<div class="check-item">
+            <div class="check-toggle">
+              <button class="toggle-btn ${s==='go'?'go-active':''}" onclick="setItem('${item.id}','go')" title="GO">✓</button>
+              <button class="toggle-btn ${s==='caution'?'caution-active':''}" onclick="setItem('${item.id}','caution')" title="CAUTION">⚠</button>
+              <button class="toggle-btn ${s==='nogo'?'nogo-active':''}" onclick="setItem('${item.id}','nogo')" title="NO-GO">✕</button>
+            </div>
+            <div class="check-info">
+              <div class="check-name">
+                ${item.required?'<span class="required-dot" title="Required for GO"></span>':''}
+                ${esc(item.name)}
+              </div>
+              <div class="check-desc">${esc(item.desc)}</div>
+              <div class="check-note">
+                <input type="text" placeholder="Note (optional)" value="${esc(notes[item.id]||'')}" oninput="setNote('${item.id}',this.value)">
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function exportReport() {
+  const v = getVerdict();
+  const report = {
+    generated: new Date().toISOString(),
+    verdict: v.verdict,
+    score: `${v.checked}/${v.total}`,
+    sections: CHECKLIST.map(s=>({
+      section: s.title,
+      status: getSectionStatus(s),
+      items: s.items.map(i=>({
+        name: i.name,
+        required: i.required,
+        status: state[i.id]||'unchecked',
+        note: notes[i.id]||''
+      }))
+    }))
+  };
+  const blob = new Blob([JSON.stringify(report,null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`preflight_${new Date().toISOString().slice(0,10)}.json`; a.click();
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+loadState();
+render();
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

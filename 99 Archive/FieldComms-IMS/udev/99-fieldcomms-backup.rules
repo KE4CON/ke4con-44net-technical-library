@@ -1,0 +1,6 @@
+# FieldComms USB Backup Trigger
+# Triggers automatic backup when a USB drive labeled "FIELDCOMMS" is inserted
+# Install to: /etc/udev/rules.d/99-fieldcomms-backup.rules
+
+ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_LABEL}=="FIELDCOMMS", \
+    RUN+="/bin/systemctl start fieldcomms-backup@%k.service"

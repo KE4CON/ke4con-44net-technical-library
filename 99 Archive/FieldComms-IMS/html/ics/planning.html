@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — ICS Planning</title>
+<link rel="stylesheet" href="../theme.css">
+<style>
+.page-header{background: linear-gradient(135deg, var(--eoc) 0%, var(--eoc-lt) 100%);border-bottom:2px solid var(--blue);padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.page-header a{color: rgba(255,255,255,0.7);text-decoration:none;font-size:13px;}
+.page-header a:hover{color: #fff;}
+.page-title{font-family:var(--font-hd);font-size:18px;color:var(--blue);letter-spacing:2px;}
+.ics-nav{background:var(--panel2);border-bottom:1px solid var(--line);padding:0;display:flex;overflow-x:auto;}
+.ics-nav a{display:flex;align-items:center;gap:6px;padding:11px 18px;text-decoration:none;color:var(--muted);font-family:var(--font-hd);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;border-bottom:3px solid transparent;transition:color 0.15s,border-color 0.15s;}
+.ics-nav a:hover{color:var(--txt);}
+.ics-nav a.active{color:var(--blue);border-bottom-color:var(--blue);}
+.container{max-width:1100px;margin:0 auto;padding:20px 20px 40px;}
+.sec-label{font-family:var(--font-hd);font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--blue);padding:16px 0 8px;display:flex;align-items:center;gap:10px;}
+.sec-label::after{content:'';flex:1;height:1px;background: var(--line);}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;}
+.panel-title{font-family:var(--font-hd);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--blue);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.field{margin-bottom:10px;}
+.field label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;}
+.field input,.field select,.field textarea{width:100%;box-sizing:border-box;background:var(var(--input-bg);border:1px solid var(--line);border-radius:4px;color:var(--txt);padding:7px 10px;font-size:13px;}
+.field textarea{resize:vertical;min-height:80px;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:700px){.two-col{grid-template-columns:1fr;}}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+@media(max-width:600px){.three-col{grid-template-columns:1fr;}}
+.tab-bar{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:16px;}
+.tab{background:none;border:none;border-bottom:3px solid transparent;color:var(--muted);font-family:var(--font-hd);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;padding:10px 16px;cursor:pointer;transition:color 0.15s,border-color 0.15s;}
+.tab:hover{color:var(--txt);}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* Situation status board */
+.status-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+.status-card{background: var(--bg);border:1px solid var(--line);border-radius:6px;padding:12px;text-align:center;}
+.status-card .sc-label{font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;}
+.status-card .sc-val{font-family:var(--font-hd);font-size:22px;}
+.status-card .sc-sub{font-size:10px;color:var(--muted);margin-top:3px;}
+
+/* Resource status table */
+.rs-table{width:100%;border-collapse:collapse;font-size:12px;}
+.rs-table th{text-align:left;padding:6px 8px;color:var(--blue);font-family:var(--font-hd);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--line);background:var(--panel);}
+.rs-table td{padding:7px 8px;border-bottom:1px solid var(--line);color:var(--txt);}
+.rs-table tr:hover td{background:var(--panel);}
+
+/* IAP form list */
+.iap-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);}
+.iap-item:last-child{border-bottom:none;}
+.iap-num{font-family:var(--font-hd);font-size:13px;color:var(--blue);min-width:72px;}
+.iap-name{font-size:13px;color:var(--txt);flex:1;}
+.iap-status{font-size:10px;font-family:var(--font-hd);padding:2px 7px;border-radius:3px;}
+.iap-done{background:rgba(26,122,58,0.10);color:var(--green);border:1px solid var(--green);}
+.iap-pend{background:rgba(26,58,107,0.08);color:var(--eoc);border:1px solid var(--amber);}
+.iap-na{background: var(--bg);color:var(--muted);border:1px solid var(--line);}
+
+/* Doc list */
+.doc-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);}
+.doc-row:last-child{border-bottom:none;}
+.doc-icon{font-size:18px;}
+.doc-name{flex:1;font-size:12px;color:var(--txt);}
+.doc-meta{font-size:10px;color:var(--muted);}
+
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:50;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--panel);border:2px solid var(--blue);border-radius:10px;width:min(520px,95vw);padding:24px;position:relative;max-height:85vh;overflow-y:auto;}
+.modal-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;}
+.modal-close:hover{color:var(--txt);}
+.modal-title{font-family:var(--font-hd);font-size:18px;color:var(--blue);margin-bottom:16px;}
+</style>
+</head>
+<body>
+<div class="page-header">
+  <a href="../index.html">⌂ Home</a>
+  <span style="color:var(--line)">›</span>
+  <a href="index.html">ICS Platform</a>
+  <span style="color:var(--line)">›</span>
+  <span class="page-title">📋 PLANNING</span>
+  <span style="margin-left:auto;display:flex;gap:8px">
+    <button class="btn btn-sm" onclick="saveAll()" style="border-color:var(--blue);color:var(--blue)">💾 Save</button>
+    <button class="btn btn-sm" onclick="window.print()" style="background:var(--panel2)">🖨 Print IAP</button>
+  </span>
+</div>
+<nav class="ics-nav">
+  <a href="index.html">🏛 Overview</a>
+  <a href="command.html">⭐ Command</a>
+  <a href="operations.html">🔴 Operations</a>
+  <a href="planning.html" class="active">📋 Planning</a>
+  <a href="logistics.html">🟢 Logistics</a>
+  <a href="finance.html">💜 Finance</a>
+  <a href="planningp.html">🅿 Planning P</a>
+</nav>
+
+<div class="container">
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('situation')">Situation Status</button>
+    <button class="tab" onclick="showTab('iap')">IAP Forms</button>
+    <button class="tab" onclick="showTab('resstatus')">Resource Status</button>
+    <button class="tab" onclick="showTab('docs')">Documentation</button>
+  </div>
+
+  <!-- SITUATION STATUS -->
+  <div class="tab-pane active" id="tab-situation">
+    <div class="sec-label">📊 Incident Status Summary (ICS-209)</div>
+    <div class="status-board" id="statusBoard">
+      <div class="status-card">
+        <div class="sc-label">Total Personnel</div>
+        <div class="sc-val" id="ss-personnel" style="color:var(--blue)">—</div>
+        <div class="sc-sub">On incident</div>
+      </div>
+      <div class="status-card">
+        <div class="sc-label">Resources</div>
+        <div class="sc-val" id="ss-resources" style="color:var(--eoc)">—</div>
+        <div class="sc-sub">Total committed</div>
+      </div>
+      <div class="status-card">
+        <div class="sc-label">Assigned</div>
+        <div class="sc-val" id="ss-assigned" style="color:var(--green)">—</div>
+        <div class="sc-sub">Working</div>
+      </div>
+      <div class="status-card">
+        <div class="sc-label">Available</div>
+        <div class="sc-val" id="ss-available" style="color:var(--green)">—</div>
+        <div class="sc-sub">In staging</div>
+      </div>
+      <div class="status-card">
+        <div class="sc-label">Out of Service</div>
+        <div class="sc-val" id="ss-oos" style="color:var(--red)">—</div>
+        <div class="sc-sub">Unavailable</div>
+      </div>
+      <div class="status-card">
+        <div class="sc-label">Op Period</div>
+        <div class="sc-val" id="ss-period" style="color:var(--eoc)">—</div>
+        <div class="sc-sub">Current</div>
+      </div>
+    </div>
+
+    <div class="two-col" style="margin-top:16px">
+      <div class="panel">
+        <div class="panel-title">Current Situation</div>
+        <div class="field"><label>Incident Status</label>
+          <select id="incStatus">
+            <option value="active">Active</option>
+            <option value="contained">Contained</option>
+            <option value="controlled">Controlled</option>
+            <option value="in_mopping_up">In Mopping Up</option>
+            <option value="patrol">Patrol</option>
+          </select>
+        </div>
+        <div class="field"><label>Percent Contained / Completed</label>
+          <input type="range" id="pctContained" min="0" max="100" value="0" oninput="document.getElementById('pctLabel').textContent=this.value+'%'">
+          <span id="pctLabel" style="font-family:var(--font-hd);color:var(--blue);font-size:13px">0%</span>
+        </div>
+        <div class="field"><label>Situation Narrative</label>
+          <textarea id="situNarrative" placeholder="Describe current incident situation, area involved, threat to life/property…"></textarea>
+        </div>
+        <div class="field"><label>Significant Events This Period</label>
+          <textarea id="sigEvents" placeholder="List significant events, milestones, or changes…" style="min-height:60px"></textarea>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Weather / Environmental</div>
+        <div class="field"><label>Current Weather</label>
+          <textarea id="weatherCurrent" placeholder="Temperature, winds, visibility, precipitation…" style="min-height:60px"></textarea>
+        </div>
+        <div class="field"><label>24-Hour Forecast</label>
+          <textarea id="weather24h" placeholder="Expected conditions over next 24 hours…" style="min-height:60px"></textarea>
+        </div>
+        <div class="field"><label>Hazardous Conditions</label>
+          <textarea id="hazardCond" placeholder="Flash flood watch, high wind warning, heat advisory…" style="min-height:60px"></textarea>
+        </div>
+        <div class="field"><label>Agencies / Jurisdictions Involved</label>
+          <textarea id="agencies" placeholder="Franklin County ARES, Red Cross, Columbus Fire…" style="min-height:60px"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IAP FORMS -->
+  <div class="tab-pane" id="tab-iap">
+    <div class="panel">
+      <div class="panel-title">Incident Action Plan — Form Status</div>
+      <div id="iapList"></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-title">Planning P — Key Planning Times</div>
+      <div class="three-col">
+        <div class="field"><label>IC/UC Meeting</label><input type="text" id="pp-icuc" placeholder="0600"></div>
+        <div class="field"><label>Tactics Meeting</label><input type="text" id="pp-tactics" placeholder="0800"></div>
+        <div class="field"><label>Planning Meeting</label><input type="text" id="pp-planning" placeholder="1000"></div>
+        <div class="field"><label>Operations Briefing</label><input type="text" id="pp-opsbriefing" placeholder="1400"></div>
+        <div class="field"><label>Operational Period Start</label><input type="text" id="pp-opstart" placeholder="1800"></div>
+        <div class="field"><label>Next Period Brief</label><input type="text" id="pp-nextbrief" placeholder="1600"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESOURCE STATUS -->
+  <div class="tab-pane" id="tab-resstatus">
+    <div class="panel">
+      <div class="panel-title">Resource Status Summary</div>
+      <div style="overflow-x:auto">
+        <table class="rs-table" id="rsTable">
+          <thead>
+            <tr>
+              <th>Kind / Type</th>
+              <th>Total Ordered</th>
+              <th>On Scene</th>
+              <th>Assigned</th>
+              <th>Available</th>
+              <th>Out of Service</th>
+              <th>Needed</th>
+            </tr>
+          </thead>
+          <tbody id="rsBody"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-sm" onclick="addRsRow()" style="margin-top:10px;border-color:var(--blue);color:var(--blue)">+ Add Row</button>
+    </div>
+  </div>
+
+  <!-- DOCUMENTATION -->
+  <div class="tab-pane" id="tab-docs">
+    <div class="panel">
+      <div class="panel-title">
+        Incident Documentation
+        <button class="btn btn-sm" onclick="openAddDoc()" style="border-color:var(--blue);color:var(--blue)">+ Add Document</button>
+      </div>
+      <div id="docList"></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-title">Demobilization Plan</div>
+      <div class="field"><label>Demobilization Date / Time</label><input type="text" id="demoDate" placeholder="2026-06-10 1800Z"></div>
+      <div class="field"><label>Demobilization Priority</label>
+        <select id="demoPriority">
+          <option value="">Not yet determined</option>
+          <option value="mutual_aid_first">Release mutual aid first</option>
+          <option value="oos_first">Release out-of-service first</option>
+          <option value="all_at_once">Coordinated all-at-once</option>
+        </select>
+      </div>
+      <div class="field"><label>Demobilization Instructions</label>
+        <textarea id="demoInstructions" placeholder="Who releases resources, reporting locations, documentation required before release…"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Document Modal -->
+<div class="modal-bg" id="addDocModal" onclick="if(event.target===this)closeAddDoc()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAddDoc()">✕</button>
+    <div class="modal-title">Add Document</div>
+    <div class="field"><label>Document Name *</label><input type="text" id="docName" placeholder="ICS-202 Operational Period 1"></div>
+    <div class="field"><label>Type</label>
+      <select id="docType">
+        <option value="form">ICS Form</option>
+        <option value="map">Map / Diagram</option>
+        <option value="report">Situation Report</option>
+        <option value="message">Message</option>
+        <option value="photo">Photo / Image</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="field"><label>Author</label><input type="text" id="docAuthor" placeholder="Name / Callsign"></div>
+    <div class="field"><label>Notes</label><textarea id="docNotes" placeholder="Brief description or location of document…" style="min-height:60px"></textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-sm" onclick="closeAddDoc()" style="background:var(--panel2)">Cancel</button>
+      <button class="btn" onclick="saveDoc()" style="border-color:var(--blue);color:var(--blue)">Add Document</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORE = 'ics_planning';
+let state = { docs:[], rsRows:[] };
+let incData = null;
+
+const IAP_FORMS = [
+  { num:'ICS-201', name:'Incident Briefing', section:'Command', link:'command.html' },
+  { num:'ICS-202', name:'Incident Objectives', section:'Command', link:'command.html' },
+  { num:'ICS-203', name:'Organization Assignment List', section:'Command', link:'command.html' },
+  { num:'ICS-204', name:'Assignment List', section:'Operations', link:'operations.html' },
+  { num:'ICS-205', name:'Incident Radio Communications Plan', section:'Logistics', link:'logistics.html' },
+  { num:'ICS-206', name:'Medical Plan', section:'Logistics', link:'logistics.html' },
+  { num:'ICS-207', name:'Incident Organization Chart', section:'Planning', link:'planning.html' },
+  { num:'ICS-208', name:'Safety Message', section:'Command', link:'command.html' },
+  { num:'ICS-209', name:'Incident Status Summary', section:'Planning', link:'planning.html' },
+  { num:'ICS-211', name:'Incident Check-In List', section:'Logistics', link:'logistics.html' },
+  { num:'ICS-213', name:'General Message', section:'All', link:'../ics213.html' },
+  { num:'ICS-214', name:'Activity Log', section:'All', link:'../ics214.html' },
+  { num:'ICS-215', name:'Operational Planning Worksheet', section:'Operations', link:'operations.html' },
+  { num:'ICS-309', name:'Communications Log', section:'Logistics', link:'../ics309.html' },
+];
+
+function load() {
+  try { const d = JSON.parse(localStorage.getItem(STORE)||'{}');
+    if(d.docs) state.docs = d.docs;
+    if(d.rsRows) state.rsRows = d.rsRows;
+    const ids = ['incStatus','pctContained','situNarrative','sigEvents','weatherCurrent','weather24h','hazardCond','agencies','pp-icuc','pp-tactics','pp-planning','pp-opsbriefing','pp-opstart','pp-nextbrief','demoDate','demoPriority','demoInstructions'];
+    ids.forEach(id => { if(d[id]!==undefined){ const el=document.getElementById(id); if(el) el.value=d[id]; } });
+    if(d.pctContained) document.getElementById('pctLabel').textContent = d.pctContained + '%';
+  } catch(e) {}
+  loadResourceStats();
+  renderAll();
+}
+
+async function loadResourceStats() {
+  try {
+    const res = JSON.parse(localStorage.getItem('ics_resources')||'[]');
+    document.getElementById('ss-resources').textContent = res.length;
+    document.getElementById('ss-assigned').textContent = res.filter(r=>r.status==='assigned').length;
+    document.getElementById('ss-available').textContent = res.filter(r=>r.status==='available'||r.status==='staged').length;
+    document.getElementById('ss-oos').textContent = res.filter(r=>r.status==='out_of_service').length;
+  } catch(e) {}
+  try {
+    const i = await fetch('http://192.168.50.1:5055/api/ics/incidents');
+    const d = await i.json();
+    const inc = (d.incidents||[]).find(x=>x.status==='active');
+    if(inc){ document.getElementById('ss-period').textContent = inc.current_period||1; incData=inc; }
+  } catch(e) {}
+}
+
+function renderAll() {
+  renderIAP(); renderRsTable(); renderDocs();
+}
+
+function renderIAP() {
+  document.getElementById('iapList').innerHTML = IAP_FORMS.map(f => {
+    const cls = 'iap-pend'; // Future: track completion state
+    return `<div class="iap-item">
+      <span class="iap-num">${f.num}</span>
+      <span class="iap-name">${f.name}</span>
+      <span style="font-size:10px;color:var(--muted);min-width:80px">${f.section}</span>
+      <a href="${f.link}" class="btn btn-sm" style="font-size:10px">Open</a>
+    </div>`;
+  }).join('');
+}
+
+function renderRsTable() {
+  document.getElementById('rsBody').innerHTML = state.rsRows.map((r, i) => `
+    <tr>
+      <td><input type="text" value="${r.kind||''}" onchange="updateRsRow(${i},'kind',this.value)" style="background:var(var(--input-bg);border:1px solid transparent;border-radius:3px;color:var(--txt);padding:4px 6px;font-size:12px;width:100%;box-sizing:border-box"></td>
+      <td><input type="number" value="${r.ordered||0}" onchange="updateRsRow(${i},'ordered',this.value)" style="background:var(var(--input-bg);border:1px solid transparent;border-radius:3px;color:var(--txt);padding:4px 6px;font-size:12px;width:60px"></td>
+      <td><input type="number" value="${r.on_scene||0}" onchange="updateRsRow(${i},'on_scene',this.value)" style="background:var(var(--input-bg);border:1px solid transparent;border-radius:3px;color:var(--txt);padding:4px 6px;font-size:12px;width:60px"></td>
+      <td style="color:var(--eoc)">${r.assigned||0}</td>
+      <td style="color:var(--green)">${r.available||0}</td>
+      <td style="color:var(--red)">${r.oos||0}</td>
+      <td><input type="number" value="${r.needed||0}" onchange="updateRsRow(${i},'needed',this.value)" style="background:var(var(--input-bg);border:1px solid transparent;border-radius:3px;color:var(--txt);padding:4px 6px;font-size:12px;width:60px"></td>
+    </tr>`).join('') ||
+    '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--muted)">No resource types added</td></tr>';
+}
+
+function addRsRow() {
+  state.rsRows.push({ kind:'', ordered:0, on_scene:0, assigned:0, available:0, oos:0, needed:0 });
+  renderRsTable();
+}
+
+function updateRsRow(i, field, val) {
+  state.rsRows[i][field] = val;
+}
+
+const docIcons = { form:'📋', map:'🗺', report:'📊', message:'📨', photo:'📷', other:'📄' };
+
+function renderDocs() {
+  document.getElementById('docList').innerHTML = state.docs.length
+    ? state.docs.map((d, i) => `<div class="doc-row">
+        <span class="doc-icon">${docIcons[d.type]||'📄'}</span>
+        <div>
+          <div class="doc-name">${d.name}</div>
+          <div class="doc-meta">${d.type} · ${d.author||'—'} · ${d.timestamp ? new Date(d.timestamp).toLocaleString() : ''}</div>
+          ${d.notes ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">${d.notes}</div>` : ''}
+        </div>
+        <button onclick="removeDoc(${i})" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px">✕</button>
+      </div>`).join('')
+    : '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">No documents logged</div>';
+}
+
+function openAddDoc() { document.getElementById('addDocModal').classList.add('open'); }
+function closeAddDoc() { document.getElementById('addDocModal').classList.remove('open'); }
+
+function saveDoc() {
+  const name = document.getElementById('docName').value.trim();
+  if(!name){ alert('Name required'); return; }
+  state.docs.push({
+    name, type: document.getElementById('docType').value,
+    author: document.getElementById('docAuthor').value.trim(),
+    notes: document.getElementById('docNotes').value.trim(),
+    timestamp: new Date().toISOString()
+  });
+  ['docName','docAuthor','docNotes'].forEach(id=>document.getElementById(id).value='');
+  closeAddDoc(); renderDocs();
+}
+
+function removeDoc(i) { state.docs.splice(i,1); renderDocs(); }
+
+function saveAll() {
+  const ids = ['incStatus','pctContained','situNarrative','sigEvents','weatherCurrent','weather24h','hazardCond','agencies','pp-icuc','pp-tactics','pp-planning','pp-opsbriefing','pp-opstart','pp-nextbrief','demoDate','demoPriority','demoInstructions'];
+  const d = { docs: state.docs, rsRows: state.rsRows };
+  ids.forEach(id => { const el=document.getElementById(id); if(el) d[id]=el.value; });
+  localStorage.setItem(STORE, JSON.stringify(d));
+  const btn = event.target; btn.textContent='✓ Saved'; setTimeout(()=>btn.textContent='💾 Save',1500);
+}
+
+function showTab(id) {
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+window.addEventListener('load', load);
+</script>
+
+<script src="../lib/identity.js"></script>
+</body>
+</html>

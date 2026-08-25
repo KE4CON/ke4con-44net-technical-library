@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — Repeater Database</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.page-header {
+  background: linear-gradient(135deg, var(--eoc) 0%, var(--eoc-lt) 100%);
+  border-bottom: 2px solid var(--eoc);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.page-header a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; }
+.page-header a:hover { color: #fff; }
+.page-title { font-family: var(--font-hd); font-size: 18px; color: var(--eoc); letter-spacing: 2px; }
+
+/* Source tabs */
+.source-bar {
+  background: var(--panel2); border-bottom: 1px solid var(--line);
+  padding: 0 16px; display: flex; align-items: center; gap: 0; overflow-x: auto;
+}
+.src-tab {
+  background: none; border: none; border-bottom: 3px solid transparent;
+  color: var(--muted); font-family: var(--font-hd); font-size: 11px;
+  letter-spacing: 0.1em; text-transform: uppercase; padding: 10px 16px;
+  cursor: pointer; white-space: nowrap; transition: color 0.15s, border-color 0.15s;
+}
+.src-tab:hover { color: var(--txt); }
+.src-tab.active { color: var(--eoc); border-bottom-color: var(--eoc); }
+.src-count {
+  background: var(--amber); color: #000; border-radius: 8px;
+  font-size: 9px; padding: 1px 5px; margin-left: 5px;
+  font-family: var(--font-hd); vertical-align: middle;
+}
+.src-count.zero { background: var(--line); color: var(--muted); }
+
+/* Toolbar */
+.toolbar {
+  background: var(--panel); border-bottom: 1px solid var(--line);
+  padding: 10px 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+}
+.toolbar input[type=text], .toolbar select {
+  background: var(var(--input-bg); border: 1px solid var(--line); border-radius: 4px;
+  color: var(--txt); padding: 6px 10px; font-size: 13px;
+}
+.toolbar input:focus, .toolbar select:focus { outline: none; border-color: var(--eoc-lt); }
+.tlabel { font-size: 11px; color: var(--muted); display: block; margin-bottom: 3px; }
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--line); border-radius: 10px;
+  padding: 40px 20px; text-align: center; margin: 20px;
+  cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--eoc-lt); background: rgba(245,166,35,0.05);
+}
+.drop-zone-icon { font-size: 40px; margin-bottom: 12px; }
+.drop-zone-title { font-family: var(--font-hd); font-size: 16px; color: var(--txt); margin-bottom: 8px; }
+.drop-zone-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+/* Source info banner */
+.source-banner {
+  background: rgba(26,58,107,0.06); border-bottom: 1px solid rgba(245,166,35,0.3);
+  padding: 8px 20px; font-size: 11px; color: var(--amber);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.source-banner.offline { background: rgba(57,255,20,0.05); border-color: rgba(57,255,20,0.2); color: var(--green); }
+.source-banner.server  { background: rgba(26,58,107,0.05); border-color: rgba(0,120,255,0.2); color: var(--blue); }
+.source-banner.demo    { background: rgba(200,200,200,0.05); border-color: var(--line); color: var(--muted); }
+
+/* Table */
+#repTable { width: 100%; border-collapse: collapse; font-size: 12px; }
+#repTable th {
+  text-align: left; padding: 7px 8px; color: #ffffff;
+  font-family: var(--font-hd); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  border-bottom: 2px solid var(--line); background: var(--panel);
+  position: sticky; top: 0; z-index: 2; cursor: pointer; user-select: none;
+}
+#repTable th:hover { color: var(--txt); }
+#repTable th.sorted { color: var(--green); }
+#repTable td { padding: 6px 8px; border-bottom: 1px solid var(--line); color: var(--txt); vertical-align: middle; }
+#repTable tr:hover td { background: var(--panel); cursor: pointer; }
+#repTable tr.selected td { background: rgba(26,58,107,0.06); }
+
+.freq { font-family: var(--font-hd); color: var(--green); }
+.callsign-cell { font-family: var(--font-hd); color: var(--eoc-lt); }
+.badge {
+  display: inline-block; border-radius: 3px; padding: 1px 5px;
+  font-family: var(--font-hd); font-size: 9px; letter-spacing: 0.03em;
+  white-space: nowrap; margin: 1px;
+}
+.badge-fm    { background: rgba(100,100,100,0.15); color: var(--muted); border: 1px solid var(--line); }
+.badge-dstar { background: rgba(0,180,255,0.15); color: #00b4ff; border: 1px solid #00b4ff55; }
+.badge-c4fm  { background: rgba(255,140,0,0.15); color: #ff8c00; border: 1px solid #ff8c0055; }
+.badge-dmr   { background: rgba(91,45,140,0.10); color: #c850ff; border: 1px solid #c850ff55; }
+.badge-p25   { background: rgba(184,32,32,0.10); color: var(--red); border: 1px solid rgba(255,80,80,0.3); }
+.badge-tone  { background: rgba(26,122,58,0.08); color: var(--green); border: 1px solid rgba(57,255,20,0.3); }
+.badge-ares  { background: rgba(255,60,60,0.12); color: var(--red); border: 1px solid rgba(255,60,60,0.3); }
+.badge-skyw  { background: rgba(0,180,255,0.12); color: #00b4ff; border: 1px solid rgba(0,180,255,0.3); }
+.badge-echo  { background: rgba(26,58,107,0.08); color: var(--amber); border: 1px solid rgba(245,166,35,0.3); }
+.badge-on    { color: var(--green); font-size: 11px; }
+.badge-off   { color: var(--red); font-size: 11px; }
+
+.dist-cell { font-family: var(--font-hd); font-size: 11px; color: var(--muted); }
+
+/* Detail panel */
+.detail-panel {
+  position: fixed; right: 0; top: 0; bottom: 0; width: 340px;
+  background: var(--panel); border-left: 2px solid var(--amber);
+  padding: 20px; overflow-y: auto; z-index: 20;
+  transform: translateX(100%); transition: transform 0.2s;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.2);
+}
+.detail-panel.open { transform: translateX(0); }
+.detail-close { position: absolute; top: 14px; right: 16px; background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; }
+.detail-close:hover { color: var(--txt); }
+.detail-freq { font-family: var(--font-hd); font-size: 30px; color: var(--green); line-height: 1; }
+.detail-call { font-family: var(--font-hd); font-size: 18px; color: var(--amber); margin-top: 4px; }
+.detail-sub { font-size: 11px; color: var(--muted); margin-top: 4px; margin-bottom: 16px; }
+.drow { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+.drow:last-child { border-bottom: none; }
+.drow .dl { color: var(--muted); }
+.drow .dv { color: var(--txt); font-family: var(--font-hd); font-size: 11px; text-align: right; max-width: 180px; word-break: break-word; }
+.drow .dv a { color: var(--amber); text-decoration: none; }
+.detail-notes { font-size: 11px; color: var(--muted); line-height: 1.6; margin-top: 12px; padding: 10px; background: var(--bg); border-radius: 6px; }
+.detail-badges { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0; }
+.detail-prog-row { display: flex; gap: 8px; margin-top: 10px; }
+
+/* Status / empty */
+.status-bar {
+  background: var(--eoc); border-top: 1px solid var(--line);
+  padding: 7px 20px; font-size: 11px; color: rgba(255,255,255,0.8);
+  display: flex; justify-content: space-between; align-items: center;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+}
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+.table-wrap { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 185px); padding-bottom: 44px; }
+
+/* Import progress overlay */
+.import-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.2);
+  z-index: 100; align-items: center; justify-content: center; flex-direction: column; gap: 16px;
+}
+.import-overlay.show { display: flex; }
+.import-box {
+  background: var(--panel); border: 2px solid var(--amber); border-radius: 10px;
+  padding: 30px 40px; text-align: center; min-width: 300px;
+}
+.import-title { font-family: var(--font-hd); font-size: 16px; color: var(--amber); margin-bottom: 12px; }
+.import-prog-bar { background: var(--bg); border-radius: 4px; height: 8px; overflow: hidden; margin: 12px 0; }
+.import-prog-fill { background: var(--amber); height: 100%; border-radius: 4px; transition: width 0.1s; }
+.import-msg { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <a href="index.html">⌂ Home</a>
+  <span style="color:var(--line)">›</span>
+  <span class="page-title">📻 REPEATER DATABASE</span>
+  <span style="margin-left:auto;display:flex;gap:8px;align-items:center">
+    <span style="font-size:11px;color:var(--muted)" id="headerState">No data loaded</span>
+  </span>
+</div>
+
+<!-- Source selector tabs -->
+<div class="source-bar">
+  <button class="src-tab active" id="tab-offline" onclick="switchSource('offline')">
+    📁 Offline File <span class="src-count zero" id="cnt-offline">0</span>
+  </button>
+  <button class="src-tab" id="tab-server" onclick="switchSource('server')">
+    🖥 Server API <span class="src-count zero" id="cnt-server">0</span>
+  </button>
+  <button class="src-tab" id="tab-demo" onclick="switchSource('demo')">
+    🔬 Demo Data <span class="src-count zero" id="cnt-demo">8</span>
+  </button>
+  <div style="margin-left:auto;padding:8px;display:flex;gap:8px;align-items:center">
+    <label style="font-size:11px;color:var(--muted)" for="fileInput">Load file:</label>
+    <input type="file" id="fileInput" accept=".csv,.json,.txt" style="font-size:11px;color:var(--muted)" onchange="handleFileInput(event)">
+  </div>
+</div>
+
+<!-- Source panels -->
+<div id="panel-offline">
+  <!-- Drop zone shown when no offline data -->
+  <div id="dropZone" class="drop-zone"
+       ondragover="event.preventDefault();this.classList.add('drag-over')"
+       ondragleave="this.classList.remove('drag-over')"
+       ondrop="handleDrop(event)"
+       onclick="document.getElementById('fileInput').click()">
+    <div class="drop-zone-icon">📂</div>
+    <div class="drop-zone-title">Load RepeaterBook Offline Export</div>
+    <div class="drop-zone-desc">
+      Drag &amp; drop a RepeaterBook CSV or JSON export here, or click to browse.<br><br>
+      <strong style="color:var(--eoc)">How to get the offline file:</strong><br>
+      1. Visit <strong>repeaterbook.com</strong> → Search your area → <em>Export → CSV</em><br>
+      2. Or use the <strong>RepeaterBook app</strong> → Export → Share file<br>
+      3. Or run <code style="background: var(--bg);padding:1px 4px;border-radius:3px">fetch_repeaters.py</code> on this server<br><br>
+      <span style="color:var(--muted)">Supported: RepeaterBook CSV export · RepeaterBook JSON export · Incident Management repeaters.json</span>
+    </div>
+  </div>
+</div>
+
+<div id="panel-server" style="display:none">
+  <div class="source-banner server">
+    🖥 Loaded from local server API (fetch_repeaters.py)
+    <button class="btn btn-sm" onclick="loadFromServer()" style="margin-left:auto;border-color:var(--blue);color:var(--blue)">⟳ Refresh</button>
+  </div>
+</div>
+
+<div id="panel-demo" style="display:none">
+  <div class="source-banner demo">
+    ⚠ SAMPLE DATA ONLY — these are placeholders, not real repeaters. Load a RepeaterBook CSV on the Offline File tab.
+  </div>
+</div>
+
+<!-- Toolbar (hidden until data loaded) -->
+<div class="toolbar" id="toolbar" style="display:none">
+  <div>
+    <span class="tlabel">Search</span>
+    <input type="text" id="searchBox" placeholder="Callsign, city, freq, notes…" style="width:200px" oninput="applyFilters()">
+  </div>
+  <div>
+    <span class="tlabel">Band</span>
+    <select id="filterBand" onchange="applyFilters()">
+      <option value="">All Bands</option>
+      <option value="10m">10m</option>
+      <option value="6m">6m</option>
+      <option value="2m">2m</option>
+      <option value="1.25m">1.25m</option>
+      <option value="70cm">70cm</option>
+      <option value="33cm">33cm</option>
+      <option value="23cm">23cm</option>
+    </select>
+  </div>
+  <div>
+    <span class="tlabel">Mode</span>
+    <select id="filterMode" onchange="applyFilters()">
+      <option value="">All Modes</option>
+      <option value="fm">FM / Analog</option>
+      <option value="dstar">D-STAR</option>
+      <option value="c4fm">C4FM / Fusion</option>
+      <option value="dmr">DMR</option>
+      <option value="p25">P25</option>
+    </select>
+  </div>
+  <div>
+    <span class="tlabel">Status</span>
+    <select id="filterStatus" onchange="applyFilters()">
+      <option value="">All</option>
+      <option value="on">On-Air</option>
+      <option value="off">Off-Air</option>
+    </select>
+  </div>
+  <div>
+    <span class="tlabel">State</span>
+    <select id="filterState" onchange="applyFilters()">
+      <option value="">All States</option>
+    </select>
+  </div>
+  <div>
+    <span class="tlabel">Use</span>
+    <select id="filterUse" onchange="applyFilters()">
+      <option value="">All</option>
+      <option value="OPEN">Open</option>
+      <option value="CLOSED">Closed</option>
+      <option value="PRIVATE">Private</option>
+    </select>
+  </div>
+  <div>
+    <span class="tlabel">EmComm</span>
+    <select id="filterEmcomm" onchange="applyFilters()">
+      <option value="">All</option>
+      <option value="ares">ARES</option>
+      <option value="skywarn">SKYWARN</option>
+      <option value="races">RACES</option>
+    </select>
+  </div>
+  <div>
+    <span class="tlabel">Sort by distance</span>
+    <select id="sortDistMode" onchange="applyFilters()">
+      <option value="">Off</option>
+      <option value="asc">Nearest first</option>
+      <option value="desc">Farthest first</option>
+    </select>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:flex-end">
+    <button class="btn btn-sm" onclick="exportCSV()" style="background:var(--panel2)">⬇ CSV</button>
+    <button class="btn btn-sm" onclick="window.print()" style="background:var(--panel2)">🖨 Print</button>
+  </div>
+</div>
+
+<!-- Source info banner (shown after load) -->
+<div id="sourceBanner" style="display:none" class="source-banner offline">
+  <span id="sourceBannerText"></span>
+  <span id="sourceBannerRight" style="margin-left:auto"></span>
+</div>
+
+<!-- Table -->
+<div class="table-wrap" id="tableWrap" style="display:none">
+  <table id="repTable">
+    <thead>
+      <tr>
+        <th onclick="sortBy('output_freq')" data-col="output_freq">Output ↕</th>
+        <th onclick="sortBy('input_freq')" data-col="input_freq">Input ↕</th>
+        <th onclick="sortBy('callsign')" data-col="callsign">Callsign ↕</th>
+        <th onclick="sortBy('tone')" data-col="tone">Tone ↕</th>
+        <th onclick="sortBy('mode')" data-col="mode">Mode ↕</th>
+        <th onclick="sortBy('city')" data-col="city">City ↕</th>
+        <th onclick="sortBy('state')" data-col="state">State ↕</th>
+        <th>EmComm</th>
+        <th>Links</th>
+        <th onclick="sortBy('use')" data-col="use">Use ↕</th>
+        <th onclick="sortBy('status')" data-col="status">Status ↕</th>
+        <th onclick="sortBy('_dist')" data-col="_dist" id="thDist" style="display:none">Dist ↕</th>
+      </tr>
+    </thead>
+    <tbody id="repBody"></tbody>
+  </table>
+  <div id="emptyState" class="empty-state" style="display:none">
+    <div class="empty-icon">🔍</div>
+    <div style="font-family:var(--font-hd);font-size:16px;color:var(--txt)">No repeaters match</div>
+    <div style="margin-top:8px;font-size:12px">Try adjusting your filters.</div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span id="statusLeft">Load a RepeaterBook export file to begin</span>
+  <span id="statusRight"></span>
+</div>
+
+<!-- Detail Panel -->
+<div class="detail-panel" id="detailPanel">
+  <button class="detail-close" onclick="closeDetail()">✕</button>
+  <div class="detail-freq" id="detFreq">—</div>
+  <div class="detail-call" id="detCall"></div>
+  <div class="detail-sub" id="detSub"></div>
+  <div class="detail-badges" id="detBadges"></div>
+  <div id="detRows"></div>
+  <div class="detail-notes" id="detNotes" style="display:none"></div>
+  <div class="detail-prog-row" style="margin-top:16px">
+    <button class="btn btn-sm" onclick="copyDetail()">📋 Copy</button>
+    <button class="btn btn-sm" onclick="programDetail()" style="border-color: var(--eoc-lt);color:var(--eoc)">📡 Program</button>
+    <button class="btn btn-sm" onclick="window.print()" style="background:var(--panel2)">🖨</button>
+  </div>
+  <div id="programBox" style="display:none;margin-top:12px;background: var(--bg);border:1px solid var(--line);border-radius:6px;padding:12px;font-size:11px;color:var(--muted);font-family:monospace;line-height:1.7"></div>
+</div>
+
+<!-- Import progress overlay -->
+<div class="import-overlay" id="importOverlay">
+  <div class="import-box">
+    <div class="import-title">📂 Importing RepeaterBook Data</div>
+    <div class="import-prog-bar"><div class="import-prog-fill" id="importFill" style="width:0%"></div></div>
+    <div class="import-msg" id="importMsg">Parsing file…</div>
+  </div>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────
+const STATION_LAT = 42.3153;
+const STATION_LON = -88.4473;
+const STORE_KEY   = 'fieldcomms_repeaters_offline';
+
+// ── State ──────────────────────────────────────────────────────────
+let allRepeaters   = [];   // current active dataset
+let serverData     = [];
+let offlineData    = [];
+let filtered       = [];
+let sortCol        = 'output_freq';
+let sortDir        = 1;
+let selectedRep    = null;
+let currentSource  = 'offline';
+let offlineMeta    = null;  // { filename, count, imported }
+
+// ── Distance helpers ───────────────────────────────────────────────
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 3958.8; // miles
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function addDistances(reps) {
+  return reps.map(r => {
+    const lat = parseFloat(r.lat || r.Lat || 0);
+    const lon = parseFloat(r.lon || r.Long || 0);
+    r._dist = (lat && lon) ? Math.round(haversine(STATION_LAT, STATION_LON, lat, lon) * 10) / 10 : null;
+    return r;
+  });
+}
+
+// ── Band detection ─────────────────────────────────────────────────
+function bandOfFreq(f) {
+  f = parseFloat(f);
+  if (f >= 28   && f < 30)  return '10m';
+  if (f >= 50   && f < 54)  return '6m';
+  if (f >= 144  && f < 148) return '2m';
+  if (f >= 222  && f < 225) return '1.25m';
+  if (f >= 420  && f < 450) return '70cm';
+  if (f >= 902  && f < 928) return '33cm';
+  if (f >= 1240 && f < 1300)return '23cm';
+  return 'other';
+}
+
+// ── Mode normalizer ────────────────────────────────────────────────
+function normalizeMode(r) {
+  const d = (r.mode || r.Digital || r.digital || '').toString().toLowerCase();
+  if (d.includes('dstar') || d.includes('d-star') || d === 'dv') return 'dstar';
+  if (d.includes('c4fm') || d.includes('fusion') || d.includes('yaesu') || d === 'dn') return 'c4fm';
+  if (d.includes('dmr')) return 'dmr';
+  if (d.includes('p25') || d.includes('apco')) return 'p25';
+  // RepeaterBook uses "Y" for digital, "A" or "" for analog
+  if (d === 'y' || d === 'yes') return 'fm'; // digital field present but mode unknown = flag as FM
+  return 'fm';
+}
+
+const MODE_LABELS = { dstar:'D-STAR', c4fm:'C4FM', dmr:'DMR', p25:'P25', fm:'FM' };
+
+function modeBadge(r) {
+  const m = normalizeMode(r);
+  return `<span class="badge badge-${m}">${MODE_LABELS[m]}</span>`;
+}
+
+// ── CSV parser (handles quoted fields, CRLF) ───────────────────────
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim().split('\n');
+  if (lines.length < 2) return [];
+
+  // Parse header — find column names
+  const headers = parseCSVRow(lines[0]);
+
+  const records = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const vals = parseCSVRow(lines[i]);
+    const rec = {};
+    headers.forEach((h, j) => { rec[h.trim()] = (vals[j] || '').trim(); });
+    records.push(rec);
+  }
+  return records;
+}
+
+function parseCSVRow(line) {
+  const cols = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (ch === ',' && !inQ) {
+      cols.push(cur); cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  cols.push(cur);
+  return cols;
+}
+
+// ── Normalize a raw record (CSV or JSON) to our schema ─────────────
+function normalizeRecord(r) {
+  // RepeaterBook CSV columns (common variants)
+  const freq  = r['Frequency'] || r['Output Freq'] || r['output_freq'] || r['FREQ'] || r['freq'] || '';
+  const input = r['Input Freq'] || r['input_freq']  || r['INPUT_FREQ'] || r['input'] || '';
+  const cs    = r['Callsign']   || r['callsign']    || r['CALLSIGN']   || '';
+  const city  = r['Nearest City']|| r['city']       || r['NEAREST_CITY']|| r['location_city'] || '';
+  const state = r['State']      || r['state']       || r['STATE']      || r['location_state'] || '';
+  const pl    = r['PL']         || r['tone']        || r['TONE']       || r['CTCSS'] || r['pl'] || '';
+  const tsq   = r['TSQ']        || r['tone_input']  || r['input_tone'] || '';
+  const use   = r['Use']        || r['use']         || r['USE']        || 'OPEN';
+  const stat  = r['Operational Status'] || r['status'] || r['operational_status'] || r['OPERATIONAL_STATUS'] || 'On Air';
+  const digital= r['Digital']  || r['digital']      || r['mode']       || '';
+  const digCode= r['Digital Code']|| r['digital_code']|| r['DigitalCode']|| '';
+  const county = r['County']   || r['county']       || '';
+  const lat   = parseFloat(r['Lat'] || r['lat'] || r['LAT'] || 0);
+  const lon   = parseFloat(r['Long']|| r['lon'] || r['LON'] || r['Longitude'] || 0);
+  const notes = r['Notes']      || r['notes']       || r['NOTES']      || r['comment'] || '';
+  const ares  = yesish(r['ARES']   || r['ares']);
+  const races = yesish(r['RACES']  || r['races']);
+  const skywarn=yesish(r['SKYWARN']|| r['skywarn']);
+  const canwarn=yesish(r['CANWARN']|| r['canwarn']);
+  const echo  = r['EchoLink Node'] || r['echolink_node'] || r['Echolink'] || '';
+  const allstar=r['AllStar Node'] || r['allstar_node'] || r['AllStar'] || '';
+  const wires = r['Wires Node'] || r['wires_node'] || '';
+  const sponsor=r['Sponsor']    || r['sponsor']     || r['Trustee']    || r['trustee'] || '';
+  const web   = r['Website']    || r['web']         || '';
+  const updated=r['Last Update']|| r['last_updated']|| r['Updated']    || '';
+  const id    = r['rptr_id']    || r['id']          || r['ID']         || (freq + cs);
+
+  const norm = {
+    id: String(id),
+    callsign: cs.toUpperCase(),
+    output_freq: parseFloat(freq) || 0,
+    input_freq: parseFloat(input) || 0,
+    tone: pl,
+    tone_input: tsq,
+    mode: digital,
+    digital_code: digCode,
+    city, state, county, lat, lon,
+    status: stat,
+    use: use.toUpperCase(),
+    ares, races, skywarn, canwarn,
+    echolink: echo,
+    allstar: allstar,
+    wires: wires,
+    sponsor, web, notes, updated,
+    _raw: r
+  };
+
+  // Computed
+  norm._band    = bandOfFreq(norm.output_freq);
+  norm._modeKey = normalizeMode(norm);
+
+  return norm;
+}
+
+function yesish(v) {
+  if (!v) return false;
+  return ['yes','y','1','true'].includes(String(v).toLowerCase());
+}
+
+// ── FILE IMPORT ────────────────────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) importFile(file);
+}
+
+function handleFileInput(e) {
+  const file = e.target.files[0];
+  if (file) importFile(file);
+  e.target.value = '';
+}
+
+function importFile(file) {
+  document.getElementById('importOverlay').classList.add('show');
+  document.getElementById('importMsg').textContent = `Reading ${file.name}…`;
+  document.getElementById('importFill').style.width = '10%';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('importFill').style.width = '40%';
+    document.getElementById('importMsg').textContent = 'Parsing…';
+    setTimeout(() => {
+      try {
+        const text = e.target.result;
+        let raw = [];
+
+        if (file.name.toLowerCase().endsWith('.json')) {
+          const json = JSON.parse(text);
+          raw = Array.isArray(json) ? json : (json.results || json.repeaters || []);
+        } else {
+          // CSV
+          raw = parseCSV(text);
+        }
+
+        document.getElementById('importFill').style.width = '70%';
+        document.getElementById('importMsg').textContent = `Normalizing ${raw.length} records…`;
+
+        setTimeout(() => {
+          const reps = raw.map(normalizeRecord).filter(r => r.output_freq > 0);
+          addDistances(reps);
+
+          offlineData = reps;
+          offlineMeta = {
+            filename: file.name,
+            count: reps.length,
+            imported: new Date().toLocaleString()
+          };
+
+          // Persist to localStorage (up to ~4MB)
+          try {
+            localStorage.setItem(STORE_KEY, JSON.stringify({ meta: offlineMeta, data: reps }));
+          } catch(e2) {}
+
+          document.getElementById('importFill').style.width = '100%';
+          document.getElementById('importMsg').textContent = `Loaded ${reps.length} repeaters!`;
+
+          setTimeout(() => {
+            document.getElementById('importOverlay').classList.remove('show');
+            switchSource('offline');
+          }, 600);
+        }, 50);
+      } catch(err) {
+        document.getElementById('importOverlay').classList.remove('show');
+        alert('Import failed: ' + err.message + '\n\nMake sure this is a RepeaterBook CSV or JSON export.');
+      }
+    }, 50);
+  };
+  reader.readAsText(file);
+}
+
+// ── SOURCE SWITCHING ───────────────────────────────────────────────
+function switchSource(src) {
+  currentSource = src;
+  ['offline','server','demo'].forEach(s => {
+    document.getElementById(`tab-${s}`).classList.toggle('active', s === src);
+    const p = document.getElementById(`panel-${src}`);
+  });
+
+  if (src === 'offline') {
+    if (offlineData.length) {
+      showData(offlineData, 'offline', offlineMeta);
+    } else {
+      // Try localStorage
+      try {
+        const stored = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+        if (stored && stored.data && stored.data.length) {
+          offlineData = stored.data;
+          offlineMeta = stored.meta;
+          addDistances(offlineData);
+          showData(offlineData, 'offline', offlineMeta);
+          return;
+        }
+      } catch(e) {}
+      // Show drop zone
+      hideTableUI();
+      document.getElementById('dropZone').style.display = '';
+    }
+  } else if (src === 'server') {
+    loadFromServer();
+  } else if (src === 'demo') {
+    showData(demoData(), 'demo', null);
+  }
+}
+
+function showData(reps, src, meta) {
+  allRepeaters = reps;
+  document.getElementById('dropZone').style.display = 'none';
+
+  // Source banner
+  const banner = document.getElementById('sourceBanner');
+  const bannerText = document.getElementById('sourceBannerText');
+  const bannerRight = document.getElementById('sourceBannerRight');
+  banner.style.display = '';
+  banner.className = `source-banner ${src}`;
+
+  if (src === 'offline' && meta) {
+    bannerText.innerHTML = `📁 <strong>${meta.filename}</strong> — ${meta.count.toLocaleString()} repeaters imported ${meta.imported}`;
+    bannerRight.innerHTML = `<button class="btn btn-sm" onclick="document.getElementById('fileInput').click()" style="border-color:var(--green);color:var(--green)">⬆ Load different file</button>`;
+  } else if (src === 'server') {
+    bannerText.innerHTML = `🖥 Loaded from server API — ${reps.length.toLocaleString()} repeaters`;
+    bannerRight.innerHTML = `<button class="btn btn-sm" onclick="loadFromServer()" style="border-color:var(--blue);color:var(--blue)">⟳ Refresh</button>`;
+  } else {
+    bannerText.innerHTML = `⚠ SAMPLE DATA — ${reps.length} placeholders, NOT real repeaters. Load real data via Offline File tab.`;
+    bannerRight.innerHTML = ``;
+  }
+
+  // Update tab counts
+  document.getElementById(`cnt-${src}`).textContent = reps.length;
+  document.getElementById(`cnt-${src}`).className = 'src-count';
+
+  // Populate state filter
+  const states = [...new Set(reps.map(r => r.state).filter(Boolean))].sort();
+  const stateEl = document.getElementById('filterState');
+  stateEl.innerHTML = '<option value="">All States</option>' +
+    states.map(s => `<option value="${s}">${s}</option>`).join('');
+
+  document.getElementById('toolbar').style.display = '';
+  document.getElementById('tableWrap').style.display = '';
+  document.getElementById('headerState').textContent = `${reps.length.toLocaleString()} repeaters`;
+
+  applyFilters();
+}
+
+function hideTableUI() {
+  document.getElementById('toolbar').style.display = 'none';
+  document.getElementById('tableWrap').style.display = 'none';
+  document.getElementById('sourceBanner').style.display = 'none';
+  document.getElementById('statusLeft').textContent = 'Drop a RepeaterBook file to load';
+}
+
+// ── SERVER LOAD ────────────────────────────────────────────────────
+async function loadFromServer() {
+  document.getElementById('statusLeft').textContent = 'Connecting to server…';
+  document.getElementById('panel-server').style.display = '';
+  try {
+    const res = await fetch('http://192.168.50.1:5050/api/repeaters', { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const reps = Array.isArray(data) ? data : (data.repeaters || []);
+    const normalized = reps.map(normalizeRecord);
+    addDistances(normalized);
+    serverData = normalized;
+    document.getElementById('cnt-server').textContent = serverData.length;
+    document.getElementById('cnt-server').className = serverData.length ? 'src-count' : 'src-count zero';
+    showData(serverData, 'server', null);
+  } catch(e) {
+    document.getElementById('statusLeft').textContent = 'Server unavailable — use Offline File or Demo';
+    if (currentSource === 'server') {
+      document.getElementById('panel-server').innerHTML = `
+        <div class="source-banner" style="color:var(--red);border-color:rgba(255,80,80,0.3)">
+          ⚠ Server API unreachable — run <code>fetch_repeaters.py</code> first, or use the Offline File tab.
+          <button class="btn btn-sm" onclick="loadFromServer()" style="margin-left:auto">⟳ Retry</button>
+        </div>`;
+      hideTableUI();
+    }
+  }
+}
+
+// ── FILTERS & SORT ─────────────────────────────────────────────────
+function applyFilters() {
+  const q      = document.getElementById('searchBox').value.toLowerCase();
+  const band   = document.getElementById('filterBand').value;
+  const mode   = document.getElementById('filterMode').value;
+  const status = document.getElementById('filterStatus').value;
+  const state  = document.getElementById('filterState').value;
+  const use    = document.getElementById('filterUse').value;
+  const emcomm = document.getElementById('filterEmcomm').value;
+  const distMode = document.getElementById('sortDistMode').value;
+
+  // Show/hide distance column
+  const showDist = distMode !== '';
+  document.getElementById('thDist').style.display = showDist ? '' : 'none';
+
+  filtered = allRepeaters.filter(r => {
+    if (q) {
+      const haystack = [r.callsign, r.city, r.state, r.output_freq, r.tone, r.sponsor, r.notes, r.county].join(' ').toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    if (band   && r._band     !== band)   return false;
+    if (mode   && r._modeKey  !== mode)   return false;
+    if (state  && r.state     !== state)  return false;
+    if (use    && r.use       !== use)    return false;
+    if (status === 'on'  && !(r.status||'').toLowerCase().includes('on'))  return false;
+    if (status === 'off' && !(r.status||'').toLowerCase().includes('off')) return false;
+    if (emcomm === 'ares'    && !r.ares)    return false;
+    if (emcomm === 'skywarn' && !r.skywarn) return false;
+    if (emcomm === 'races'   && !r.races)   return false;
+    return true;
+  });
+
+  // Sort
+  if (distMode) {
+    filtered.sort((a,b) => {
+      const da = a._dist ?? 99999, db = b._dist ?? 99999;
+      return distMode === 'asc' ? da - db : db - da;
+    });
+  } else {
+    sortData(false);
+    return;
+  }
+
+  renderTable(showDist);
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = 1; }
+  document.querySelectorAll('#repTable th').forEach(th => {
+    const dc = th.dataset.col;
+    if (dc === col) th.classList.add('sorted');
+    else th.classList.remove('sorted');
+  });
+  sortData(true);
+}
+
+function sortData(render = true) {
+  filtered.sort((a, b) => {
+    let va = a[sortCol] ?? '', vb = b[sortCol] ?? '';
+    const na = parseFloat(va), nb = parseFloat(vb);
+    if (!isNaN(na) && !isNaN(nb)) return (na - nb) * sortDir;
+    return String(va).localeCompare(String(vb)) * sortDir;
+  });
+  if (render) renderTable(document.getElementById('sortDistMode').value !== '');
+}
+
+// ── RENDER TABLE ───────────────────────────────────────────────────
+function renderTable(showDist) {
+  const tbody = document.getElementById('repBody');
+
+  if (!filtered.length) {
+    tbody.innerHTML = '';
+    document.getElementById('emptyState').style.display = '';
+    document.getElementById('statusLeft').textContent = `No repeaters match (${allRepeaters.length} total)`;
+    return;
+  }
+
+  document.getElementById('emptyState').style.display = 'none';
+
+  const statusIcon = s => {
+    const sl = (s||'').toLowerCase();
+    if (sl.includes('on'))  return `<span class="badge-on" title="On-Air">●</span>`;
+    if (sl.includes('off')) return `<span class="badge-off" title="Off-Air">●</span>`;
+    return `<span style="color:var(--muted)" title="${s}">●</span>`;
+  };
+
+  tbody.innerHTML = filtered.map((r, i) => {
+    const emcommBadges = [
+      r.ares    ? `<span class="badge badge-ares">ARES</span>` : '',
+      r.races   ? `<span class="badge badge-ares">RACES</span>` : '',
+      r.skywarn ? `<span class="badge badge-skyw">SKY</span>` : '',
+      r.canwarn ? `<span class="badge badge-skyw">CAN</span>` : '',
+    ].filter(Boolean).join('');
+
+    const linkBadges = [
+      r.echolink ? `<span class="badge badge-echo" title="EchoLink ${r.echolink}">EL</span>` : '',
+      r.allstar  ? `<span class="badge badge-echo" title="AllStar ${r.allstar}">AS</span>` : '',
+      r.wires    ? `<span class="badge badge-echo" title="Wires-X ${r.wires}">WX</span>` : '',
+    ].filter(Boolean).join('');
+
+    const distCell = showDist
+      ? `<td class="dist-cell" style="display:${showDist?'':'none'}">${r._dist != null ? r._dist + ' mi' : '—'}</td>`
+      : `<td style="display:none"></td>`;
+
+    const tone = r.tone || '';
+    const toneDisplay = tone
+      ? `<span class="badge badge-tone">${tone}</span>${r.tone_input && r.tone_input !== tone ? `<span class="badge" style="background:none;color:var(--muted);font-size:9px">in:${r.tone_input}</span>` : ''}`
+      : '<span style="color:var(--muted);font-size:11px">—</span>';
+
+    return `<tr onclick="showDetail(${i})" style="cursor:pointer">
+      <td><span class="freq">${r.output_freq ? parseFloat(r.output_freq).toFixed(4) : '—'}</span></td>
+      <td><span class="freq" style="color:var(--muted);font-size:11px">${r.input_freq ? parseFloat(r.input_freq).toFixed(4) : '—'}</span></td>
+      <td class="callsign-cell">${r.callsign||'—'}</td>
+      <td>${toneDisplay}</td>
+      <td>${modeBadge(r)}</td>
+      <td style="font-size:11px">${r.city||'—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${r.state||'—'}</td>
+      <td>${emcommBadges||'<span style="color:var(--line)">—</span>'}</td>
+      <td>${linkBadges||'<span style="color:var(--line)">—</span>'}</td>
+      <td style="font-size:10px;color:var(--muted)">${r.use||'—'}</td>
+      <td>${statusIcon(r.status)}</td>
+      ${distCell}
+    </tr>`;
+  }).join('');
+
+  document.getElementById('statusLeft').textContent = `${filtered.length.toLocaleString()} of ${allRepeaters.length.toLocaleString()} repeaters`;
+  document.getElementById('statusRight').textContent = `Sort: ${sortCol} ${sortDir===1?'↑':'↓'}`;
+}
+
+// ── DETAIL PANEL ───────────────────────────────────────────────────
+function showDetail(idx) {
+  selectedRep = filtered[idx];
+  const r = selectedRep;
+
+  document.getElementById('detFreq').textContent = r.output_freq ? parseFloat(r.output_freq).toFixed(4) + ' MHz' : '—';
+  document.getElementById('detCall').textContent = r.callsign || '—';
+
+  const bandLabel = r._band || bandOfFreq(r.output_freq);
+  document.getElementById('detSub').textContent = [bandLabel, r.city, r.state].filter(Boolean).join(' · ');
+
+  // Badges
+  const badges = [
+    modeBadge(r),
+    r.ares    ? `<span class="badge badge-ares">ARES</span>` : '',
+    r.races   ? `<span class="badge badge-ares">RACES</span>` : '',
+    r.skywarn ? `<span class="badge badge-skyw">SKYWARN</span>` : '',
+    r.canwarn ? `<span class="badge badge-skyw">CANWARN</span>` : '',
+    r.echolink? `<span class="badge badge-echo">EchoLink ${r.echolink}</span>` : '',
+    r.allstar ? `<span class="badge badge-echo">AllStar ${r.allstar}</span>` : '',
+    r.wires   ? `<span class="badge badge-echo">Wires-X ${r.wires}</span>` : '',
+  ].filter(Boolean).join('');
+  document.getElementById('detBadges').innerHTML = badges;
+
+  const statusIcon = (r.status||'').toLowerCase().includes('on')
+    ? `<span style="color:var(--green)">● On-Air</span>`
+    : `<span style="color:var(--red)">● ${r.status||'Unknown'}</span>`;
+
+  const rows = [
+    ['Input',       r.input_freq ? parseFloat(r.input_freq).toFixed(4) + ' MHz' : '—'],
+    ['CTCSS (out)', r.tone       || 'None / CSQ'],
+    ['CTCSS (in)',  r.tone_input || r.tone || 'Same'],
+    ['Offset',      r.input_freq && r.output_freq ? ((parseFloat(r.input_freq)-parseFloat(r.output_freq)).toFixed(3)+' MHz') : '—'],
+    ['Digital Code',r.digital_code || (r._modeKey !== 'fm' ? '—' : null)],
+    ['County',      r.county || '—'],
+    ['Distance',    r._dist != null ? r._dist + ' miles from station' : '—'],
+    ['Status',      statusIcon],
+    ['Use',         r.use || '—'],
+    ['Trustee/Sponsor', r.sponsor || '—'],
+    ['Last Updated',r.updated || '—'],
+    ['Website',     r.web ? `<a href="${r.web}" target="_blank">${r.web.replace(/https?:\/\//,'')}</a>` : null],
+  ].filter(([,v]) => v !== null && v !== undefined);
+
+  document.getElementById('detRows').innerHTML = rows.map(([l,v]) =>
+    `<div class="drow"><span class="dl">${l}</span><span class="dv">${v}</span></div>`
+  ).join('');
+
+  const notes = r.notes || '';
+  const notesEl = document.getElementById('detNotes');
+  notesEl.textContent = notes;
+  notesEl.style.display = notes ? '' : 'none';
+
+  document.getElementById('programBox').style.display = 'none';
+  document.getElementById('detailPanel').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.remove('open');
+  selectedRep = null;
+}
+
+function copyDetail() {
+  if (!selectedRep) return;
+  const r = selectedRep;
+  const txt = [
+    r.callsign,
+    parseFloat(r.output_freq).toFixed(4) + '/' + parseFloat(r.input_freq).toFixed(4),
+    'MHz',
+    r.tone ? 'T' + r.tone : 'CSQ',
+    MODE_LABELS[r._modeKey] || 'FM',
+    r.city + ',' + r.state,
+    r.echolink ? 'EL:' + r.echolink : '',
+    r.notes
+  ].filter(Boolean).join(' ');
+  navigator.clipboard.writeText(txt).then(() => {
+    document.getElementById('statusLeft').textContent = 'Copied to clipboard';
+  });
+}
+
+function programDetail() {
+  if (!selectedRep) return;
+  const r = selectedRep;
+  const box = document.getElementById('programBox');
+  const offset = r.input_freq && r.output_freq
+    ? ((parseFloat(r.input_freq) - parseFloat(r.output_freq)).toFixed(3))
+    : '—';
+  box.innerHTML = `<strong style="color:var(--eoc)">Programming Summary</strong><br>
+RX (output): ${parseFloat(r.output_freq||0).toFixed(4)} MHz<br>
+TX (input):  ${parseFloat(r.input_freq||0).toFixed(4)} MHz<br>
+Offset:      ${offset} MHz<br>
+CTCSS TX:    ${r.tone || 'None'}<br>
+CTCSS RX:    ${r.tone_input || r.tone || 'None'}<br>
+Mode:        ${MODE_LABELS[r._modeKey] || 'FM'}${r.digital_code ? ' Code:'+r.digital_code : ''}<br>
+Name:        ${r.callsign} ${r.city||''}`.replace(/\n/g,'<br>');
+  box.style.display = box.style.display === 'none' ? '' : 'none';
+}
+
+// ── EXPORT ─────────────────────────────────────────────────────────
+function exportCSV() {
+  const cols = ['callsign','output_freq','input_freq','tone','tone_input','_modeKey','digital_code','city','state','county','use','status','ares','races','skywarn','echolink','allstar','sponsor','notes','updated','_dist'];
+  const headers = ['Callsign','Output Freq','Input Freq','CTCSS','CTCSS In','Mode','Digital Code','City','State','County','Use','Status','ARES','RACES','SKYWARN','EchoLink','AllStar','Sponsor','Notes','Last Update','Distance (mi)'];
+  const rows = [headers.join(',')];
+  filtered.forEach(r => rows.push(cols.map(c => `"${(r[c]??'').toString().replace(/"/g,'""')}"`).join(',')));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([rows.join('\n')], {type:'text/csv'}));
+  a.download = 'repeaters_fieldcomms.csv'; a.click();
+}
+
+// ── DEMO DATA ──────────────────────────────────────────────────────
+function demoData() {
+  // ─────────────────────────────────────────────────────────────────────
+  // SAMPLE / PLACEHOLDER DATA ONLY — NOT REAL REPEATERS.
+  // These entries exist only to show how the page looks and behaves before
+  // you load real data. The callsigns, frequencies, and tones below are
+  // illustrative placeholders and must NOT be used for actual operations.
+  //
+  // To load REAL McHenry County / Northern Illinois repeaters:
+  //   • Go to repeaterbook.com → search McHenry County, IL (and neighbors)
+  //   • Export → CSV, then load it on the "Offline File" tab of this page, OR
+  //   • Have the net manager run fetch_repeaters.py with a RepeaterBook API
+  //     token (see the User Manual, Repeater Database chapter).
+  // ─────────────────────────────────────────────────────────────────────
+  const raw = [
+    {Callsign:'SAMPLE-1',Frequency:'147.000','Input Freq':'147.600',PL:'107.2',Digital:'',State:'IL','Nearest City':'(sample — load real data)','Operational Status':'On Air',Use:'OPEN',ARES:'Yes',RACES:'Yes',SKYWARN:'Yes',Sponsor:'PLACEHOLDER — not a real repeater',Lat:'42.31',Long:'-88.45','EchoLink Node':'',Notes:'SAMPLE DATA ONLY. Load a RepeaterBook CSV on the Offline File tab for real McHenry County data.','Last Update':''},
+    {Callsign:'SAMPLE-2',Frequency:'444.000','Input Freq':'449.000',PL:'114.8',Digital:'',State:'IL','Nearest City':'(sample — load real data)','Operational Status':'On Air',Use:'OPEN',ARES:'',RACES:'',SKYWARN:'',Sponsor:'PLACEHOLDER — not a real repeater',Lat:'42.33',Long:'-88.27','EchoLink Node':'',Notes:'SAMPLE DATA ONLY. This is a placeholder UHF entry.','Last Update':''},
+    {Callsign:'SAMPLE-3',Frequency:'145.000','Input Freq':'144.400',PL:'103.5',Digital:'',State:'WI','Nearest City':'(sample — border county)','Operational Status':'On Air',Use:'OPEN',ARES:'Yes',RACES:'',SKYWARN:'Yes',Sponsor:'PLACEHOLDER — not a real repeater',Lat:'42.58',Long:'-87.82','EchoLink Node':'',Notes:'SAMPLE DATA ONLY. Represents how a mutual-aid border-county entry would appear.','Last Update':''},
+  ];
+  const normalized = raw.map(normalizeRecord);
+  addDistances(normalized);
+  return normalized;
+}
+
+// ── INIT ───────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  // Try localStorage first
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+    if (stored && stored.data && stored.data.length) {
+      offlineData = stored.data;
+      offlineMeta = stored.meta;
+      addDistances(offlineData);
+      document.getElementById('cnt-offline').textContent = offlineData.length;
+      document.getElementById('cnt-offline').className = 'src-count';
+    }
+  } catch(e) {}
+
+  // Default to offline tab (shows drop zone or cached data)
+  switchSource('offline');
+});
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

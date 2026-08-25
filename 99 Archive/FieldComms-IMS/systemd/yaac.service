@@ -1,0 +1,19 @@
+[Unit]
+Description=YAAC APRS Client (Yet Another APRS Client)
+After=network.target
+
+[Service]
+Type=simple
+User=fieldcomms
+Group=fieldcomms
+WorkingDirectory=/opt/yaac
+# Run headless; YAAC web server must be configured to port 8082
+ExecStart=/usr/bin/java -jar /opt/yaac/YAAC.jar -nogui
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=yaac
+
+[Install]
+WantedBy=multi-user.target

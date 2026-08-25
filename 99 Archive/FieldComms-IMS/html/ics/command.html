@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — ICS Command</title>
+<link rel="stylesheet" href="../theme.css">
+<style>
+.page-header {
+  background: linear-gradient(135deg, var(--eoc) 0%, var(--eoc-lt) 100%);
+  border-bottom: 2px solid var(--eoc);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.page-header a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; }
+.page-header a:hover { color: #fff; }
+.page-title { font-family: var(--font-hd); font-size: 18px; color: var(--eoc); letter-spacing: 2px; }
+
+.ics-nav { background: var(--panel2); border-bottom: 1px solid var(--line); padding: 0; display: flex; overflow-x: auto; }
+.ics-nav a { display:flex;align-items:center;gap:6px;padding:11px 18px;text-decoration:none;color:var(--muted);font-family:var(--font-hd);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;border-bottom:3px solid transparent;transition:color 0.15s,border-color 0.15s; }
+.ics-nav a:hover { color:var(--txt); }
+.ics-nav a.active { color: var(--eoc); border-bottom-color: var(--eoc); }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 20px 20px 40px; }
+.sec-label { font-family:var(--font-hd);font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color: var(--eoc);padding:16px 0 8px;display:flex;align-items:center;gap:10px; }
+.sec-label::after { content:'';flex:1;height:1px;background: var(--line); }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media(max-width:700px){ .two-col { grid-template-columns: 1fr; } }
+
+.panel { background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px; }
+.panel-title { font-family:var(--font-hd);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color: var(--eoc);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between; }
+
+.field { margin-bottom:10px; }
+.field label { font-size:11px;color:var(--muted);display:block;margin-bottom:4px; }
+.field input, .field select, .field textarea {
+  width:100%;box-sizing:border-box;
+  background:var(var(--input-bg);border:1px solid var(--line);border-radius:4px;
+  color:var(--txt);padding:7px 10px;font-size:13px;
+}
+.field textarea { resize:vertical;min-height:80px; }
+.field input:focus, .field select:focus, .field textarea:focus { outline:none;border-color: var(--eoc-lt); }
+
+/* Objectives list */
+.obj-list { display:flex;flex-direction:column;gap:6px;margin-bottom:12px; }
+.obj-item {
+  display:flex;align-items:flex-start;gap:10px;
+  background: var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;
+}
+.obj-num { font-family:var(--font-hd);font-size:16px;color:var(--eoc);min-width:24px;padding-top:1px; }
+.obj-text { flex:1;font-size:13px;color:var(--txt); }
+.obj-del { background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 2px; }
+.obj-del:hover { color:var(--red); }
+
+/* Staff table */
+.staff-table { width:100%;border-collapse:collapse;font-size:12px; }
+.staff-table th { text-align:left;padding:6px 8px;color: #ffffff;font-family:var(--font-hd);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:1px solid var(--line); }
+.staff-table td { padding:7px 8px;border-bottom:1px solid var(--line);color:var(--txt); }
+.staff-table input { background:var(var(--input-bg);border:1px solid transparent;border-radius:3px;color:var(--txt);padding:4px 6px;font-size:12px;width:100%;box-sizing:border-box; }
+.staff-table input:focus { outline:none;border-color: var(--eoc-lt); }
+.pos-label { font-family:var(--font-hd);font-size:11px;color:var(--muted); }
+
+/* Safety messages */
+.safety-msg {
+  background:rgba(184,32,32,0.06);border:1px solid rgba(255,80,80,0.3);border-radius:6px;
+  padding:10px 12px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;
+}
+.safety-msg .sm-icon { font-size:18px;line-height:1; }
+.safety-msg .sm-text { flex:1;font-size:12px;color:var(--txt);line-height:1.5; }
+.safety-msg .sm-del { background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px; }
+
+/* Print: ICS-201 */
+@media print {
+  .page-header,.ics-nav,.btn,.field input,.field textarea,.field select,.panel-title button { display:none!important; }
+  .panel { border:1px solid #ccc;break-inside:avoid; }
+}
+</style>
+</head>
+<body>
+<div class="page-header">
+  <a href="../index.html">⌂ Home</a>
+  <span style="color:var(--line)">›</span>
+  <a href="index.html">ICS Platform</a>
+  <span style="color:var(--line)">›</span>
+  <span class="page-title">⭐ COMMAND</span>
+  <span style="margin-left:auto">
+    <button class="btn btn-sm" onclick="save()" >💾 Save</button>
+    &nbsp;<button class="btn btn-sm" onclick="window.print()" style="background:var(--panel2)">🖨 Print ICS-201</button>
+  </span>
+</div>
+<nav class="ics-nav">
+  <a href="index.html">🏛 Overview</a>
+  <a href="command.html" class="active">⭐ Command</a>
+  <a href="operations.html">🔴 Operations</a>
+  <a href="planning.html">📋 Planning</a>
+  <a href="logistics.html">🟢 Logistics</a>
+  <a href="finance.html">💜 Finance</a>
+  <a href="planningp.html">🅿 Planning P</a>
+</nav>
+
+<div class="container">
+  <div id="noInc" style="text-align:center;padding:60px;color:var(--muted)">Loading incident data…</div>
+  <div id="mainContent" style="display:none">
+
+    <!-- Incident Header -->
+    <div class="panel" style="margin-bottom:16px;border-color: var(--eoc-lt)">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div class="field"><label>Incident Name</label><input type="text" id="incName"></div>
+        <div class="field"><label>Incident Number</label><input type="text" id="incNumber"></div>
+        <div class="field"><label>Operational Period</label><input type="text" id="incPeriod" readonly style="color:var(--eoc)"></div>
+        <div class="field"><label>Incident Commander</label><input type="text" id="incIC"></div>
+        <div class="field"><label>Location</label><input type="text" id="incLocation"></div>
+        <div class="field"><label>Prepared By</label><input type="text" id="incPrepared"></div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <!-- Incident Objectives -->
+      <div class="panel">
+        <div class="panel-title">
+          Incident Objectives (ICS-202)
+          <button class="btn btn-sm" onclick="addObjective()">+ Add</button>
+        </div>
+        <div class="obj-list" id="objList"></div>
+
+        <!-- Common objectives dropdown -->
+        <div style="margin-bottom:8px">
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px">
+            Select a common objective to pre-fill the text field, then edit if needed and click <strong style="color:var(--txt)">+ Add</strong>:
+          </label>
+          <select id="commonObjSel" onchange="prefillObjective(this.value)"
+            style="width:100%;padding:7px 10px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;color:var(--txt);font-size:12px">
+            <option value="">— Select a common objective to pre-fill —</option>
+            <optgroup label="Life Safety">
+              <option>Ensure the life safety of all responders and the public as the first priority</option>
+              <option>Establish and maintain accountability of all incident personnel</option>
+              <option>Provide emergency medical support for all activated personnel</option>
+              <option>Identify and mitigate all safety hazards in the operational area</option>
+              <option>Establish and maintain a safe work environment for all responders</option>
+              <option>Conduct welfare checks on all isolated or vulnerable populations in the affected area</option>
+              <option>Establish decontamination procedures for all personnel exiting the hot zone</option>
+              <option>Ensure no responder works more than [hours] hours without adequate rest per the work-rest ratio</option>
+              <option>Establish a personnel rehabilitation area for rest, hydration, and medical monitoring</option>
+            </optgroup>
+            <optgroup label="Communications">
+              <option>Establish and maintain communications with all field units on the primary tactical channel</option>
+              <option>Maintain a continuous communications link with McHenry County EOC</option>
+              <option>Provide Winlink email capability for formal message traffic throughout the operational period</option>
+              <option>Establish backup communications via HF on [frequency] MHz in the event of VHF failure</option>
+              <option>Monitor all assigned radio channels and log all significant traffic in ICS-309</option>
+              <option>Establish and maintain a net control station at the Incident Command Post</option>
+              <option>Provide communications coverage for all assigned geographic sectors</option>
+              <option>Test and verify all assigned radio frequencies before the start of the operational period</option>
+              <option>Coordinate radio frequencies with all mutual aid agencies operating on the incident</option>
+            </optgroup>
+            <optgroup label="Resource Management">
+              <option>Check in all incoming resources and maintain an accurate resource status board</option>
+              <option>Coordinate logistics for food, water, fuel, and shelter for all activated personnel</option>
+              <option>Identify and request additional resources needed for the next operational period</option>
+              <option>Demobilize all resources no longer needed and document demobilization in ICS-221</option>
+              <option>Establish and maintain a staging area for incoming resources at [location]</option>
+              <option>Assign all activated personnel to a Division or Group before the start of operations</option>
+              <option>Track and report resource status changes to the Resources Unit every [interval]</option>
+            </optgroup>
+            <optgroup label="Incident Command">
+              <option>Establish a unified command structure with all agencies operating on this incident</option>
+              <option>Complete and distribute the Incident Action Plan before the start of each operational period</option>
+              <option>Conduct an operational period briefing at [time] prior to each shift change</option>
+              <option>Maintain a complete and accurate incident documentation file in accordance with ICS standards</option>
+              <option>Conduct a transition briefing with incoming personnel at each shift change</option>
+              <option>Provide situation status updates to McHenry County EOC every [interval]</option>
+              <option>Establish and maintain a clear chain of command for all incident operations</option>
+              <option>Implement the ICS span of control standard — no supervisor responsible for more than seven personnel</option>
+            </optgroup>
+            <optgroup label="Search &amp; Rescue">
+              <option>Conduct a systematic primary search of the assigned area and report results to Operations</option>
+              <option>Conduct a secondary search of all areas where primary search was interrupted or inconclusive</option>
+              <option>Maintain continuous radio contact with all search teams in the field</option>
+              <option>Coordinate with the Planning Section to update the search assignment map every [interval]</option>
+              <option>Establish and maintain a hasty team capability for rapid response to confirmed sightings</option>
+              <option>Document all search assignments and results on ICS-204 and submit to the Planning Section</option>
+              <option>Coordinate canine search resources with field teams to maximize coverage efficiency</option>
+              <option>Establish and maintain a command post at [location] to support all field search operations</option>
+              <option>Brief all search teams on last known point, travel direction, and subject profile before deployment</option>
+              <option>Ensure all field teams carry required personal protective equipment and navigation tools</option>
+            </optgroup>
+            <optgroup label="Shelter &amp; Mass Care">
+              <option>Open and staff the emergency shelter at [location] to support displaced residents</option>
+              <option>Coordinate registration of all shelter residents using the American Red Cross registration system</option>
+              <option>Provide communications link between the shelter and the Incident Command Post</option>
+              <option>Coordinate medical screening for all shelter arrivals with the Medical Unit</option>
+              <option>Establish and maintain a pet-friendly shelter area separate from the main shelter population</option>
+              <option>Coordinate meals and supply logistics for shelter population with the Logistics Section</option>
+            </optgroup>
+            <optgroup label="Weather &amp; Natural Disaster">
+              <option>Monitor and report all significant weather observations to the Situation Unit every [interval]</option>
+              <option>Provide NWS storm spotter coverage for the assigned geographic area throughout the operational period</option>
+              <option>Coordinate damage assessment operations in the affected area and report findings to the Planning Section</option>
+              <option>Establish contact with all affected jurisdictions and assess their communications needs</option>
+              <option>Coordinate utility restoration communications with [utility company] field crews</option>
+              <option>Provide ground truth confirmation of reported damage to assist NWS with warning decisions</option>
+              <option>Support door-to-door welfare check operations in areas where utilities or communications are disrupted</option>
+              <option>Monitor river and flood gauge readings at [location] and report to EOC every [interval]</option>
+            </optgroup>
+            <optgroup label="HazMat">
+              <option>Establish hot, warm, and cold zone perimeters and maintain them throughout the incident</option>
+              <option>Coordinate with HazMat team to identify the released substance and determine protective actions</option>
+              <option>Provide communications relay between the HazMat team in the hot zone and Incident Command</option>
+              <option>Coordinate public notification and evacuation with law enforcement and local government</option>
+              <option>Monitor weather conditions and adjust protective action recommendations as wind direction changes</option>
+              <option>Establish a decontamination corridor and coordinate with EMS for potential patient decontamination</option>
+            </optgroup>
+            <optgroup label="Mass Casualty">
+              <option>Establish a triage area and begin START triage of all patients at [location]</option>
+              <option>Coordinate patient distribution to receiving hospitals and maintain a patient tracking log</option>
+              <option>Establish communications with all receiving hospitals and provide patient count updates every [interval]</option>
+              <option>Coordinate with Logistics for additional medical supplies and equipment as needed</option>
+              <option>Establish a fatality management area and coordinate with the Medical Examiner</option>
+              <option>Provide communications link between EMS field units and the Medical Branch Director</option>
+            </optgroup>
+            <optgroup label="Public Information">
+              <option>Coordinate all public information releases through the designated Public Information Officer</option>
+              <option>Establish a joint information center with all participating agencies for this incident</option>
+              <option>Provide a public inquiry line and log all contacts in accordance with the communications plan</option>
+              <option>Release an initial incident information summary to the public within [time] of activation</option>
+              <option>Monitor social media for incident-related misinformation and coordinate corrections through the PIO</option>
+              <option>Provide regular situation updates to elected officials and agency administrators throughout the incident</option>
+              <option>Document all media inquiries and coordinate responses through the designated PIO</option>
+              <option>Establish a family reunification center and coordinate with law enforcement for notifications</option>
+            </optgroup>
+            <optgroup label="Finance &amp; Administration">
+              <option>Document all personnel time on ICS-211 and ICS-214 for cost recovery purposes</option>
+              <option>Track all expenditures and procurement actions for submission to the Finance Section</option>
+              <option>Obtain authorization from the Finance Section Chief before any procurement exceeding $[amount]</option>
+              <option>Complete all time reports and submit to the Finance Section before demobilization</option>
+            </optgroup>
+            <optgroup label="Demobilization">
+              <option>Develop a demobilization plan and distribute to all sections before the end of the operational period</option>
+              <option>Complete all required documentation before demobilization of any resources</option>
+              <option>Conduct an after-action review with all section chiefs before closing out the incident</option>
+              <option>Return all borrowed or shared equipment to the issuing agency before demobilization</option>
+              <option>Ensure all ICS forms are completed, compiled, and archived in the incident documentation file</option>
+              <option>Brief incoming shift or relief personnel on current status before demobilization of current shift</option>
+              <option>Compile all ICS-214 activity logs and submit a consolidated report to the Documentation Unit</option>
+              <option>Notify all served agencies of demobilization timeline at least [time] before release of resources</option>
+            </optgroup>
+            <optgroup label="MCESV/MCEMA Specific">
+              <option>Establish and maintain communications with the McHenry County EOC throughout the operational period</option>
+              <option>Coordinate K9ESV Starcom radio resources with the McHenry County Emergency Management Agency</option>
+              <option>Provide RACES/ARES communications support to all served agencies requesting assistance</option>
+              <option>Maintain an accurate activation roster in the FieldComms system throughout the incident</option>
+              <option>Coordinate with the McHenry County ARES Emergency Coordinator for resource assignments</option>
+              <option>Provide a final incident summary to the McHenry County EMA Director before demobilization</option>
+              <option>Ensure all activated K9ESV members are logged in the FieldComms roster before operations begin</option>
+              <option>Coordinate mutual aid communications resources with neighboring county ARES/RACES groups</option>
+              <option>Submit a completed ICS-214 activity log for each activated unit before demobilization</option>
+              <option>Provide written documentation of all significant events to the McHenry County EMA after the incident</option>
+              <option>Test all primary and backup communication paths before declaring the activation operational</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <!-- Free-text entry -->
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="newObjText" placeholder="Edit the pre-filled objective above or type a custom one, then click + Add"
+            style="flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:4px;color:var(--txt);padding:7px 10px;font-size:12px"
+            onkeydown="if(event.key==='Enter')addObjective()">
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label>Safety Message</label>
+          <textarea id="safetyMsg" placeholder="Key safety messages for this operational period…"></textarea>
+        </div>
+        <div class="field">
+          <label>Weather Summary</label>
+          <textarea id="weatherSummary" placeholder="Current and forecast weather conditions…" style="min-height:60px"></textarea>
+        </div>
+      </div>
+
+      <!-- Command Staff -->
+      <div>
+        <div class="panel" style="margin-bottom:16px">
+          <div class="panel-title">Command Staff (ICS-203)</div>
+          <table class="staff-table">
+            <tr><th style="width:140px">Position</th><th>Name / Callsign</th><th>Agency</th></tr>
+            <tr>
+              <td class="pos-label">Incident Commander</td>
+              <td><input type="text" id="staffIC" placeholder="Name / Callsign"></td>
+              <td><input type="text" id="staffICAgency" placeholder="Agency"></td>
+            </tr>
+            <tr>
+              <td class="pos-label">Safety Officer</td>
+              <td><input type="text" id="staffSO"></td>
+              <td><input type="text" id="staffSOA"></td>
+            </tr>
+            <tr>
+              <td class="pos-label">Public Info Officer</td>
+              <td><input type="text" id="staffPIO"></td>
+              <td><input type="text" id="staffPIOA"></td>
+            </tr>
+            <tr>
+              <td class="pos-label">Liaison Officer</td>
+              <td><input type="text" id="staffLO"></td>
+              <td><input type="text" id="staffLOA"></td>
+            </tr>
+            <tr>
+              <td class="pos-label">Ops Section Chief</td>
+              <td><input type="text" id="staffOps"></td>
+              <td><input type="text" id="staffOpsA"></td>
+            </tr>
+            <tr>
+              <td class="pos-label">Planning Section Chief</td>
+              <td><input type="text" id="staffPlan"></td>
+              <td><input type="text" id="staffPlanA"></td>
+            </tr>
+            <tr>
+              <td class="pos-label">Logistics Section Chief</td>
+              <td><input type="text" id="staffLog"></td>
+              <td><input type="text" id="staffLogA"></td>
+            </tr>
+            <tr>
+              <td class="pos-label">Finance/Admin Chief</td>
+              <td><input type="text" id="staffFin"></td>
+              <td><input type="text" id="staffFinA"></td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Situation / Map -->
+        <div class="panel">
+          <div class="panel-title">Situation Summary (ICS-201)</div>
+          <div class="field">
+            <label>Current Situation</label>
+            <textarea id="currentSituation" placeholder="Describe current incident status, resources committed, and priorities…"></textarea>
+          </div>
+          <div class="field">
+            <label>Accomplishments This Period</label>
+            <textarea id="accomplishments" placeholder="Key accomplishments since last briefing…" style="min-height:60px"></textarea>
+          </div>
+          <div class="field">
+            <label>Planned Actions Next Period</label>
+            <textarea id="plannedActions" placeholder="Actions planned for the next operational period…" style="min-height:60px"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Safety Messages list -->
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-title">
+        ⚠ Safety Hazards Log
+        <button class="btn btn-sm" onclick="addSafety()">+ Add Hazard</button>
+      </div>
+      <div id="safetyList"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input type="text" id="newSafetyText" placeholder="Describe hazard or safety concern…" style="flex:1;background:var(var(--input-bg);border:1px solid var(--line);border-radius:4px;color:var(--txt);padding:7px 10px;font-size:13px" onkeydown="if(event.key==='Enter')addSafety()">
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = 'http://192.168.50.1:5055/api/ics';
+const STORE = 'ics_command';
+let state = { incId:null, objectives:[], safetyHazards:[] };
+
+async function init() {
+  // Try to load from server
+  try {
+    const res = await fetch(`${API}/incidents`);
+    const data = await res.json();
+    const inc = (data.incidents || []).find(i => i.status === 'active') || (data.incidents||[])[0];
+    if (inc) {
+      state.incId = inc.id;
+      document.getElementById('incName').value = inc.name || '';
+      document.getElementById('incNumber').value = inc.number || inc.id || '';
+      document.getElementById('incPeriod').value = `Period ${inc.current_period || 1}`;
+      document.getElementById('incIC').value = inc.incident_commander || '';
+      document.getElementById('incLocation').value = inc.location || '';
+    }
+  } catch(e) {}
+
+  // Load local state
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE) || '{}');
+    if (saved.objectives) state.objectives = saved.objectives;
+    if (saved.safetyHazards) state.safetyHazards = saved.safetyHazards;
+    ['incPrepared','staffIC','staffICAgency','staffSO','staffSOA','staffPIO','staffPIOA',
+     'staffLO','staffLOA','staffOps','staffOpsA','staffPlan','staffPlanA','staffLog',
+     'staffLogA','staffFin','staffFinA','safetyMsg','weatherSummary','currentSituation',
+     'accomplishments','plannedActions'].forEach(id => {
+      if (saved[id] !== undefined) document.getElementById(id).value = saved[id];
+    });
+  } catch(e) {}
+
+  renderObjectives(); renderSafety();
+  document.getElementById('noInc').style.display = 'none';
+  document.getElementById('mainContent').style.display = '';
+}
+
+function renderObjectives() {
+  document.getElementById('objList').innerHTML = state.objectives.length
+    ? state.objectives.map((o, i) => `
+      <div class="obj-item">
+        <span class="obj-num">${i+1}</span>
+        <span class="obj-text">${o}</span>
+        <button class="obj-del" onclick="delObj(${i})">✕</button>
+      </div>`).join('')
+    : '<div style="color:var(--muted);font-size:12px;padding:8px">No objectives entered yet.</div>';
+}
+
+function prefillObjective(val) {
+  if (!val) return;
+  const input = document.getElementById('newObjText');
+  input.value = val;
+  input.focus();
+  // Reset dropdown so same item can be selected again
+  document.getElementById('commonObjSel').value = '';
+}
+
+function addObjective() {
+  const t = document.getElementById('newObjText').value.trim();
+  if (!t) return;
+  state.objectives.push(t);
+  document.getElementById('newObjText').value = '';
+  renderObjectives();
+}
+
+function delObj(i) { state.objectives.splice(i,1); renderObjectives(); }
+
+function renderSafety() {
+  document.getElementById('safetyList').innerHTML = state.safetyHazards.length
+    ? state.safetyHazards.map((h, i) => `
+      <div class="safety-msg">
+        <span class="sm-icon">⚠</span>
+        <span class="sm-text">${h}</span>
+        <button class="sm-del" onclick="delSafety(${i})">✕</button>
+      </div>`).join('')
+    : '<div style="color:var(--muted);font-size:12px;padding:8px">No hazards logged.</div>';
+}
+
+function addSafety() {
+  const t = document.getElementById('newSafetyText').value.trim();
+  if (!t) return;
+  state.safetyHazards.push(t);
+  document.getElementById('newSafetyText').value = '';
+  renderSafety();
+}
+
+function delSafety(i) { state.safetyHazards.splice(i,1); renderSafety(); }
+
+function save() {
+  const ids = ['incPrepared','staffIC','staffICAgency','staffSO','staffSOA','staffPIO','staffPIOA',
+    'staffLO','staffLOA','staffOps','staffOpsA','staffPlan','staffPlanA','staffLog',
+    'staffLogA','staffFin','staffFinA','safetyMsg','weatherSummary','currentSituation',
+    'accomplishments','plannedActions'];
+  const toSave = { objectives: state.objectives, safetyHazards: state.safetyHazards };
+  ids.forEach(id => { toSave[id] = document.getElementById(id)?.value || ''; });
+  localStorage.setItem(STORE, JSON.stringify(toSave));
+  document.getElementById('incName') && postToServer();
+  const btn = document.querySelector('.btn'); if(btn){ btn.textContent='✓ Saved'; setTimeout(()=>btn.textContent='💾 Save',1500); }
+}
+
+async function postToServer() {
+  if (!state.incId) return;
+  try {
+    await fetch(`${API}/incidents/${state.incId}/command`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        objectives: state.objectives,
+        safety_message: document.getElementById('safetyMsg').value,
+        weather: document.getElementById('weatherSummary').value,
+        situation: document.getElementById('currentSituation').value,
+      })
+    });
+  } catch(e) {}
+}
+
+window.addEventListener('load', init);
+</script>
+
+<script src="../lib/identity.js"></script>
+</body>
+</html>

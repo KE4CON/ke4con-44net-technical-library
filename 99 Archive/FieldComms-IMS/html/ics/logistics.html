@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — ICS Logistics</title>
+<link rel="stylesheet" href="../theme.css">
+<style>
+.page-header{background: linear-gradient(135deg, var(--eoc) 0%, var(--eoc-lt) 100%);border-bottom:2px solid var(--green);padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.page-header a{color: rgba(255,255,255,0.7);text-decoration:none;font-size:13px;}
+.page-header a:hover{color: #fff;}
+.page-title{font-family:var(--font-hd);font-size:18px;color:var(--green);letter-spacing:2px;}
+.ics-nav{background:var(--panel2);border-bottom:1px solid var(--line);padding:0;display:flex;overflow-x:auto;}
+.ics-nav a{display:flex;align-items:center;gap:6px;padding:11px 18px;text-decoration:none;color:var(--muted);font-family:var(--font-hd);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;border-bottom:3px solid transparent;transition:color 0.15s,border-color 0.15s;}
+.ics-nav a:hover{color:var(--txt);}
+.ics-nav a.active{color:var(--green);border-bottom-color:var(--green);}
+.container{max-width:1100px;margin:0 auto;padding:20px 20px 40px;}
+.sec-label{font-family:var(--font-hd);font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--green);padding:16px 0 8px;display:flex;align-items:center;gap:10px;}
+.sec-label::after{content:'';flex:1;height:1px;background: var(--line);}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;}
+.panel-title{font-family:var(--font-hd);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--green);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.field{margin-bottom:10px;}
+.field label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;}
+.field input,.field select,.field textarea{width:100%;box-sizing:border-box;background:var(var(--input-bg);border:1px solid var(--line);border-radius:4px;color:var(--txt);padding:7px 10px;font-size:13px;}
+.field textarea{resize:vertical;min-height:70px;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--green);}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:700px){.two-col{grid-template-columns:1fr;}}
+.tab-bar{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:16px;}
+.tab{background:none;border:none;border-bottom:3px solid transparent;color:var(--muted);font-family:var(--font-hd);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;padding:10px 16px;cursor:pointer;transition:color 0.15s,border-color 0.15s;}
+.tab:hover{color:var(--txt);}
+.tab.active{color:var(--green);border-bottom-color:var(--green);}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* Comms plan table (ICS-205) */
+.comms-table{width:100%;border-collapse:collapse;font-size:12px;}
+.comms-table th{text-align:left;padding:6px 8px;color:var(--green);font-family:var(--font-hd);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--line);background:var(--panel);}
+.comms-table td{padding:6px 8px;border-bottom:1px solid var(--line);color:var(--txt);}
+.comms-table td input,.comms-table td select{background:var(var(--input-bg);border:1px solid transparent;border-radius:3px;color:var(--txt);padding:3px 6px;font-size:12px;width:100%;box-sizing:border-box;}
+.comms-table td input:focus,.comms-table td select:focus{outline:none;border-color:var(--green);}
+.comms-table tr:hover td{background:var(--panel2);}
+
+/* Supply table */
+.supply-table{width:100%;border-collapse:collapse;font-size:12px;}
+.supply-table th{text-align:left;padding:6px 8px;color:var(--green);font-family:var(--font-hd);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--line);background:var(--panel);}
+.supply-table td{padding:7px 8px;border-bottom:1px solid var(--line);color:var(--txt);}
+.supply-table tr:hover td{background:var(--panel2);}
+.pri-chip{padding:2px 7px;border-radius:3px;font-size:10px;font-family:var(--font-hd);}
+.pri-high{background:rgba(184,32,32,0.10);color:var(--red);border:1px solid var(--red);}
+.pri-med{background:rgba(26,58,107,0.08);color:var(--eoc);border:1px solid var(--amber);}
+.pri-low{background: var(--bg);color:var(--muted);border:1px solid var(--line);}
+
+/* Meal log */
+.meal-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);}
+.meal-row:last-child{border-bottom:none;}
+.meal-type{font-family:var(--font-hd);font-size:12px;color:var(--green);min-width:80px;}
+.meal-count{font-size:13px;color:var(--txt);}
+.meal-note{font-size:11px;color:var(--muted);flex:1;}
+
+/* Check-in table */
+.checkin-table{width:100%;border-collapse:collapse;font-size:12px;}
+.checkin-table th{text-align:left;padding:6px 8px;color:var(--green);font-family:var(--font-hd);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--line);}
+.checkin-table td{padding:7px 8px;border-bottom:1px solid var(--line);color:var(--txt);}
+
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:50;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--panel);border:2px solid var(--green);border-radius:10px;width:min(520px,95vw);padding:24px;position:relative;max-height:85vh;overflow-y:auto;}
+.modal-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;}
+.modal-close:hover{color:var(--txt);}
+.modal-title{font-family:var(--font-hd);font-size:18px;color:var(--green);margin-bottom:16px;}
+.two-f{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+</style>
+</head>
+<body>
+<div class="page-header">
+  <a href="../index.html">⌂ Home</a>
+  <span style="color:var(--line)">›</span>
+  <a href="index.html">ICS Platform</a>
+  <span style="color:var(--line)">›</span>
+  <span class="page-title">🟢 LOGISTICS</span>
+  <span style="margin-left:auto;display:flex;gap:8px">
+    <button class="btn btn-sm" onclick="saveAll()" style="border-color:var(--green);color:var(--green)">💾 Save</button>
+    <button class="btn btn-sm" onclick="window.print()" style="background:var(--panel2)">🖨 Print ICS-205</button>
+  </span>
+</div>
+<nav class="ics-nav">
+  <a href="index.html">🏛 Overview</a>
+  <a href="command.html">⭐ Command</a>
+  <a href="operations.html">🔴 Operations</a>
+  <a href="planning.html">📋 Planning</a>
+  <a href="logistics.html" class="active">🟢 Logistics</a>
+  <a href="finance.html">💜 Finance</a>
+  <a href="planningp.html">🅿 Planning P</a>
+</nav>
+
+<div class="container">
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('comms')">Comms Plan</button>
+    <button class="tab" onclick="showTab('supply')">Supply</button>
+    <button class="tab" onclick="showTab('facilities')">Facilities</button>
+    <button class="tab" onclick="showTab('food')">Food / Medical</button>
+    <button class="tab" onclick="showTab('checkin')">Check-In (ICS-211)</button>
+  </div>
+
+  <!-- COMMS PLAN (ICS-205) -->
+  <div class="tab-pane active" id="tab-comms">
+    <div class="panel">
+      <div class="panel-title">
+        Incident Radio Communications Plan (ICS-205)
+        <button class="btn btn-sm" onclick="addCommsRow()" style="border-color:var(--green);color:var(--green)">+ Add Channel</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="comms-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Function / Assignment</th><th>Channel Name</th>
+              <th>Frequency (MHz)</th><th>Tone / DCS</th><th>Mode</th><th>Remarks</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="commsBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-title">Communications Unit Leader</div>
+      <div class="two-col">
+        <div class="field"><label>Name / Callsign</label><input type="text" id="commsLeader" placeholder="W8ABC — Jane Smith"></div>
+        <div class="field"><label>Contact / Radio</label><input type="text" id="commsLeaderContact" placeholder="Ch 1 / (614) 555-0100"></div>
+      </div>
+      <div class="field"><label>Special Instructions</label>
+        <textarea id="commsSpecial" placeholder="Primary net check-in procedure, alternate frequencies, interoperability instructions…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPPLY -->
+  <div class="tab-pane" id="tab-supply">
+    <div class="panel">
+      <div class="panel-title">
+        Supply Tracking
+        <button class="btn btn-sm" onclick="openAddSupply()" style="border-color:var(--green);color:var(--green)">+ Add Item</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="supply-table">
+          <thead>
+            <tr><th>Item</th><th>Category</th><th>Qty Needed</th><th>Qty On Hand</th><th>Status</th><th>Notes</th><th></th></tr>
+          </thead>
+          <tbody id="supplyBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-title">Supply / Ordering Summary</div>
+      <div class="field"><label>Supply Unit Leader</label><input type="text" id="supplyLeader" placeholder="Name / Callsign"></div>
+      <div class="field"><label>Ordering Point of Contact</label><input type="text" id="orderingPOC" placeholder="Name / phone"></div>
+      <div class="field"><label>Special Ordering Instructions</label>
+        <textarea id="orderingInstructions" placeholder="Procurement procedures, vendor contacts, delivery location…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- FACILITIES -->
+  <div class="tab-pane" id="tab-facilities">
+    <div class="panel">
+      <div class="panel-title">Incident Facilities</div>
+      <div class="two-col">
+        <div>
+          <div style="margin-bottom:12px;font-size:10px;color:var(--green);font-family:var(--font-hd);letter-spacing:0.1em;text-transform:uppercase">Incident Command Post (ICP)</div>
+          <div class="field"><label>Location / Address</label><input type="text" id="icpLocation" placeholder="369 S High St, Columbus OH"></div>
+          <div class="field"><label>Grid / Lat-Lon</label><input type="text" id="icpGrid" placeholder="EN90aa / 39.96, -82.99"></div>
+          <div class="field"><label>Radio Contact</label><input type="text" id="icpRadio" placeholder="Ch 1 / 146.940"></div>
+          <div class="field"><label>Phone</label><input type="text" id="icpPhone" placeholder="(614) 525-3378"></div>
+          <div class="field"><label>Notes</label><textarea id="icpNotes" placeholder="Parking, access, facilities…" style="min-height:50px"></textarea></div>
+        </div>
+        <div>
+          <div style="margin-bottom:12px;font-size:10px;color:var(--green);font-family:var(--font-hd);letter-spacing:0.1em;text-transform:uppercase">Base / Camp</div>
+          <div class="field"><label>Location / Address</label><input type="text" id="baseLocation" placeholder="Ohio State Fairgrounds"></div>
+          <div class="field"><label>Grid / Lat-Lon</label><input type="text" id="baseGrid" placeholder="EN90aa"></div>
+          <div class="field"><label>Radio Contact</label><input type="text" id="baseRadio" placeholder="Ch 2 / 146.820"></div>
+          <div class="field"><label>Capacity</label><input type="text" id="baseCap" placeholder="250 personnel"></div>
+          <div class="field"><label>Notes</label><textarea id="baseNotes" placeholder="Showers, meals, rest area…" style="min-height:50px"></textarea></div>
+        </div>
+      </div>
+      <div class="two-col" style="margin-top:16px">
+        <div>
+          <div style="margin-bottom:12px;font-size:10px;color:var(--green);font-family:var(--font-hd);letter-spacing:0.1em;text-transform:uppercase">Staging Area</div>
+          <div class="field"><label>Location</label><input type="text" id="stagingLocation" placeholder="Westland Mall — West Lot"></div>
+          <div class="field"><label>Radio</label><input type="text" id="stagingRadio" placeholder="Ch 3"></div>
+          <div class="field"><label>Staging Manager</label><input type="text" id="stagingMgr" placeholder="Name / Callsign"></div>
+        </div>
+        <div>
+          <div style="margin-bottom:12px;font-size:10px;color:var(--green);font-family:var(--font-hd);letter-spacing:0.1em;text-transform:uppercase">Medical Aid Station</div>
+          <div class="field"><label>Location</label><input type="text" id="aidLocation" placeholder="ICP — Room 101"></div>
+          <div class="field"><label>Medical Officer</label><input type="text" id="aidMedic" placeholder="Name / credentials"></div>
+          <div class="field"><label>Nearest Hospital</label><input type="text" id="aidHospital" placeholder="Nationwide Children's — (614) 722-2000"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOD / MEDICAL -->
+  <div class="tab-pane" id="tab-food">
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-title">
+          Meal Tracking
+          <button class="btn btn-sm" onclick="openAddMeal()" style="border-color:var(--green);color:var(--green)">+ Log Meal</button>
+        </div>
+        <div id="mealList"></div>
+        <div style="margin-top:12px;font-family:var(--font-hd);font-size:13px;color:var(--muted)">
+          Total meals served: <span id="totalMeals" style="color:var(--green)">0</span>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Medical Plan (ICS-206)</div>
+        <div class="field"><label>Medical Unit Leader</label><input type="text" id="medLeader" placeholder="Name / Callsign"></div>
+        <div class="field"><label>Medical Aid Location</label><input type="text" id="medLocation" placeholder="ICP Room 101"></div>
+        <div class="field"><label>Ambulance Service</label><input type="text" id="medAmb" placeholder="Columbus EMS — (614) 645-4660"></div>
+        <div class="field"><label>Nearest Hospital</label><input type="text" id="medHosp" placeholder="Nationwide Children's — 0.8 miles east"></div>
+        <div class="field"><label>Special Medical Notes</label>
+          <textarea id="medNotes" placeholder="Known allergies, special medications, medical history for key personnel…"></textarea>
+        </div>
+        <div class="field"><label>Injury / Illness Log</label>
+          <textarea id="medInjuryLog" placeholder="Log any incidents, injuries, or illness here with time and person…" style="min-height:80px"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHECK-IN (ICS-211) -->
+  <div class="tab-pane" id="tab-checkin">
+    <div class="panel">
+      <div class="panel-title">
+        Incident Check-In List (ICS-211)
+        <button class="btn btn-sm" onclick="openAddCheckin()" style="border-color:var(--green);color:var(--green)">+ Check In</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="checkin-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Name / Callsign</th><th>Agency</th>
+              <th>Resource / Position</th><th>Check-In Time</th><th>ICS Check-In?</th>
+            </tr>
+          </thead>
+          <tbody id="checkinBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-bg" id="addSupplyModal" onclick="if(event.target===this)closeAddSupply()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAddSupply()">✕</button>
+    <div class="modal-title">Add Supply Item</div>
+    <div class="field"><label>Item *</label><input type="text" id="sItem" placeholder="Portable radio batteries"></div>
+    <div class="two-f">
+      <div class="field"><label>Category</label>
+        <select id="sCat">
+          <option value="comms">Communications</option>
+          <option value="power">Power / Fuel</option>
+          <option value="medical">Medical</option>
+          <option value="food">Food / Water</option>
+          <option value="shelter">Shelter</option>
+          <option value="tools">Tools / Equipment</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Priority</label>
+        <select id="sPri">
+          <option value="high">High</option>
+          <option value="med">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+    </div>
+    <div class="two-f">
+      <div class="field"><label>Qty Needed</label><input type="number" id="sNeeded" value="1" min="0"></div>
+      <div class="field"><label>Qty On Hand</label><input type="number" id="sOnHand" value="0" min="0"></div>
+    </div>
+    <div class="field"><label>Notes</label><input type="text" id="sNotes" placeholder="Vendor, location, notes…"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-sm" onclick="closeAddSupply()" style="background:var(--panel2)">Cancel</button>
+      <button class="btn" onclick="saveSupply()" style="border-color:var(--green);color:var(--green)">Add Item</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="addMealModal" onclick="if(event.target===this)closeAddMeal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAddMeal()">✕</button>
+    <div class="modal-title">Log Meal Service</div>
+    <div class="two-f">
+      <div class="field"><label>Meal Type</label>
+        <select id="mType">
+          <option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option>
+        </select>
+      </div>
+      <div class="field"><label>Count Served</label><input type="number" id="mCount" value="0" min="0"></div>
+    </div>
+    <div class="field"><label>Menu / Description</label><input type="text" id="mMenu" placeholder="Sandwiches, chips, bottled water"></div>
+    <div class="field"><label>Notes</label><input type="text" id="mNotes" placeholder="Caterer, location, time…"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-sm" onclick="closeAddMeal()" style="background:var(--panel2)">Cancel</button>
+      <button class="btn" onclick="saveMeal()" style="border-color:var(--green);color:var(--green)">Log Meal</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="addCheckinModal" onclick="if(event.target===this)closeAddCheckin()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAddCheckin()">✕</button>
+    <div class="modal-title">Personnel Check-In</div>
+    <div class="field"><label>Name / Callsign *</label><input type="text" id="ciName" placeholder="Jane Smith W8ABC"></div>
+    <div class="two-f">
+      <div class="field"><label>Agency</label><input type="text" id="ciAgency" placeholder="Franklin County ARES"></div>
+      <div class="field"><label>Resource / ICS Position</label><input type="text" id="ciPosition" placeholder="Net Control / Comms Unit"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-sm" onclick="closeAddCheckin()" style="background:var(--panel2)">Cancel</button>
+      <button class="btn" onclick="saveCheckin()" style="border-color:var(--green);color:var(--green)">Check In</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORE = 'ics_logistics';
+let state = { commsRows:[], supply:[], meals:[], checkins:[] };
+
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE)||'{}');
+    if(d.commsRows) state.commsRows = d.commsRows;
+    if(d.supply) state.supply = d.supply;
+    if(d.meals) state.meals = d.meals;
+    if(d.checkins) state.checkins = d.checkins;
+    const ids = ['commsLeader','commsLeaderContact','commsSpecial','supplyLeader','orderingPOC','orderingInstructions','icpLocation','icpGrid','icpRadio','icpPhone','icpNotes','baseLocation','baseGrid','baseRadio','baseCap','baseNotes','stagingLocation','stagingRadio','stagingMgr','aidLocation','aidMedic','aidHospital','medLeader','medLocation','medAmb','medHosp','medNotes','medInjuryLog'];
+    ids.forEach(id => { if(d[id]!==undefined){ const el=document.getElementById(id); if(el) el.value=d[id]; } });
+    if(!state.commsRows.length) initDefaultComms();
+  } catch(e) { initDefaultComms(); }
+  renderAll();
+}
+
+function initDefaultComms() {
+  state.commsRows = [
+    { fn:'Command Net', ch:'CH 1', freq:'146.940', tone:'100.0', mode:'FM/Repeater', remarks:'Primary - Franklin County Repeater' },
+    { fn:'Tactical / Ops', ch:'CH 2', freq:'146.520', tone:'', mode:'FM/Simplex', remarks:'Tactical simplex' },
+    { fn:'Logistics', ch:'CH 3', freq:'443.600', tone:'100.0', mode:'FM/Repeater', remarks:'UHF repeater' },
+    { fn:'Emergency / Interop', ch:'60m Ch1', freq:'5330.5', tone:'', mode:'USB', remarks:'60m interoperability channel' },
+  ];
+}
+
+function renderAll() { renderComms(); renderSupply(); renderMeals(); renderCheckin(); }
+
+function renderComms() {
+  document.getElementById('commsBody').innerHTML = state.commsRows.map((r, i) => `
+    <tr>
+      <td><input value="${r.fn||''}" onchange="updateComms(${i},'fn',this.value)" placeholder="Command Net"></td>
+      <td><input value="${r.ch||''}" onchange="updateComms(${i},'ch',this.value)" placeholder="CH 1" style="width:60px"></td>
+      <td><input value="${r.freq||''}" onchange="updateComms(${i},'freq',this.value)" placeholder="146.940" style="width:80px"></td>
+      <td><input value="${r.tone||''}" onchange="updateComms(${i},'tone',this.value)" placeholder="100.0" style="width:60px"></td>
+      <td><select onchange="updateComms(${i},'mode',this.value)" style="background:var(var(--input-bg);border:1px solid transparent;border-radius:3px;color:var(--txt);padding:3px 4px;font-size:11px">
+        ${['FM/Repeater','FM/Simplex','USB','LSB','CW','Digital'].map(m=>`<option ${r.mode===m?'selected':''}>${m}</option>`).join('')}
+      </select></td>
+      <td><input value="${r.remarks||''}" onchange="updateComms(${i},'remarks',this.value)" placeholder="Notes" style="width:100%"></td>
+      <td><button onclick="delComms(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer">✕</button></td>
+    </tr>`).join('') ||
+    '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--muted)">No channels — click + Add Channel</td></tr>';
+}
+
+function addCommsRow() {
+  state.commsRows.push({ fn:'', ch:'', freq:'', tone:'', mode:'FM/Repeater', remarks:'' });
+  renderComms();
+}
+
+function updateComms(i, field, val) { state.commsRows[i][field] = val; }
+function delComms(i) { state.commsRows.splice(i,1); renderComms(); }
+
+const priChip = { high:'pri-chip pri-high', med:'pri-chip pri-med', low:'pri-chip pri-low' };
+const catIcons = { comms:'📻', power:'⚡', medical:'🏥', food:'🍽', shelter:'⛺', tools:'🔧', other:'📦' };
+
+function renderSupply() {
+  document.getElementById('supplyBody').innerHTML = state.supply.map((s, i) => {
+    const pct = s.needed > 0 ? Math.min(100, Math.round((s.onhand/s.needed)*100)) : 100;
+    const barColor = pct >= 80 ? 'var(--green)' : pct >= 40 ? 'var(--amber)' : 'var(--red)';
+    return `<tr>
+      <td>${catIcons[s.cat]||'📦'} ${s.item}</td>
+      <td style="font-size:10px;color:var(--muted)">${s.cat||'—'}</td>
+      <td style="font-family:var(--font-hd)">${s.needed||0}</td>
+      <td>
+        <span style="font-family:var(--font-hd);color:${barColor}">${s.onhand||0}</span>
+        <div style="background: var(--bg);border-radius:2px;height:4px;margin-top:2px;overflow:hidden">
+          <div style="background:${barColor};height:100%;width:${pct}%;border-radius:2px"></div>
+        </div>
+      </td>
+      <td><span class="${priChip[s.pri]||'pri-chip pri-low'}">${s.pri||'low'}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${s.notes||'—'}</td>
+      <td><button onclick="delSupply(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer">✕</button></td>
+    </tr>`;}).join('') ||
+    '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--muted)">No supply items</td></tr>';
+}
+
+function openAddSupply() { document.getElementById('addSupplyModal').classList.add('open'); }
+function closeAddSupply() { document.getElementById('addSupplyModal').classList.remove('open'); }
+
+function saveSupply() {
+  const item = document.getElementById('sItem').value.trim();
+  if(!item){ alert('Item name required'); return; }
+  state.supply.push({ item, cat:document.getElementById('sCat').value, pri:document.getElementById('sPri').value, needed:parseInt(document.getElementById('sNeeded').value)||0, onhand:parseInt(document.getElementById('sOnHand').value)||0, notes:document.getElementById('sNotes').value.trim() });
+  ['sItem','sNotes'].forEach(id=>document.getElementById(id).value='');
+  closeAddSupply(); renderSupply();
+}
+
+function delSupply(i) { state.supply.splice(i,1); renderSupply(); }
+
+function renderMeals() {
+  const total = state.meals.reduce((a,m)=>a+(parseInt(m.count)||0),0);
+  document.getElementById('totalMeals').textContent = total;
+  document.getElementById('mealList').innerHTML = state.meals.length
+    ? state.meals.map((m,i) => `<div class="meal-row">
+        <span class="meal-type">${m.type}</span>
+        <span class="meal-count" style="font-family:var(--font-hd);color:var(--green)">${m.count}</span>
+        <span class="meal-note">${m.menu||''} ${m.notes||''}</span>
+        <span style="font-size:10px;color:var(--muted)">${new Date(m.ts).toLocaleTimeString()}</span>
+        <button onclick="delMeal(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">✕</button>
+      </div>`).join('')
+    : '<div style="padding:16px;color:var(--muted);font-size:12px;text-align:center">No meals logged</div>';
+}
+
+function openAddMeal() { document.getElementById('addMealModal').classList.add('open'); }
+function closeAddMeal() { document.getElementById('addMealModal').classList.remove('open'); }
+
+function saveMeal() {
+  state.meals.push({ type:document.getElementById('mType').value, count:parseInt(document.getElementById('mCount').value)||0, menu:document.getElementById('mMenu').value.trim(), notes:document.getElementById('mNotes').value.trim(), ts:new Date().toISOString() });
+  ['mMenu','mNotes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mCount').value='0';
+  closeAddMeal(); renderMeals();
+}
+
+function delMeal(i) { state.meals.splice(i,1); renderMeals(); }
+
+function renderCheckin() {
+  document.getElementById('checkinBody').innerHTML = state.checkins.length
+    ? state.checkins.map((c,i) => `<tr>
+        <td style="font-family:var(--font-hd);color:var(--muted)">${i+1}</td>
+        <td style="font-family:var(--font-hd);color:var(--eoc)">${c.name}</td>
+        <td style="font-size:11px;color:var(--muted)">${c.agency||'—'}</td>
+        <td style="font-size:11px">${c.position||'—'}</td>
+        <td style="font-family:var(--font-hd);font-size:11px;color:var(--green)">${new Date(c.ts).toLocaleTimeString()}</td>
+        <td><input type="checkbox" ${c.ics_checkin?'checked':''} onchange="toggleICS(${i},this.checked)"></td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--muted)">No personnel checked in</td></tr>';
+}
+
+function openAddCheckin() { document.getElementById('addCheckinModal').classList.add('open'); }
+function closeAddCheckin() { document.getElementById('addCheckinModal').classList.remove('open'); }
+
+function saveCheckin() {
+  const name = document.getElementById('ciName').value.trim();
+  if(!name){ alert('Name required'); return; }
+  state.checkins.push({ name, agency:document.getElementById('ciAgency').value.trim(), position:document.getElementById('ciPosition').value.trim(), ts:new Date().toISOString(), ics_checkin:false });
+  ['ciName','ciAgency','ciPosition'].forEach(id=>document.getElementById(id).value='');
+  closeAddCheckin(); renderCheckin();
+}
+
+function toggleICS(i, v) { state.checkins[i].ics_checkin = v; }
+
+function saveAll() {
+  const ids = ['commsLeader','commsLeaderContact','commsSpecial','supplyLeader','orderingPOC','orderingInstructions','icpLocation','icpGrid','icpRadio','icpPhone','icpNotes','baseLocation','baseGrid','baseRadio','baseCap','baseNotes','stagingLocation','stagingRadio','stagingMgr','aidLocation','aidMedic','aidHospital','medLeader','medLocation','medAmb','medHosp','medNotes','medInjuryLog'];
+  const d = { commsRows:state.commsRows, supply:state.supply, meals:state.meals, checkins:state.checkins };
+  ids.forEach(id => { const el=document.getElementById(id); if(el) d[id]=el.value; });
+  localStorage.setItem(STORE, JSON.stringify(d));
+  const btn = event.target; btn.textContent='✓ Saved'; setTimeout(()=>btn.textContent='💾 Save',1500);
+}
+
+function showTab(id) {
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+window.addEventListener('load', load);
+</script>
+
+<script src="../lib/identity.js"></script>
+</body>
+</html>

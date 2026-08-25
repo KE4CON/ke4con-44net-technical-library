@@ -1,0 +1,28 @@
+[Unit]
+Description=AMPRNet Gateway Status Service (Public :9000 + Control :9001)
+Documentation=https://github.com/KE4CON/CrossPlatformAPRS
+After=network.target wg-quick@ampr0.service
+Wants=wg-quick@ampr0.service
+
+[Service]
+Type=simple
+User=amprgate
+Group=amprgate
+WorkingDirectory=/opt/amprgate
+
+# The service runs two listeners:
+#   Port 9000 (0.0.0.0) — status API + UI, callsign-authenticated
+#   Port 9001 (127.0.0.1) — tunnel control, localhost only, requires callsign session
+ExecStart=/opt/amprgate/venv/bin/python /opt/amprgate/amprgate_status.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=amprgate-status
+
+# Allow sudo for wg-quick tunnel management
+# Requires sudoers entry on gateway Pi:
+#   amprgate ALL=(ALL) NOPASSWD: /usr/bin/wg, /usr/bin/wg-quick
+
+[Install]
+WantedBy=multi-user.target

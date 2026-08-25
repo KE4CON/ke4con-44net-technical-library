@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — Reference Library</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+/* ── Layout ────────────────────────────────────────────────────────── */
+.page-header {
+  background: linear-gradient(135deg, var(--eoc) 0%, var(--eoc-lt) 100%);
+  border-bottom: 3px solid var(--accent);
+  padding: 12px 20px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.page-header a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; }
+.page-header a:hover { color: #fff; }
+.page-title { font-family: var(--font-hd); font-size: 18px; color: #fff; letter-spacing: 2px; }
+
+/* ── Main tabs ─────────────────────────────────────────────────────── */
+.main-tabs {
+  background: var(--panel); border-bottom: 2px solid var(--line);
+  display: flex; gap: 0; padding: 0 20px; overflow-x: auto;
+}
+.main-tab {
+  background: none; border: none; border-bottom: 4px solid transparent;
+  color: var(--muted); font-family: var(--font-hd); font-size: 12px;
+  letter-spacing: 0.1em; text-transform: uppercase; padding: 13px 20px;
+  cursor: pointer; white-space: nowrap; margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.main-tab:hover { color: var(--txt); }
+.main-tab.active { color: var(--eoc); border-bottom-color: var(--eoc); }
+.main-tab .tab-count {
+  background: var(--eoc); color: #fff; border-radius: 9px;
+  font-size: 9px; padding: 1px 5px; margin-left: 5px;
+  vertical-align: middle; font-family: var(--font-hd);
+}
+.main-tab.active .tab-count { background: var(--eoc); }
+
+/* ── Content layout ────────────────────────────────────────────────── */
+.content-wrap {
+  display: grid; grid-template-columns: 260px 1fr;
+  gap: 0; min-height: calc(100vh - 130px);
+}
+@media(max-width:800px){ .content-wrap { grid-template-columns: 1fr; } }
+
+/* ── Left sidebar ──────────────────────────────────────────────────── */
+.sidebar-panel {
+  background: var(--panel2); border-right: 1px solid var(--line);
+  padding: 16px 14px; overflow-y: auto;
+}
+.sidebar-section-title {
+  font-family: var(--font-hd); font-size: 10px; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--eoc); margin-bottom: 8px;
+  padding-bottom: 5px; border-bottom: 1px solid var(--line);
+}
+.filter-group { margin-bottom: 16px; }
+.filter-btn {
+  display: flex; align-items: center; gap: 7px;
+  width: 100%; background: none; border: none; border-radius: 5px;
+  padding: 6px 8px; text-align: left; cursor: pointer; font-size: 12px;
+  color: var(--txt); transition: background 0.12s;
+}
+.filter-btn:hover { background: var(--panel); }
+.filter-btn.active { background: var(--eoc); color: #fff; }
+.filter-btn .fb-icon { font-size: 14px; width: 18px; text-align: center; }
+.filter-btn .fb-count {
+  margin-left: auto; font-family: var(--font-hd); font-size: 10px;
+  color: var(--muted); background: var(--bg); border-radius: 6px;
+  padding: 1px 5px;
+}
+.filter-btn.active .fb-count { background: rgba(255,255,255,0.25); color: #fff; }
+
+/* Tag cloud */
+.tag-cloud { display: flex; flex-wrap: wrap; gap: 5px; margin-top:4px; }
+.tag-pill {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  padding: 2px 8px; font-size: 10px; color: var(--muted); cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.tag-pill:hover { border-color: var(--eoc-lt); color: var(--eoc); }
+.tag-pill.active { background: var(--eoc); border-color: var(--eoc); color: #fff; }
+
+/* ── Main content ──────────────────────────────────────────────────── */
+.main-panel { display: flex; flex-direction: column; overflow: hidden; }
+
+/* Toolbar */
+.toolbar {
+  background: var(--panel); border-bottom: 1px solid var(--line);
+  padding: 10px 16px; display: flex; gap: 8px; align-items: center;
+  flex-wrap: wrap; flex-shrink: 0;
+}
+.search-wrap { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 200px; }
+.search-wrap input {
+  flex: 1; background: var(--input-bg); border: 1px solid var(--line);
+  border-radius: 4px; color: var(--txt); padding: 6px 10px; font-size: 13px;
+}
+.search-wrap input:focus { outline: none; border-color: var(--eoc-lt); }
+.sort-select {
+  background: var(--input-bg); border: 1px solid var(--line); border-radius: 4px;
+  color: var(--txt); padding: 6px 8px; font-size: 12px;
+}
+
+/* View toggles */
+.view-toggle { display: flex; gap: 3px; }
+.vbtn {
+  background: var(--panel2); border: 1px solid var(--line); border-radius: 4px;
+  padding: 5px 9px; cursor: pointer; font-size: 13px; color: var(--muted);
+  transition: background 0.12s;
+}
+.vbtn.active { background: var(--eoc); border-color: var(--eoc); color: #fff; }
+
+/* ── Document grid ─────────────────────────────────────────────────── */
+.docs-area { flex: 1; overflow-y: auto; padding: 16px; }
+
+.docs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.docs-list { display: flex; flex-direction: column; gap: 6px; }
+
+/* Document card (grid view) */
+.doc-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  overflow: hidden; cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  display: flex; flex-direction: column;
+}
+.doc-card:hover { border-color: var(--eoc-lt); box-shadow: 0 2px 8px rgba(26,58,107,0.12); }
+
+.doc-thumb {
+  height: 120px; background: var(--panel2); border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 52px; overflow: hidden; position: relative;
+}
+.doc-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.doc-thumb-placeholder { opacity: 0.4; }
+.doc-cat-badge {
+  position: absolute; top: 6px; right: 6px;
+  font-size: 9px; font-family: var(--font-hd); letter-spacing: 0.05em;
+  padding: 2px 6px; border-radius: 3px;
+}
+
+.doc-body { padding: 10px 12px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.doc-title { font-family: var(--font-hd); font-size: 13px; color: var(--txt); line-height: 1.3; }
+.doc-source { font-size: 10px; color: var(--muted); }
+.doc-desc { font-size: 10px; color: var(--muted); line-height: 1.4; flex: 1; }
+
+.doc-footer {
+  padding: 7px 12px; background: var(--panel2); border-top: 1px solid var(--line);
+  display: flex; align-items: center; gap: 6px;
+}
+.doc-size { font-size: 10px; color: var(--dim); }
+.doc-tags { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; }
+.doc-tag {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 1px 6px; font-size: 9px; color: var(--muted);
+}
+
+/* Document row (list view) */
+.doc-row {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  padding: 10px 14px; cursor: pointer; display: flex; align-items: center; gap: 12px;
+  transition: border-color 0.12s, background 0.12s;
+}
+.doc-row:hover { border-color: var(--eoc-lt); background: var(--panel2); }
+.doc-row .dr-icon { font-size: 24px; flex-shrink: 0; width: 28px; text-align: center; }
+.doc-row .dr-body { flex: 1; min-width: 0; }
+.doc-row .dr-title { font-family: var(--font-hd); font-size: 13px; color: var(--txt); }
+.doc-row .dr-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.doc-row .dr-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* Cross-ref badge */
+.xref-badge {
+  font-size: 9px; font-family: var(--font-hd); padding: 2px 6px;
+  border-radius: 3px; border: 1px solid; white-space: nowrap;
+}
+.xref-amateur { background: rgba(26,58,107,0.1); color: var(--eoc); border-color: rgba(26,58,107,0.3); }
+.xref-ics     { background: rgba(200,80,80,0.1); color: #b82020; border-color: rgba(184,32,32,0.3); }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-icon  { font-size: 52px; margin-bottom: 12px; }
+
+/* ── Upload panel ──────────────────────────────────────────────────── */
+.upload-panel {
+  position: fixed; right: 0; top: 0; bottom: 0; width: 400px; z-index: 200;
+  background: var(--panel); border-left: 2px solid var(--eoc);
+  box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+  display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform 0.25s ease;
+}
+.upload-panel.open { transform: translateX(0); }
+.upload-panel-header {
+  background: var(--eoc); padding: 14px 18px;
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+.upload-panel-header h2 { font-family: var(--font-hd); font-size: 15px; color: #fff; flex: 1; }
+.upload-panel-close { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 22px; cursor: pointer; }
+.upload-panel-close:hover { color: #fff; }
+.upload-panel-body { flex: 1; overflow-y: auto; padding: 18px; }
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--line); border-radius: 8px;
+  padding: 30px 20px; text-align: center; cursor: pointer; margin-bottom: 16px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--eoc-lt); background: rgba(26,58,107,0.04);
+}
+.drop-zone.has-file { border-color: var(--green); background: rgba(26,122,58,0.04); }
+.dz-icon { font-size: 36px; margin-bottom: 8px; }
+.dz-text { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.dz-filename { font-family: var(--font-hd); font-size: 13px; color: var(--eoc); margin-top: 6px; }
+
+/* Upload form fields */
+.up-field { margin-bottom: 11px; }
+.up-field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 3px; }
+.up-field input, .up-field select, .up-field textarea {
+  width: 100%; box-sizing: border-box;
+  background: var(--input-bg); border: 1px solid var(--line); border-radius: 4px;
+  color: var(--txt); padding: 6px 9px; font-size: 12px;
+}
+.up-field input:focus, .up-field select:focus, .up-field textarea:focus {
+  outline: none; border-color: var(--eoc-lt);
+}
+.up-field textarea { resize: vertical; min-height: 60px; }
+.up-field .field-hint { font-size: 10px; color: var(--dim); margin-top: 2px; }
+
+/* Section checkboxes */
+.section-checks { display: flex; gap: 12px; margin-top: 4px; }
+.section-check { display: flex; align-items: center; gap: 5px; font-size: 12px; cursor: pointer; }
+.section-check input { cursor: pointer; }
+
+/* Progress bar */
+.upload-progress { margin-top: 10px; display: none; }
+.progress-bar { background: var(--panel2); border-radius: 4px; height: 8px; overflow: hidden; }
+.progress-fill { background: var(--eoc-lt); height: 100%; border-radius: 4px; transition: width 0.3s; }
+.progress-msg { font-size: 11px; color: var(--muted); margin-top: 5px; text-align: center; }
+
+/* ── Document detail modal ─────────────────────────────────────────── */
+.modal-bg {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  z-index: 300; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  width: min(640px, 100%); max-height: 85vh; overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.modal-head {
+  background: var(--eoc); padding: 16px 20px;
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.modal-icon { font-size: 28px; flex-shrink: 0; }
+.modal-title { font-family: var(--font-hd); font-size: 16px; color: #fff; flex: 1; }
+.modal-close { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 22px; cursor: pointer; }
+.modal-close:hover { color: #fff; }
+.modal-body { padding: 20px; }
+.meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.meta-item label { font-size: 10px; color: var(--muted); display: block; margin-bottom: 3px; letter-spacing: 0.05em; text-transform: uppercase; }
+.meta-item .meta-val { font-size: 12px; color: var(--txt); }
+.modal-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+
+/* ── Category colors ───────────────────────────────────────────────── */
+.cat-radio    { background: rgba(184,32,32,0.12);  color: #b82020;  border-color: rgba(184,32,32,0.3);  }
+.cat-ics      { background: rgba(26,58,107,0.12);  color: var(--eoc); border-color: rgba(26,58,107,0.3); }
+.cat-agency   { background: rgba(91,45,140,0.12);  color: var(--purple); border-color: rgba(91,45,140,0.3); }
+.cat-training { background: rgba(26,122,58,0.12);  color: var(--green); border-color: rgba(26,122,58,0.3); }
+.cat-plans    { background: rgba(200,118,10,0.12); color: var(--amber); border-color: rgba(200,118,10,0.3); }
+.cat-other    { background: var(--panel2); color: var(--muted); border-color: var(--line); }
+
+/* ── Status bar ─────────────────────────────────────────────────────── */
+.status-bar {
+  background: var(--eoc); color: rgba(255,255,255,0.8);
+  padding: 5px 16px; font-size: 10px; display: flex; justify-content: space-between;
+  flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <a href="index.html">⌂ Home</a>
+  <span style="color:rgba(255,255,255,0.4)">›</span>
+  <span class="page-title">📚 REFERENCE LIBRARY</span>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <button class="btn btn-sm" onclick="openUpload()"
+            style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.4);color:#fff">
+      ⬆ Upload Document
+    </button>
+    <button class="btn btn-sm" onclick="refreshAll()"
+            style="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.3);color:rgba(255,255,255,0.8)">
+      ⟳
+    </button>
+  </div>
+</div>
+
+<!-- Main tabs: Amateur / ICS / All -->
+<div class="main-tabs">
+  <button class="main-tab active" id="tab-amateur" onclick="switchTab('amateur')">
+    📻 Amateur Radio
+    <span class="tab-count" id="cnt-amateur">0</span>
+  </button>
+  <button class="main-tab" id="tab-ics" onclick="switchTab('ics')">
+    🏛 ICS / Emergency Mgmt
+    <span class="tab-count" id="cnt-ics">0</span>
+  </button>
+  <button class="main-tab" id="tab-all" onclick="switchTab('all')">
+    📂 All Documents
+    <span class="tab-count" id="cnt-all">0</span>
+  </button>
+</div>
+
+<div class="content-wrap">
+
+  <!-- Left sidebar -->
+  <div class="sidebar-panel">
+
+    <div class="filter-group">
+      <div class="sidebar-section-title">Category</div>
+
+      <button class="filter-btn active" id="cat-all" onclick="setCategory('')">
+        <span class="fb-icon">📂</span> All Categories
+        <span class="fb-count" id="catcnt-all">0</span>
+      </button>
+      <button class="filter-btn" id="cat-radio" onclick="setCategory('radio')">
+        <span class="fb-icon">📻</span> Radio Manuals
+        <span class="fb-count" id="catcnt-radio">0</span>
+      </button>
+      <button class="filter-btn" id="cat-ics" onclick="setCategory('ics')">
+        <span class="fb-icon">📋</span> ICS Forms &amp; Plans
+        <span class="fb-count" id="catcnt-ics">0</span>
+      </button>
+      <button class="filter-btn" id="cat-agency" onclick="setCategory('agency')">
+        <span class="fb-icon">🏛</span> Agency / Government
+        <span class="fb-count" id="catcnt-agency">0</span>
+      </button>
+      <button class="filter-btn" id="cat-training" onclick="setCategory('training')">
+        <span class="fb-icon">🎓</span> Training Materials
+        <span class="fb-count" id="catcnt-training">0</span>
+      </button>
+      <button class="filter-btn" id="cat-plans" onclick="setCategory('plans')">
+        <span class="fb-icon">🗺</span> Plans &amp; Procedures
+        <span class="fb-count" id="catcnt-plans">0</span>
+      </button>
+      <button class="filter-btn" id="cat-other" onclick="setCategory('other')">
+        <span class="fb-icon">📄</span> Other
+        <span class="fb-count" id="catcnt-other">0</span>
+      </button>
+    </div>
+
+    <div class="filter-group">
+      <div class="sidebar-section-title">Cross-Referenced</div>
+      <button class="filter-btn" id="xref-btn" onclick="toggleXref()">
+        <span class="fb-icon">🔗</span> On Both Tabs
+        <span class="fb-count" id="catcnt-xref">0</span>
+      </button>
+    </div>
+
+    <div class="filter-group">
+      <div class="sidebar-section-title">Tags</div>
+      <div class="tag-cloud" id="tagCloud"></div>
+    </div>
+
+    <div class="filter-group" style="margin-top:12px">
+      <div class="sidebar-section-title">Sort By</div>
+      <select class="sort-select" id="sortSelect" onchange="applyFilters()" style="width:100%">
+        <option value="uploaded">Newest first</option>
+        <option value="-title">Title A–Z</option>
+        <option value="-source">Source A–Z</option>
+        <option value="-downloads">Most downloaded</option>
+      </select>
+    </div>
+
+  </div>
+
+  <!-- Main content panel -->
+  <div class="main-panel">
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span style="color:var(--muted);font-size:14px">🔍</span>
+        <input type="text" id="searchBox"
+               placeholder="Search title, description, source, tags…"
+               oninput="applyFilters()">
+        <button onclick="clearSearch()"
+                style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px"
+                title="Clear">✕</button>
+      </div>
+
+      <div style="font-size:11px;color:var(--muted)" id="resultCount">
+        Loading…
+      </div>
+
+      <div class="view-toggle">
+        <button class="vbtn active" id="vbtn-grid" onclick="setView('grid')" title="Grid view">⊞</button>
+        <button class="vbtn" id="vbtn-list" onclick="setView('list')" title="List view">☰</button>
+      </div>
+    </div>
+
+    <!-- Documents area -->
+    <div class="docs-area" id="docsArea">
+      <div class="empty-state">
+        <div class="empty-icon">📚</div>
+        <div style="font-family:var(--font-hd);font-size:16px;color:var(--txt)">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <span id="statusLeft">Reference Library · Port 5056</span>
+      <span id="statusRight"></span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Upload Panel ──────────────────────────────────────────────────── -->
+<div class="upload-panel" id="uploadPanel">
+  <div class="upload-panel-header">
+    <h2>⬆ Upload Document</h2>
+    <button class="upload-panel-close" onclick="closeUpload()">✕</button>
+  </div>
+  <div class="upload-panel-body">
+
+    <!-- Drop zone -->
+    <div class="drop-zone" id="dropZone"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="handleDrop(event)"
+         onclick="document.getElementById('fileInput').click()">
+      <div class="dz-icon" id="dzIcon">📄</div>
+      <div class="dz-text">Drag &amp; drop a file here, or click to browse</div>
+      <div class="dz-filename" id="dzFilename" style="display:none"></div>
+      <div class="dz-text" style="margin-top:8px;font-size:10px">
+        PDF, Word, Excel, PowerPoint, images, KML, ZIP · Max 200 MB
+      </div>
+    </div>
+    <input type="file" id="fileInput" style="display:none"
+           accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv,.jpg,.jpeg,.png,.gif,.zip,.kml,.kmz,.gpx"
+           onchange="handleFileSelect(event)">
+
+    <!-- Metadata form -->
+    <div class="up-field">
+      <label>Title *</label>
+      <input type="text" id="upTitle" placeholder="e.g. IC-7300 Operating Manual">
+    </div>
+    <div class="up-field">
+      <label>Category *</label>
+      <select id="upCategory">
+        <option value="radio">📻 Radio Manual</option>
+        <option value="ics">📋 ICS Form / Plan</option>
+        <option value="agency">🏛 Agency / Government Document</option>
+        <option value="training">🎓 Training Material</option>
+        <option value="plans">🗺 Plan / Procedure / SOG</option>
+        <option value="other">📄 Other</option>
+      </select>
+    </div>
+    <div class="up-field">
+      <label>Show on tab(s) *</label>
+      <div class="section-checks">
+        <label class="section-check">
+          <input type="checkbox" id="secAmateur" checked>
+          📻 Amateur Radio
+        </label>
+        <label class="section-check">
+          <input type="checkbox" id="secICS">
+          🏛 ICS / EmMgmt
+        </label>
+      </div>
+      <div class="field-hint">Documents can appear on both tabs (cross-reference)</div>
+    </div>
+    <div class="up-field">
+      <label>Source / Publisher</label>
+      <input type="text" id="upSource" placeholder="e.g. Icom, ARRL, IL SWIC, FEMA, NIMS">
+    </div>
+    <div class="up-field">
+      <label>Applies To</label>
+      <input type="text" id="upAppliesTo" placeholder="e.g. McHenry County, Illinois, Statewide">
+    </div>
+    <div class="up-field">
+      <label>Description</label>
+      <textarea id="upDescription" placeholder="Brief description of contents and when to use this document…"></textarea>
+    </div>
+    <div class="up-field">
+      <label>Tags <span style="color:var(--dim)">(comma-separated)</span></label>
+      <input type="text" id="upTags"
+             placeholder="e.g. HF, NIMS, frequency plan, SWIC, mutual aid">
+    </div>
+    <div class="up-field">
+      <label>Revision / Version</label>
+      <input type="text" id="upRevision" placeholder="e.g. Rev 3, 2025-01, v2.1">
+    </div>
+    <div class="up-field">
+      <label>Expiry Date <span style="color:var(--dim)">(if applicable)</span></label>
+      <input type="date" id="upExpires">
+    </div>
+
+    <!-- Progress -->
+    <div class="upload-progress" id="uploadProgress">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-msg" id="progressMsg">Uploading…</div>
+    </div>
+
+    <!-- Buttons -->
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-sm" onclick="clearUploadForm()"
+              style="background:var(--panel2);border-color:var(--line);color:var(--txt)">
+        Clear
+      </button>
+      <button class="btn" onclick="submitUpload()" id="uploadBtn" style="flex:1">
+        ⬆ Upload Document
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Document Detail Modal ─────────────────────────────────────────── -->
+<div class="modal-bg" id="detailModal" onclick="if(event.target===this)closeDetail()">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-icon" id="detIcon">📄</div>
+      <div style="flex:1">
+        <div class="modal-title" id="detTitle">Document</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:3px" id="detSubtitle"></div>
+      </div>
+      <button class="modal-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="detSectionBadges" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap"></div>
+      <div class="meta-grid" id="detMetaGrid"></div>
+      <div id="detDescription" style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px"></div>
+      <div id="detTags" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px"></div>
+      <div class="modal-actions" id="detActions"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const API = 'http://192.168.50.1:5056';
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let allDocs     = [];
+let activeTab   = 'amateur';
+let activeCategory = '';
+let activeTag   = '';
+let xrefOnly    = false;
+let viewMode    = 'grid';
+let selectedDoc = null;
+let uploadFile  = null;
+
+// ── Category config ───────────────────────────────────────────────────────────
+const CAT_CFG = {
+  radio:    { icon:'📻', label:'Radio Manual',         cls:'cat-radio' },
+  ics:      { icon:'📋', label:'ICS Form / Plan',      cls:'cat-ics' },
+  agency:   { icon:'🏛', label:'Agency / Government',  cls:'cat-agency' },
+  training: { icon:'🎓', label:'Training Material',    cls:'cat-training' },
+  plans:    { icon:'🗺', label:'Plan / Procedure',     cls:'cat-plans' },
+  other:    { icon:'📄', label:'Other',                cls:'cat-other' },
+};
+
+const EXT_ICONS = {
+  pdf: '📕', doc: '📘', docx: '📘', xls: '📗', xlsx: '📗',
+  ppt: '📙', pptx: '📙', txt: '📃', md: '📃',
+  jpg: '🖼', jpeg: '🖼', png: '🖼', gif: '🖼',
+  zip: '🗜', kml: '🗺', kmz: '🗺', gpx: '🗺',
+  mp3: '🎧', mp4: '🎬', csv: '📊',
+};
+
+function fileIcon(filename) {
+  const ext = (filename || '').split('.').pop().toLowerCase();
+  return EXT_ICONS[ext] || '📄';
+}
+
+function fmtSize(bytes) {
+  if (!bytes) return '—';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(0) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString('en-US', {year:'numeric',month:'short',day:'numeric'}); }
+  catch(e) { return iso; }
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Load data ─────────────────────────────────────────────────────────────────
+async function loadDocs() {
+  try {
+    const r = await fetch(`${API}/refs`, { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    allDocs = data.documents || [];
+    updateCounts();
+    buildTagCloud();
+    applyFilters();
+    document.getElementById('statusLeft').textContent =
+      `Reference Library · ${allDocs.length} documents · Port 5056`;
+  } catch(e) {
+    showError('Reference library server unavailable — is reference_server.py running?');
+    document.getElementById('statusLeft').textContent = 'Server offline (port 5056)';
+  }
+}
+
+function updateCounts() {
+  // Tab counts
+  const amateurDocs = allDocs.filter(d => d.sections?.includes('amateur') || d.section === 'amateur');
+  const icsDocs     = allDocs.filter(d => d.sections?.includes('ics')     || d.section === 'ics');
+  const xrefDocs    = allDocs.filter(d => {
+    const s = d.sections || [d.section || 'amateur'];
+    return s.includes('amateur') && s.includes('ics');
+  });
+
+  document.getElementById('cnt-amateur').textContent = amateurDocs.length;
+  document.getElementById('cnt-ics').textContent     = icsDocs.length;
+  document.getElementById('cnt-all').textContent     = allDocs.length;
+
+  // Category counts (for current tab)
+  const tabDocs = getTabDocs();
+  const countFor = cat => tabDocs.filter(d => d.category === cat).length;
+  document.getElementById('catcnt-all').textContent      = tabDocs.length;
+  document.getElementById('catcnt-radio').textContent    = countFor('radio');
+  document.getElementById('catcnt-ics').textContent      = countFor('ics');
+  document.getElementById('catcnt-agency').textContent   = countFor('agency');
+  document.getElementById('catcnt-training').textContent = countFor('training');
+  document.getElementById('catcnt-plans').textContent    = countFor('plans');
+  document.getElementById('catcnt-other').textContent    = countFor('other');
+  document.getElementById('catcnt-xref').textContent     = xrefDocs.length;
+}
+
+function getTabDocs() {
+  if (activeTab === 'all') return allDocs;
+  return allDocs.filter(d => {
+    const s = d.sections || [d.section || 'amateur'];
+    return s.includes(activeTab);
+  });
+}
+
+function buildTagCloud() {
+  const tagMap = {};
+  allDocs.forEach(d => (d.tags||[]).forEach(t => tagMap[t] = (tagMap[t]||0) + 1));
+  const sorted = Object.entries(tagMap).sort((a,b) => b[1]-a[1]).slice(0,30);
+  document.getElementById('tagCloud').innerHTML = sorted.map(([tag, count]) =>
+    `<span class="tag-pill ${activeTag===tag?'active':''}"
+           onclick="setTag('${esc(tag)}')">${esc(tag)} <sup>${count}</sup></span>`
+  ).join('');
+}
+
+// ── Filtering ─────────────────────────────────────────────────────────────────
+function applyFilters() {
+  const q    = (document.getElementById('searchBox').value || '').toLowerCase();
+  const sort = document.getElementById('sortSelect').value;
+
+  let docs = getTabDocs();
+
+  // Cross-ref filter
+  if (xrefOnly) {
+    docs = docs.filter(d => {
+      const s = d.sections || [d.section||'amateur'];
+      return s.includes('amateur') && s.includes('ics');
+    });
+  }
+
+  // Category
+  if (activeCategory) docs = docs.filter(d => d.category === activeCategory);
+
+  // Tag
+  if (activeTag) docs = docs.filter(d => (d.tags||[]).includes(activeTag));
+
+  // Search
+  if (q) {
+    docs = docs.filter(d => {
+      const hay = [d.title, d.description, d.source, d.applies_to,
+                   d.filename, (d.tags||[]).join(' ')].join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  // Sort
+  const rev = sort === 'uploaded' || sort === '-downloads';
+  const key = sort.replace('-', '') === 'uploaded' ? 'uploaded'
+            : sort.replace('-', '') === 'downloads' ? 'downloads'
+            : sort.replace('-', '');
+  docs.sort((a, b) => {
+    const av = a[key] || '', bv = b[key] || '';
+    if (typeof av === 'number') return rev ? bv - av : av - bv;
+    return rev ? bv.localeCompare(av) : av.localeCompare(bv);
+  });
+
+  renderDocs(docs);
+  document.getElementById('resultCount').textContent =
+    `${docs.length} document${docs.length !== 1 ? 's' : ''}`;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderDocs(docs) {
+  const area = document.getElementById('docsArea');
+  if (!docs.length) {
+    area.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <div style="font-family:var(--font-hd);font-size:16px;color:var(--txt)">No documents found</div>
+      <div style="margin-top:8px;font-size:12px;color:var(--muted)">
+        Try a different filter, or
+        <span style="color:var(--eoc);cursor:pointer" onclick="openUpload()">upload a document</span>
+      </div>
+    </div>`;
+    return;
+  }
+
+  if (viewMode === 'grid') {
+    area.innerHTML = `<div class="docs-grid">${docs.map(docCard).join('')}</div>`;
+  } else {
+    area.innerHTML = `<div class="docs-list">${docs.map(docRow).join('')}</div>`;
+  }
+}
+
+function docSectionBadges(doc) {
+  const s = doc.sections || [doc.section || 'amateur'];
+  const hasAmateur = s.includes('amateur');
+  const hasICS     = s.includes('ics');
+  if (hasAmateur && hasICS)
+    return `<span class="xref-badge xref-amateur">📻 Amateur</span>
+            <span class="xref-badge xref-ics">🏛 ICS</span>`;
+  if (hasICS)     return `<span class="xref-badge xref-ics">🏛 ICS</span>`;
+  return `<span class="xref-badge xref-amateur">📻 Amateur</span>`;
+}
+
+function catBadgeHtml(cat) {
+  const c = CAT_CFG[cat] || CAT_CFG.other;
+  return `<span class="doc-cat-badge ${c.cls}">${c.icon} ${c.label}</span>`;
+}
+
+function docCard(doc) {
+  const icon = fileIcon(doc.filename);
+  const hasPDF = (doc.filename||'').toLowerCase().endsWith('.pdf');
+  const thumb = hasPDF
+    ? `<img src="${API}/refs/${doc.id}/thumbnail" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+    : '';
+  const expired = doc.expires && new Date(doc.expires) < new Date()
+    ? '<span style="color:var(--red);font-size:10px">⚠ Expired</span>' : '';
+
+  return `<div class="doc-card" onclick="showDetail('${doc.id}')">
+    <div class="doc-thumb">
+      ${thumb}
+      <span class="doc-thumb-placeholder" ${hasPDF?'style="display:none"':''}>${icon}</span>
+      ${catBadgeHtml(doc.category)}
+    </div>
+    <div class="doc-body">
+      <div class="doc-title">${esc(doc.title)}</div>
+      <div class="doc-source">${esc(doc.source||'')}</div>
+      ${doc.applies_to ? `<div class="doc-source">📍 ${esc(doc.applies_to)}</div>` : ''}
+      <div class="doc-desc">${esc((doc.description||'').slice(0,80))}${(doc.description||'').length>80?'…':''}</div>
+      ${expired}
+    </div>
+    <div class="doc-footer">
+      ${docSectionBadges(doc)}
+      <span class="doc-size" style="margin-left:auto">${fmtSize(doc.size_bytes)}</span>
+    </div>
+  </div>`;
+}
+
+function docRow(doc) {
+  const icon = fileIcon(doc.filename);
+  const expired = doc.expires && new Date(doc.expires) < new Date()
+    ? ' <span style="color:var(--red);font-size:10px">⚠</span>' : '';
+  return `<div class="doc-row" onclick="showDetail('${doc.id}')">
+    <div class="dr-icon">${icon}</div>
+    <div class="dr-body">
+      <div class="dr-title">${esc(doc.title)}${expired}</div>
+      <div class="dr-meta">
+        ${doc.source ? esc(doc.source) + ' · ' : ''}
+        ${doc.applies_to ? esc(doc.applies_to) + ' · ' : ''}
+        ${fmtSize(doc.size_bytes)} · ${fmtDate(doc.uploaded)}
+        &nbsp;${docSectionBadges(doc)}
+      </div>
+    </div>
+    <div class="dr-actions">
+      <button onclick="event.stopPropagation();downloadDoc('${doc.id}','${esc(doc.filename)}')"
+              class="btn btn-sm" style="font-size:10px">⬇ Download</button>
+    </div>
+  </div>`;
+}
+
+function showError(msg) {
+  document.getElementById('docsArea').innerHTML = `<div class="empty-state">
+    <div class="empty-icon">⚠</div>
+    <div style="font-family:var(--font-hd);font-size:14px;color:var(--txt)">${esc(msg)}</div>
+  </div>`;
+}
+
+// ── Detail modal ──────────────────────────────────────────────────────────────
+function showDetail(id) {
+  const doc = allDocs.find(d => d.id === id);
+  if (!doc) return;
+  selectedDoc = doc;
+
+  document.getElementById('detIcon').textContent = fileIcon(doc.filename);
+  document.getElementById('detTitle').textContent = doc.title;
+  document.getElementById('detSubtitle').textContent =
+    [(CAT_CFG[doc.category]||CAT_CFG.other).label,
+     doc.source, doc.revision].filter(Boolean).join(' · ');
+
+  document.getElementById('detSectionBadges').innerHTML = docSectionBadges(doc);
+
+  const meta = [
+    ['Filename',   doc.filename],
+    ['Size',       fmtSize(doc.size_bytes)],
+    ['Uploaded',   fmtDate(doc.uploaded)],
+    ['Downloads',  doc.downloads || 0],
+    ['Source',     doc.source || '—'],
+    ['Applies To', doc.applies_to || '—'],
+    ['Revision',   doc.revision || '—'],
+    ['Expires',    doc.expires ? fmtDate(doc.expires) + (new Date(doc.expires)<new Date()?' ⚠':'') : 'No expiry'],
+  ];
+  document.getElementById('detMetaGrid').innerHTML = meta.map(([l,v]) =>
+    `<div class="meta-item"><label>${l}</label><div class="meta-val">${esc(String(v))}</div></div>`
+  ).join('');
+
+  document.getElementById('detDescription').textContent = doc.description || 'No description provided.';
+
+  document.getElementById('detTags').innerHTML = (doc.tags||[]).map(t =>
+    `<span class="tag-pill">${esc(t)}</span>`
+  ).join('');
+
+  document.getElementById('detActions').innerHTML = `
+    <button class="btn" onclick="downloadDoc('${doc.id}','${esc(doc.filename)}')">⬇ Download</button>
+    <button class="btn btn-sm" onclick="editDoc('${doc.id}')"
+            style="background:var(--panel2);border-color:var(--line);color:var(--txt)">✏ Edit</button>
+    <button class="btn btn-sm" onclick="deleteDoc('${doc.id}')"
+            style="background:rgba(184,32,32,0.08);border-color:var(--red);color:var(--red)">🗑 Delete</button>
+    <button class="btn btn-sm" onclick="toggleXrefDoc('${doc.id}')"
+            style="background:var(--panel2);border-color:var(--line);color:var(--txt)">
+      🔗 ${(doc.sections||[]).length > 1 ? 'Remove cross-ref' : 'Add to both tabs'}
+    </button>
+  `;
+
+  document.getElementById('detailModal').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailModal').classList.remove('open');
+  selectedDoc = null;
+}
+
+async function downloadDoc(id, filename) {
+  const a = document.createElement('a');
+  a.href = `${API}/refs/${id}/file`;
+  a.download = filename;
+  a.click();
+}
+
+async function deleteDoc(id) {
+  if (!confirm('Delete this document and its file? This cannot be undone.')) return;
+  try {
+    const r = await fetch(`${API}/refs/${id}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error('Delete failed');
+    closeDetail();
+    allDocs = allDocs.filter(d => d.id !== id);
+    updateCounts(); buildTagCloud(); applyFilters();
+  } catch(e) { alert('Delete failed: ' + e.message); }
+}
+
+async function toggleXrefDoc(id) {
+  const doc = allDocs.find(d => d.id === id);
+  if (!doc) return;
+  const currentSections = doc.sections || [doc.section || 'amateur'];
+  const newSections = currentSections.length > 1
+    ? [activeTab === 'all' ? 'amateur' : activeTab]  // remove cross-ref
+    : ['amateur', 'ics'];                              // add cross-ref
+  await updateDocMeta(id, { sections: newSections });
+  closeDetail(); await loadDocs();
+}
+
+async function editDoc(id) {
+  const doc = allDocs.find(d => d.id === id);
+  if (!doc) return;
+  closeDetail();
+  // Pre-fill the upload panel's metadata fields for editing
+  // (Re-upload not needed — just PUT metadata)
+  openUpload();
+  document.getElementById('upTitle').value       = doc.title || '';
+  document.getElementById('upCategory').value    = doc.category || 'other';
+  document.getElementById('upSource').value      = doc.source || '';
+  document.getElementById('upAppliesTo').value   = doc.applies_to || '';
+  document.getElementById('upDescription').value = doc.description || '';
+  document.getElementById('upTags').value        = (doc.tags||[]).join(', ');
+  document.getElementById('upRevision').value    = doc.revision || '';
+  document.getElementById('upExpires').value     = (doc.expires||'').slice(0,10);
+  const s = doc.sections || [doc.section || 'amateur'];
+  document.getElementById('secAmateur').checked  = s.includes('amateur');
+  document.getElementById('secICS').checked      = s.includes('ics');
+
+  // Change upload button to "Save Changes"
+  const btn = document.getElementById('uploadBtn');
+  btn.textContent = '💾 Save Changes';
+  btn.onclick = () => saveMetaOnly(id);
+}
+
+async function saveMetaOnly(id) {
+  const sections = [];
+  if (document.getElementById('secAmateur').checked) sections.push('amateur');
+  if (document.getElementById('secICS').checked)     sections.push('ics');
+  if (!sections.length) sections.push('amateur');
+
+  const update = {
+    title:       document.getElementById('upTitle').value.trim(),
+    category:    document.getElementById('upCategory').value,
+    sections,
+    source:      document.getElementById('upSource').value.trim(),
+    applies_to:  document.getElementById('upAppliesTo').value.trim(),
+    description: document.getElementById('upDescription').value.trim(),
+    tags:        document.getElementById('upTags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    revision:    document.getElementById('upRevision').value.trim(),
+    expires:     document.getElementById('upExpires').value || null,
+  };
+
+  await updateDocMeta(id, update);
+  closeUpload();
+  resetUploadBtn();
+  await loadDocs();
+}
+
+async function updateDocMeta(id, updates) {
+  const r = await fetch(`${API}/refs/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  if (!r.ok) throw new Error('Update failed');
+  return r.json();
+}
+
+function resetUploadBtn() {
+  const btn = document.getElementById('uploadBtn');
+  btn.textContent = '⬆ Upload Document';
+  btn.onclick = submitUpload;
+}
+
+// ── Upload ────────────────────────────────────────────────────────────────────
+function openUpload() {
+  document.getElementById('uploadPanel').classList.add('open');
+}
+function closeUpload() {
+  document.getElementById('uploadPanel').classList.remove('open');
+  resetUploadBtn();
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag-over');
+  setUploadFile(e.dataTransfer.files[0]);
+}
+
+function handleFileSelect(e) {
+  setUploadFile(e.target.files[0]);
+}
+
+function setUploadFile(file) {
+  if (!file) return;
+  uploadFile = file;
+  const ext = file.name.split('.').pop().toLowerCase();
+  document.getElementById('dzIcon').textContent = EXT_ICONS[ext] || '📄';
+  document.getElementById('dzFilename').textContent = file.name;
+  document.getElementById('dzFilename').style.display = '';
+  document.getElementById('dropZone').classList.add('has-file');
+  // Auto-fill title if empty
+  if (!document.getElementById('upTitle').value) {
+    document.getElementById('upTitle').value =
+      file.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ');
+  }
+}
+
+async function submitUpload() {
+  if (!uploadFile) { alert('Please select a file first'); return; }
+  const title = document.getElementById('upTitle').value.trim();
+  if (!title) { alert('Please enter a title'); return; }
+
+  const sections = [];
+  if (document.getElementById('secAmateur').checked) sections.push('amateur');
+  if (document.getElementById('secICS').checked)     sections.push('ics');
+  if (!sections.length) sections.push('amateur');
+
+  const fd = new FormData();
+  fd.append('file',        uploadFile);
+  fd.append('title',       title);
+  fd.append('category',    document.getElementById('upCategory').value);
+  fd.append('section',     sections.join(','));
+  fd.append('source',      document.getElementById('upSource').value.trim());
+  fd.append('applies_to',  document.getElementById('upAppliesTo').value.trim());
+  fd.append('description', document.getElementById('upDescription').value.trim());
+  fd.append('tags',        document.getElementById('upTags').value.trim());
+  fd.append('revision',    document.getElementById('upRevision').value.trim());
+  fd.append('expires',     document.getElementById('upExpires').value || '');
+
+  // Show progress
+  const prog = document.getElementById('uploadProgress');
+  const fill = document.getElementById('progressFill');
+  const msg  = document.getElementById('progressMsg');
+  prog.style.display = '';
+  fill.style.width   = '0%';
+  msg.textContent    = 'Uploading…';
+  document.getElementById('uploadBtn').disabled = true;
+
+  try {
+    // Simulate progress (XHR for real progress)
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API}/refs/upload`);
+
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) {
+        const pct = Math.round(e.loaded / e.total * 90);
+        fill.style.width = pct + '%';
+        msg.textContent  = `Uploading ${fmtSize(e.loaded)} / ${fmtSize(e.total)}`;
+      }
+    };
+
+    await new Promise((resolve, reject) => {
+      xhr.onload = () => {
+        if (xhr.status === 201) {
+          fill.style.width = '100%';
+          msg.textContent  = '✓ Upload complete!';
+          resolve(JSON.parse(xhr.responseText));
+        } else {
+          reject(new Error(xhr.responseText));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.send(fd);
+    });
+
+    setTimeout(() => {
+      prog.style.display = 'none';
+      clearUploadForm();
+      closeUpload();
+      loadDocs();
+    }, 800);
+
+  } catch(e) {
+    fill.style.width = '0%';
+    msg.textContent  = '✗ Upload failed: ' + e.message;
+    document.getElementById('uploadBtn').disabled = false;
+  }
+}
+
+function clearUploadForm() {
+  uploadFile = null;
+  ['upTitle','upSource','upAppliesTo','upDescription','upTags','upRevision','upExpires']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('upCategory').value = 'radio';
+  document.getElementById('secAmateur').checked = true;
+  document.getElementById('secICS').checked = false;
+  document.getElementById('dzIcon').textContent = '📄';
+  document.getElementById('dzFilename').style.display = 'none';
+  document.getElementById('dropZone').classList.remove('has-file');
+  document.getElementById('uploadProgress').style.display = 'none';
+  document.getElementById('uploadBtn').disabled = false;
+  document.getElementById('fileInput').value = '';
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  updateCounts(); buildTagCloud(); applyFilters();
+}
+
+function setCategory(cat) {
+  activeCategory = cat;
+  document.querySelectorAll('.filter-btn[id^="cat-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('cat-' + (cat || 'all')).classList.add('active');
+  applyFilters();
+}
+
+function setTag(tag) {
+  activeTag = activeTag === tag ? '' : tag;
+  document.querySelectorAll('.tag-pill').forEach(p => {
+    p.classList.toggle('active', p.textContent.trim().startsWith(tag));
+  });
+  applyFilters();
+}
+
+function toggleXref() {
+  xrefOnly = !xrefOnly;
+  document.getElementById('xref-btn').classList.toggle('active', xrefOnly);
+  applyFilters();
+}
+
+function setView(v) {
+  viewMode = v;
+  document.querySelectorAll('.vbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById('vbtn-' + v).classList.add('active');
+  applyFilters();
+}
+
+function clearSearch() {
+  document.getElementById('searchBox').value = '';
+  applyFilters();
+}
+
+function refreshAll() {
+  loadDocs();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('load', loadDocs);
+setInterval(loadDocs, 60000);
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

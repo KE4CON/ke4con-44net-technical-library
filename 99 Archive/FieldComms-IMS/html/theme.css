@@ -1,0 +1,262 @@
+/* ================================================================
+   FieldComms EmComm Theme — EOC Blue (Light Mode)
+   Primary: EOC Blue  #1a3a6b  (FEMA/ICS standard government blue)
+   Accent:  Signal Blue #2d6ab4
+   ================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=Share+Tech+Mono&display=swap');
+
+:root {
+  /* ── Page surfaces ───────────────────────────── */
+  --bg:      #eef2f7;          /* light blue-grey page background   */
+  --panel:   #ffffff;          /* card / panel surface              */
+  --panel2:  #dce6f0;          /* slightly deeper panel / table hdr */
+  --line:    #b0c4dc;          /* borders, dividers                 */
+
+  /* ── Text ────────────────────────────────────── */
+  --txt:     #0f1e38;          /* primary text — near-black navy    */
+  --muted:   #4a6080;          /* secondary text                    */
+  --dim:     #7a96b8;          /* disabled / placeholder            */
+
+  /* ── EOC Blue family (primary brand) ─────────── */
+  --eoc:     #1a3a6b;          /* EOC Blue — headers, nav, hero     */
+  --eoc-lt:  #2d6ab4;          /* lighter EOC blue — active states  */
+  --eoc-xlt: #4a8fd4;          /* lightest EOC — hover, subtle      */
+
+  /* ── Semantic colors ─────────────────────────── */
+  --amber:   #c8760a;          /* warnings, highlights (darker for light bg) */
+  --green:   #1a7a3a;          /* operational / OK                  */
+  --red:     #b82020;          /* emergency / error                 */
+  --blue:    #1a5fa8;          /* links, info (readable on white)   */
+  --purple:  #5b2d8c;          /* ICS Finance / secondary accent    */
+
+  /* ── Accent: hero/header highlight ───────────── */
+  --accent:  #f0c040;          /* gold — callsign badge, hero text  */
+
+  /* ── Input background ────────────────────────── */
+  --input-bg: #f7faff;
+
+  /* ── Fonts ───────────────────────────────────── */
+  --font-ui: 'Share Tech Mono', 'Courier New', monospace;
+  --font-hd: 'Oswald', 'Arial Narrow', sans-serif;
+}
+
+/* ── Reset ───────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--txt);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── Links ───────────────────────────────────────── */
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; color: var(--eoc-lt); }
+
+/* ── Buttons ─────────────────────────────────────── */
+button {
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--txt);
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+button:hover {
+  background: var(--eoc-xlt);
+  border-color: var(--eoc-lt);
+  color: #fff;
+}
+
+.btn {
+  display: inline-block;
+  background: var(--eoc);
+  color: #ffffff;
+  border: 1px solid var(--eoc);
+  padding: 7px 16px;
+  border-radius: 4px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  text-decoration: none;
+}
+.btn:hover { background: var(--eoc-lt); border-color: var(--eoc-lt); color: #fff; text-decoration: none; }
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.btn-primary {
+  background: var(--eoc);
+  border-color: var(--eoc);
+  color: #ffffff;
+}
+.btn-primary:hover { background: var(--eoc-lt); border-color: var(--eoc-lt); }
+
+.btn-secondary {
+  background: var(--panel2);
+  border-color: var(--line);
+  color: var(--txt);
+}
+.btn-secondary:hover { background: var(--eoc-xlt); border-color: var(--eoc-lt); color: #fff; }
+
+.btn-danger {
+  background: #fff0f0;
+  border-color: var(--red);
+  color: var(--red);
+}
+.btn-danger:hover { background: var(--red); color: #fff; }
+
+/* ── Form inputs ─────────────────────────────────── */
+input, select, textarea {
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  color: var(--txt);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--eoc-lt);
+  box-shadow: 0 0 0 2px rgba(45,106,180,0.15);
+}
+select option { background: var(--panel); color: var(--txt); }
+
+/* ── Cards / panels ──────────────────────────────── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(26,58,107,0.06);
+}
+.panel2 {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+/* ── Badges ──────────────────────────────────────── */
+.badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; }
+.badge-green  { background:#d4f0de; color:var(--green);  border:1px solid #7ac89a; }
+.badge-amber  { background:#fef3d8; color:var(--amber);  border:1px solid #e6b054; }
+.badge-red    { background:#fde8e8; color:var(--red);    border:1px solid #d08080; }
+.badge-blue   { background:#ddeeff; color:var(--blue);   border:1px solid #90b8e0; }
+.badge-purple { background:#ede6f6; color:var(--purple); border:1px solid #b090d0; }
+.badge-gray   { background:var(--panel2); color:var(--muted); border:1px solid var(--line); }
+
+/* ── Status dots ─────────────────────────────────── */
+.dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+.dot-green  { background:var(--green);  box-shadow:0 0 5px rgba(26,122,58,0.4); }
+.dot-amber  { background:#d4900a;       box-shadow:0 0 5px rgba(212,144,10,0.4); }
+.dot-red    { background:var(--red);    box-shadow:0 0 5px rgba(184,32,32,0.4); }
+.dot-gray   { background:var(--dim); }
+
+/* ── Tables ──────────────────────────────────────── */
+table { width:100%; border-collapse:collapse; }
+th {
+  background: var(--eoc);
+  color: #ffffff;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 2px solid var(--eoc-lt);
+  font-family: var(--font-hd);
+}
+td { padding:8px 10px; border-bottom:1px solid var(--line); font-size:13px; color:var(--txt); }
+tr:hover td { background:var(--panel2); }
+tr:last-child td { border-bottom:none; }
+
+/* ── Navigation bar ──────────────────────────────── */
+.nav-bar {
+  background: var(--eoc);
+  border-bottom: 3px solid var(--accent);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 46px;
+  flex-wrap: wrap;
+}
+.nav-bar .logo { font-family:var(--font-hd); font-size:18px; color:var(--accent); letter-spacing:2px; margin-right:12px; }
+.nav-bar a { color:rgba(255,255,255,0.8); padding:4px 10px; border-radius:4px; font-size:12px; white-space:nowrap; }
+.nav-bar a:hover, .nav-bar a.active { color:#fff; background:var(--eoc-lt); text-decoration:none; }
+
+/* ── Layout ──────────────────────────────────────── */
+.page-wrap { max-width:1400px; margin:0 auto; padding:20px; }
+.grid { display:grid; gap:16px; }
+.grid-2 { grid-template-columns:1fr 1fr; }
+.grid-3 { grid-template-columns:1fr 1fr 1fr; }
+.grid-4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+
+@media (max-width:900px) { .grid-3,.grid-4 { grid-template-columns:1fr 1fr; } }
+@media (max-width:600px) {
+  .grid-2,.grid-3,.grid-4 { grid-template-columns:1fr; }
+  .nav-bar { height:auto; padding:8px 12px; }
+}
+
+/* ── Section headers ─────────────────────────────── */
+.section-hdr {
+  font-family: var(--font-hd);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--eoc);
+  padding: 12px 0 8px;
+  border-bottom: 2px solid var(--eoc);
+  margin-bottom: 12px;
+}
+
+/* ── Priority classes ────────────────────────────── */
+.priority-em  { color:var(--red);    font-weight:bold; }
+.priority-p1  { color:var(--amber); }
+.priority-p2  { color:var(--blue); }
+.priority-p3  { color:var(--txt); }
+.priority-r   { color:var(--muted); }
+
+/* ── Animations ──────────────────────────────────── */
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.pulse { animation:pulse 1.2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 49%{opacity:1} 50%{opacity:0} }
+.blink { animation:blink 1s infinite; }
+
+/* ── Special modes ───────────────────────────────── */
+.drill-mode { background:#fffbe6 !important; border-color:var(--amber) !important; }
+.drill-banner {
+  background: var(--amber); color:#000; font-weight:bold;
+  text-align:center; padding:6px; letter-spacing:3px;
+  font-family:var(--font-hd); font-size:14px;
+}
+
+.ics-button {
+  background: var(--eoc);
+  color: #fff; border:none; padding:10px 20px;
+  border-radius:4px; font-weight:bold; font-size:14px;
+  font-family:var(--font-hd); letter-spacing:1px;
+  cursor:pointer;
+}
+.ics-button:hover { background:var(--eoc-lt); }
+
+/* ── Print ───────────────────────────────────────── */
+@media print {
+  body { background:white; color:black; }
+  .nav-bar, .no-print { display:none !important; }
+  .panel { border:1px solid #ccc; box-shadow:none; }
+  a { color:black; }
+  th { background:#1a3a6b !important; color:white !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}

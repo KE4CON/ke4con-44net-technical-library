@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — Winlink Form Import</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.top-bar {
+  background: var(--panel); border-bottom: 2px solid var(--eoc);
+  padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.top-bar h1 { font-family: var(--font-hd); font-size: 18px; color: var(--eoc-lt); letter-spacing: 2px; margin: 0; }
+.main-wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+
+.step { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; margin-bottom: 16px; }
+.step-title { font-family: var(--font-hd); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--eoc-lt); margin-bottom: 10px; display:flex; align-items:center; gap:8px; }
+.step-num { background: var(--eoc); color:#fff; width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:12px; }
+
+.drop-zone { border: 2px dashed var(--line); border-radius: 8px; padding: 28px; text-align: center; cursor: pointer; transition: all 0.15s; }
+.drop-zone:hover, .drop-zone.drag-over { border-color: var(--eoc-lt); background: rgba(45,106,180,0.05); }
+.drop-zone-icon { font-size: 36px; margin-bottom: 8px; }
+
+textarea.xml-paste { width:100%; min-height:120px; font-family: var(--font-mono,monospace); font-size:12px; padding:10px; }
+
+.detected { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:6px; margin-bottom:12px; font-size:13px; }
+.detected.ok   { background: rgba(26,122,58,0.1); border:1px solid var(--green); color: var(--green); }
+.detected.warn { background: rgba(200,118,10,0.1); border:1px solid var(--amber); color: var(--amber); }
+.detected.err  { background: rgba(184,32,32,0.1); border:1px solid var(--red); color: var(--red); }
+
+.field-grid { display:grid; grid-template-columns: 180px 1fr; gap:8px 14px; align-items:center; }
+.field-grid label { font-size:12px; color: var(--muted); }
+.field-grid input, .field-grid textarea { width:100%; padding:6px 10px; font-size:13px; }
+.field-grid .full { grid-column:1/-1; }
+.unmapped { background: rgba(200,118,10,0.07); border:1px solid rgba(200,118,10,0.3); border-radius:6px; padding:10px 12px; margin-top:10px; font-size:12px; }
+.unmapped-row { display:flex; gap:8px; font-family:var(--font-mono,monospace); font-size:11px; padding:2px 0; }
+.unmapped-row .k { color: var(--amber); min-width:160px; }
+
+.actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+.hidden { display:none; }
+.hint { font-size:12px; color: var(--muted); line-height:1.6; }
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="index.html" class="nav-logo">⬡ Incident Management</a>
+  <div class="nav-links">
+    <a href="index.html">Dashboard</a>
+    <a href="ics/index.html">ICS Platform</a>
+    <a href="ics213.html">ICS-213</a>
+    <a href="ics214.html">ICS-214</a>
+    <a href="ics309.html">ICS-309</a>
+    <a href="refs.html">Reference Library</a>
+  </div>
+  <div class="nav-right">
+    <span id="utc-clock" style="font-family:var(--font-hd);color:var(--green);font-size:13px;letter-spacing:1px;"></span>
+  </div>
+</nav>
+
+<div class="top-bar">
+  <div>
+    <h1>📥 WINLINK FORM IMPORT</h1>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px;">Bring Winlink Express ICS form data into the incident record on the server</div>
+  </div>
+</div>
+
+<div class="main-wrap">
+
+  <!-- STEP 1: provide the form data -->
+  <div class="step">
+    <div class="step-title"><span class="step-num">1</span> Provide the Winlink form data</div>
+    <p class="hint">
+      In Winlink Express, open the form message, then either <b>save the attached <code>RMS_Express_Form_*.xml</code> file</b>
+      (right-click the attachment &#8594; Save) or <b>copy the message text</b>. Drop the XML file below, or paste the XML
+      / message text into the box. This works for both sent and received forms.
+    </p>
+    <div class="drop-zone" id="dropZone"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="handleDrop(event)"
+         onclick="document.getElementById('fileInput').click()">
+      <div class="drop-zone-icon">📂</div>
+      <div>Drop an <code>RMS_Express_Form_*.xml</code> file here, or click to browse</div>
+    </div>
+    <input type="file" id="fileInput" class="hidden" accept=".xml,.txt" onchange="handleFile(event)">
+    <div style="text-align:center;margin:10px 0;color:var(--muted);font-size:12px;">— or paste below —</div>
+    <textarea class="xml-paste" id="xmlPaste" placeholder="Paste the form XML or the Winlink message text here…"></textarea>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="parseInput()">Parse Form Data</button>
+      <button class="btn btn-secondary" onclick="clearAll()">Clear</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: review -->
+  <div class="step hidden" id="reviewStep">
+    <div class="step-title"><span class="step-num">2</span> Review &amp; correct the extracted data</div>
+    <div id="detectBanner"></div>
+    <div class="field-grid" id="fieldGrid"></div>
+    <div class="unmapped hidden" id="unmappedBox">
+      <b style="color:var(--amber)">Fields not automatically mapped</b>
+      <div class="hint" style="margin:4px 0 8px;">These came from the Winlink form but did not match a known ICS field. They are preserved in the archived record. Review in case any belong above.</div>
+      <div id="unmappedList"></div>
+    </div>
+  </div>
+
+  <!-- STEP 3: incident + actions -->
+  <div class="step hidden" id="actionStep">
+    <div class="step-title"><span class="step-num">3</span> Tag to incident &amp; file</div>
+    <div class="field-grid">
+      <label>Incident</label>
+      <select id="incidentSel"><option value="">— Loading incidents —</option></select>
+      <label>Direction</label>
+      <select id="directionSel">
+        <option value="received">Received (incoming traffic)</option>
+        <option value="sent">Sent (outgoing traffic)</option>
+      </select>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="openInICS()">📄 Open in ICS form (print)</button>
+      <button class="btn btn-secondary" onclick="archiveForm()">💾 Archive to incident</button>
+    </div>
+    <div id="resultMsg" class="hint" style="margin-top:10px;"></div>
+  </div>
+
+</div>
+
+<script>
+const API = 'http://192.168.50.1:5050';
+
+setInterval(()=>{ const e=document.getElementById('utc-clock'); if(e) e.textContent=new Date().toUTCString().slice(17,22)+'Z'; },1000);
+
+let parsed = null;   // {formType, fields:{...}, unmapped:{...}, raw:''}
+
+// ── Field mapping: Winlink variable names → our ICS field keys ────────────────
+// Winlink variable names vary by form/version, so match tolerantly (lowercase,
+// strip non-alphanumerics) against a set of known aliases.
+const MAP_213 = {
+  incident:    ['incidentname','incident'],
+  to_name:     ['msgto','to','tofield','recipient'],
+  to_pos:      ['toposition','topositiontitle','topos'],
+  from_name:   ['msgfrom','from','fromfield','sender'],
+  from_pos:    ['fromposition','frompositiontitle','frompos'],
+  msg_num:     ['msgnumber','messagenumber','msgnbr','number'],
+  date:        ['date','msgdate','datesent'],
+  time:        ['time','msgtime','timesent'],
+  subject:     ['msgsubject','subject'],
+  message:     ['msgbody','message','messagetext','body'],
+  approved_name:['approvedby','approvedbyname','approvername'],
+  approved_pos:['approvedbyposition','approverposition','approvedbytitle','position'],
+  reply:       ['reply','replytext','replymessage'],
+  replied_name:['repliedby','replybyname','replyname'],
+  reply_dt:    ['replydatetime','replydate','replytime'],
+};
+const MAP_309 = {
+  incident:  ['incidentname','incident'],
+  op_from:   ['operationalperiodfrom','opfrom','periodfrom','datetimefrom','fromdatetime'],
+  op_to:     ['operationalperiodto','opto','periodto','datetimeto','todatetime'],
+  task_no:   ['taskno','tasknumber','task'],
+  operator:  ['operator','radiooperator','operatorname','preparedby'],
+  station:   ['station','stationid','netname','net'],
+  page:      ['page','pagenumber','pageno'],
+  log:       ['log','logentries','communicationslog','messages','tdf','tabdelimited'],
+};
+const MAP_214 = {
+  incident:    ['incidentname','incident'],
+  unit_name:   ['unitname','unit'],
+  leader_name: ['unitleader','leadername','preparedbyname','unitleadername'],
+  leader_pos:  ['unitleaderposition','leaderposition','leadertitle'],
+  op_from:     ['operationalperiodfrom','opfrom','periodfrom','datefrom'],
+  op_to:       ['operationalperiodto','opto','periodto','dateto'],
+  time_from:   ['timefrom','optimefrom'],
+  time_to:     ['timeto','optimeto'],
+  prep_name:   ['preparedby','preparedbyname','prepname'],
+  prep_pos:    ['preparedbyposition','preptitle','prepposition'],
+  activities:  ['activities','activitylog','majoractivities','remarks'],
+  personnel:   ['personnel','resourcesassigned','assignedpersonnel'],
+};
+
+// Human labels for review grid
+const LABELS_213 = {
+  incident:'Incident', to_name:'To (Name)', to_pos:'To (Position)', from_name:'From (Name)',
+  from_pos:'From (Position)', msg_num:'Message #', date:'Date', time:'Time', subject:'Subject',
+  message:'Message Text', approved_name:'Approved By', approved_pos:'Approver Position',
+  reply:'Reply', replied_name:'Replied By', reply_dt:'Reply Date/Time',
+};
+const LABELS_309 = {
+  incident:'Incident', op_from:'Op Period From', op_to:'Op Period To', task_no:'Task No.',
+  operator:'Operator', station:'Station / Net', page:'Page', log:'Log Entries (raw)',
+};
+const LABELS_214 = {
+  incident:'Incident', unit_name:'Unit Name', leader_name:'Unit Leader', leader_pos:'Leader Position',
+  op_from:'Op Period From', op_to:'Op Period To', time_from:'Time From', time_to:'Time To',
+  prep_name:'Prepared By', prep_pos:'Prep Position', activities:'Activities', personnel:'Personnel',
+};
+
+function norm(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+
+function detectFormType(formName, vars) {
+  const fn = norm(formName);
+  if (fn.includes('ics309') || fn.includes('309')) return 'ics309';
+  if (fn.includes('ics213') || fn.includes('213')) return 'ics213';
+  if (fn.includes('ics214') || fn.includes('214')) return 'ics214';
+  // Heuristic from variables
+  const keys = Object.keys(vars).map(norm).join(' ');
+  if (keys.includes('communicationslog') || keys.includes('logentries')) return 'ics309';
+  if (keys.includes('activities') || keys.includes('unitleader')) return 'ics214';
+  if (keys.includes('msgbody') || keys.includes('msgto')) return 'ics213';
+  return 'unknown';
+}
+
+function mapFields(formType, vars) {
+  const map = formType === 'ics214' ? MAP_214 : formType === 'ics309' ? MAP_309 : MAP_213;
+  const fields = {};
+  const used = new Set();
+  // For each target field, find the first matching Winlink variable
+  for (const [target, aliases] of Object.entries(map)) {
+    for (const [vk, vv] of Object.entries(vars)) {
+      if (aliases.includes(norm(vk)) && (vv||'').trim() !== '') {
+        fields[target] = vv;
+        used.add(vk);
+        break;
+      }
+    }
+  }
+  // Collect unmapped, non-empty variables (excluding pure form-plumbing)
+  const PLUMBING = ['xmlfileversion','rmsexpressversion','submissiondatetime','displayform',
+                    'replytemplate','formversion','templateversion','msgseqnum','msgisreply',
+                    'msgisforward','msgisacknowledgement','msgp2p','msgsender'];
+  const unmapped = {};
+  for (const [vk, vv] of Object.entries(vars)) {
+    if (used.has(vk)) continue;
+    if (PLUMBING.includes(norm(vk))) continue;
+    if ((vv||'').trim() === '') continue;
+    unmapped[vk] = vv;
+  }
+  return { fields, unmapped };
+}
+
+// ── Parse the Winlink XML (or fall back to message-text scraping) ─────────────
+function parseInput() {
+  const raw = (document.getElementById('xmlPaste').value || '').trim();
+  if (!raw) { alert('Paste the form XML or message text, or drop a file first.'); return; }
+  parsed = parseXmlOrText(raw);
+  if (!parsed) { showDetect('err','Could not find any form data. Make sure you pasted the RMS_Express_Form XML or a Winlink form message.'); return; }
+  renderReview();
+}
+
+function parseXmlOrText(raw) {
+  // Try XML first
+  try {
+    const doc = new DOMParser().parseFromString(raw, 'text/xml');
+    const err = doc.querySelector('parsererror');
+    const formEl = doc.querySelector('RMS_Express_Form');
+    if (!err && formEl) {
+      let formName = '';
+      const dfp = doc.querySelector('form_parameters display_form, display_form');
+      if (dfp) formName = dfp.textContent || '';
+      const vars = {};
+      const varsEl = doc.querySelector('variables');
+      if (varsEl) {
+        for (const child of varsEl.children) {
+          vars[child.tagName] = (child.textContent || '').trim();
+        }
+      }
+      // Some forms also stash subject/sender in form_parameters
+      const fp = doc.querySelector('form_parameters');
+      if (fp) for (const child of fp.children) {
+        if (!(child.tagName in vars)) vars[child.tagName] = (child.textContent||'').trim();
+      }
+      const formType = detectFormType(formName, vars);
+      const { fields, unmapped } = mapFields(formType, vars);
+      return { formType, formName, fields, unmapped, raw };
+    }
+  } catch(e) { /* fall through to text */ }
+
+  // Fall back: scrape "Key: Value" lines from the message text body
+  const vars = {};
+  raw.split(/\r?\n/).forEach(line => {
+    const m = line.match(/^\s*([A-Za-z0-9 /._-]{2,40}?)\s*[:=]\s*(.+?)\s*$/);
+    if (m) vars[m[1].trim()] = m[2].trim();
+  });
+  if (Object.keys(vars).length === 0) return null;
+  const formType = detectFormType('', vars);
+  const { fields, unmapped } = mapFields(formType, vars);
+  return { formType, formName:'(from message text)', fields, unmapped, raw };
+}
+
+function showDetect(kind, msg) {
+  document.getElementById('reviewStep').classList.remove('hidden');
+  document.getElementById('detectBanner').innerHTML =
+    `<div class="detected ${kind}">${kind==='ok'?'✓':kind==='warn'?'⚠':'✕'} ${msg}</div>`;
+}
+
+function renderReview() {
+  document.getElementById('reviewStep').classList.remove('hidden');
+  document.getElementById('actionStep').classList.remove('hidden');
+
+  const ft = parsed.formType;
+  if (ft === 'ics213') showDetect('ok', 'Detected an <b>ICS-213 General Message</b> form.');
+  else if (ft === 'ics214') showDetect('ok', 'Detected an <b>ICS-214 Activity Log</b> form.');
+  else if (ft === 'ics309') showDetect('ok', 'Detected an <b>ICS-309 Communications Log</b> form.');
+  else showDetect('warn', 'Form type not recognized automatically. Data is still captured below and can be archived; ICS re-render works only for ICS-213/214/309.');
+
+  const labels = ft === 'ics214' ? LABELS_214 : ft === 'ics309' ? LABELS_309 : LABELS_213;
+  const grid = document.getElementById('fieldGrid');
+  grid.innerHTML = '';
+  for (const [key, label] of Object.entries(labels)) {
+    const val = parsed.fields[key] || '';
+    const isLong = (key==='message' || key==='reply' || key==='activities' || key==='personnel' || key==='log');
+    const id = 'fld-'+key;
+    const row = document.createElement('div');
+    row.className = 'full';
+    row.style.display = 'grid';
+    row.style.gridTemplateColumns = '180px 1fr';
+    row.style.gap = '8px 14px';
+    row.style.alignItems = isLong ? 'start' : 'center';
+    row.style.marginBottom = '6px';
+    row.innerHTML = `<label>${label}</label>` +
+      (isLong
+        ? `<textarea id="${id}" rows="4">${escapeHtml(val)}</textarea>`
+        : `<input type="text" id="${id}" value="${escapeAttr(val)}">`);
+    grid.appendChild(row);
+  }
+
+  // Unmapped
+  const um = parsed.unmapped || {};
+  const box = document.getElementById('unmappedBox');
+  const list = document.getElementById('unmappedList');
+  if (Object.keys(um).length) {
+    box.classList.remove('hidden');
+    list.innerHTML = Object.entries(um).map(([k,v]) =>
+      `<div class="unmapped-row"><span class="k">${escapeHtml(k)}</span><span>${escapeHtml(v)}</span></div>`).join('');
+  } else {
+    box.classList.add('hidden');
+  }
+
+  loadIncidents();
+}
+
+function collectFields() {
+  const ft = parsed.formType;
+  const labels = ft === 'ics214' ? LABELS_214 : ft === 'ics309' ? LABELS_309 : LABELS_213;
+  const out = {};
+  for (const key of Object.keys(labels)) {
+    const el = document.getElementById('fld-'+key);
+    if (el) out[key] = el.value;
+  }
+  return out;
+}
+
+async function loadIncidents() {
+  const sel = document.getElementById('incidentSel');
+  try {
+    const r = await fetch(`${API.replace('5050','5055')}/api/ics/incidents`, {signal:AbortSignal.timeout(4000)});
+    if (r.ok) {
+      const incs = await r.json();
+      const list = Array.isArray(incs) ? incs : (incs.incidents||[]);
+      if (list.length) {
+        sel.innerHTML = list.map(i =>
+          `<option value="${i.id}">${escapeHtml(i.name||i.id)}</option>`).join('') +
+          `<option value="">(no incident / general archive)</option>`;
+        return;
+      }
+    }
+  } catch(e) {}
+  sel.innerHTML = `<option value="">(no active incident — will file to general archive)</option>`;
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+function openInICS() {
+  const f = collectFields();
+  const ft = parsed.formType;
+  if (ft !== 'ics213' && ft !== 'ics214' && ft !== 'ics309') {
+    alert('ICS re-render is available for ICS-213, ICS-214, and ICS-309 forms only. You can still Archive this form to the incident.');
+    return;
+  }
+  const out = { formType:ft, fields:f };
+  // For 309, parse the raw log text into structured rows for the ICS-309 page.
+  if (ft === 'ics309') out.rows = parse309Rows(f.log || '');
+  sessionStorage.setItem('fc_winlink_import', JSON.stringify(out));
+  const page = ft === 'ics214' ? 'ics214.html' : ft === 'ics309' ? 'ics309.html' : 'ics213.html';
+  window.open(page + '?import=1', '_blank');
+}
+
+// Parse the Winlink 309 log block into rows. The Winlink 309 is built from a
+// tab-delimited block (Date/Time, From, To, Subject). Be tolerant of tabs,
+// runs of spaces, or pipe separators.
+function parse309Rows(blob) {
+  const out = [];
+  blob.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).forEach(line=>{
+    const parts = line.split(/\t|\s{2,}|\s*\|\s*/).map(s=>s.trim()).filter(Boolean);
+    if (parts.length >= 4) out.push({dt:parts[0], from:parts[1], to:parts[2], subject:parts.slice(3).join(' ')});
+    else if (parts.length === 3) out.push({dt:parts[0], from:parts[1], to:'', subject:parts[2]});
+    else if (parts.length) out.push({dt:'', from:'', to:'', subject:line});
+  });
+  return out;
+}
+
+async function archiveForm() {
+  const f = collectFields();
+  const incidentId = document.getElementById('incidentSel').value;
+  const direction = document.getElementById('directionSel').value;
+  const summary = buildSummary(f);
+  const payload = {
+    form_type: parsed.formType,
+    incident_id: incidentId,
+    summary: summary,
+    source: 'winlink-import',
+    direction: direction,
+    fields: f,
+    unmapped: parsed.unmapped || {},
+    raw: parsed.raw,
+    imported_at: new Date().toISOString(),
+  };
+  if (parsed.formType === 'ics309') payload.rows = parse309Rows(f.log || '');
+  const msg = document.getElementById('resultMsg');
+  try {
+    const r = await fetch(`${API}/api/forms`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (r.ok) {
+      msg.innerHTML = `<span style="color:var(--green)">✓ Archived to the incident record (${escapeHtml(parsed.formType)}, ${direction}).</span>`;
+    } else {
+      throw new Error('HTTP '+r.status);
+    }
+  } catch(e) {
+    // Fallback: keep a local copy so nothing is lost if the server is unreachable
+    const local = JSON.parse(localStorage.getItem('fc_winlink_archive')||'[]');
+    local.push(payload);
+    localStorage.setItem('fc_winlink_archive', JSON.stringify(local));
+    msg.innerHTML = `<span style="color:var(--amber)">⚠ Server unreachable — saved a local copy on this device. Re-archive when the server is back.</span>`;
+  }
+}
+
+function buildSummary(f) {
+  if (parsed.formType === 'ics214')
+    return `ICS-214 · ${f.unit_name||'unit'} · ${f.op_from||''}`.trim();
+  if (parsed.formType === 'ics309')
+    return `ICS-309 · ${f.station||f.operator||''} · ${f.op_from||''}`.trim();
+  return `ICS-213 · ${f.msg_num||''} · ${f.subject||'(no subject)'}`.trim();
+}
+
+// ── File / paste handlers ─────────────────────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) readFile(file);
+}
+function handleFile(e) { const file = e.target.files[0]; if (file) readFile(file); }
+function readFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    document.getElementById('xmlPaste').value = reader.result;
+    parseInput();
+  };
+  reader.readAsText(file);
+}
+function clearAll() {
+  document.getElementById('xmlPaste').value = '';
+  document.getElementById('reviewStep').classList.add('hidden');
+  document.getElementById('actionStep').classList.add('hidden');
+  document.getElementById('resultMsg').innerHTML = '';
+  parsed = null;
+}
+
+function escapeHtml(s){ return (s||'').replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function escapeAttr(s){ return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+</script>
+</body>
+</html>

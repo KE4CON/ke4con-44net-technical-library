@@ -1,0 +1,12 @@
+[Unit]
+Description=Monthly FieldComms Repeater Database Refresh (1st of month, 04:00)
+Requires=repeater-refresh.service
+
+[Timer]
+# Repeater data changes infrequently; refresh on the 1st of each month.
+OnCalendar=*-*-01 04:00:00
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

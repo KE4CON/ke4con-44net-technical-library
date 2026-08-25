@@ -1,0 +1,23 @@
+[Unit]
+Description=Pat Winlink — Backup Winlink Client (Port 8090)
+Documentation=https://getpat.io
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+# Pat runs as the fieldcomms user so it can access its config at
+# /home/fieldcomms/.config/pat/config.json
+User=fieldcomms
+Group=fieldcomms
+ExecStart=/usr/bin/pat http
+Restart=on-failure
+RestartSec=10
+# Give Pat a clean environment
+Environment=HOME=/opt/fieldcomms
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pat
+
+[Install]
+WantedBy=multi-user.target

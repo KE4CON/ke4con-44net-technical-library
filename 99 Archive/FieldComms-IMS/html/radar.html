@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NWS Animated Radar — FieldComms</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+body { display:flex; flex-direction:column; height:100vh; overflow:hidden; background:var(--bg); }
+
+.top-bar {
+  background:var(--eoc); border-bottom:3px solid var(--accent);
+  padding:10px 16px; display:flex; align-items:center; gap:12px;
+  flex-shrink:0; flex-wrap:wrap;
+}
+.top-bar a.back { color:var(--accent); font-family:var(--font-hd); font-size:13px; letter-spacing:1px; text-decoration:none; }
+.top-bar a.back:hover { color:#fff; }
+.top-bar-title { font-family:var(--font-hd); font-size:18px; color:#fff; letter-spacing:2px; flex:1; }
+.top-bar-sub   { font-size:10px; color:rgba(255,255,255,0.6); letter-spacing:1px; }
+
+.ctrl-bar {
+  background:var(--panel2); border-bottom:1px solid var(--line);
+  padding:8px 14px; display:flex; align-items:center; gap:10px;
+  flex-shrink:0; flex-wrap:wrap;
+}
+.ctrl-btn {
+  background:var(--eoc); color:#fff; border:none; border-radius:5px;
+  padding:6px 12px; font-family:var(--font-hd); font-size:12px;
+  letter-spacing:1px; cursor:pointer; transition:background 0.15s; white-space:nowrap;
+}
+.ctrl-btn:hover  { background:var(--eoc-lt); }
+.ctrl-btn.active { background:var(--green); }
+.ctrl-sep { width:1px; height:24px; background:var(--line); flex-shrink:0; }
+.ctrl-label { font-size:10px; color:var(--muted); letter-spacing:1px; white-space:nowrap; }
+select.ctrl-select {
+  background:var(--panel); border:1px solid var(--line); color:var(--txt);
+  border-radius:5px; padding:5px 8px; font-family:var(--font-ui); font-size:11px;
+}
+.loop-speed-wrap { display:flex; align-items:center; gap:6px; }
+input[type=range].speed-slider { width:90px; accent-color:var(--eoc-lt); }
+.status-pill {
+  margin-left:auto; padding:4px 12px; border-radius:12px;
+  font-family:var(--font-hd); font-size:11px; letter-spacing:1px; white-space:nowrap;
+}
+.status-pill.online  { background:var(--green); color:#fff; }
+.status-pill.offline { background:var(--red);   color:#fff; }
+.status-pill.loading { background:var(--amber);  color:#fff; }
+.frame-counter { font-size:11px; color:var(--muted); white-space:nowrap; min-width:90px; }
+
+#map-wrap { flex:1; position:relative; overflow:hidden; }
+#radar-map { width:100%; height:100%; }
+
+#offline-overlay {
+  position:absolute; inset:0; background:rgba(15,30,56,0.92);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:16px; z-index:1000;
+}
+#offline-overlay.hidden { display:none; }
+.offline-icon  { font-size:56px; }
+.offline-title { font-family:var(--font-hd); font-size:26px; color:#fff; letter-spacing:3px; }
+.offline-sub   { font-size:13px; color:rgba(255,255,255,0.65); text-align:center; max-width:380px; line-height:1.7; }
+.offline-retry {
+  margin-top:8px; padding:8px 22px; background:var(--eoc-lt); color:#fff;
+  border:none; border-radius:6px; font-family:var(--font-hd); font-size:13px;
+  letter-spacing:1px; cursor:pointer;
+}
+.offline-retry:hover { background:var(--eoc); }
+.wan-hint { font-size:11px; color:var(--accent); letter-spacing:1px;
+  border:1px solid rgba(240,192,64,0.4); border-radius:5px; padding:6px 14px; }
+
+.radar-legend {
+  position:absolute; bottom:28px; right:10px; z-index:500;
+  background:rgba(255,255,255,0.93); border:1px solid var(--line);
+  border-radius:8px; padding:10px 14px; font-size:10px; min-width:140px; pointer-events:none;
+}
+.legend-title { font-family:var(--font-hd); font-size:11px; color:var(--eoc); margin-bottom:6px; letter-spacing:1px; }
+.legend-bar {
+  height:14px; border-radius:3px; margin-bottom:4px;
+  background:linear-gradient(to right,
+    #00e5ff 0%,#0080ff 15%,#00cc00 30%,
+    #ffff00 50%,#ff8800 65%,#ff0000 80%,
+    #cc00cc 92%,#ffffff 100%);
+}
+.legend-labels { display:flex; justify-content:space-between; color:var(--muted); font-size:9px; }
+
+#ts-overlay {
+  position:absolute; top:10px; left:50%; transform:translateX(-50%);
+  background:rgba(15,30,56,0.78); color:#fff; border-radius:5px;
+  padding:5px 14px; font-family:var(--font-hd); font-size:12px;
+  letter-spacing:1px; z-index:500; white-space:nowrap; pointer-events:none;
+}
+
+.spinner {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:44px; height:44px; border:4px solid var(--line);
+  border-top:4px solid var(--eoc-lt); border-radius:50%;
+  animation:spin 0.8s linear infinite; z-index:600;
+}
+@keyframes spin { to { transform:translate(-50%,-50%) rotate(360deg); } }
+.spinner.hidden { display:none; }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+</head>
+<body>
+
+<div class="top-bar">
+  <a class="back" href="index.html">← Dashboard</a>
+  <div>
+    <div class="top-bar-title">🌩 NWS ANIMATED RADAR</div>
+    <div class="top-bar-sub">NEXRAD Loop · McHenry County, IL · Internet Required · Auto-updates every 5 min</div>
+  </div>
+</div>
+
+<div class="ctrl-bar">
+  <button class="ctrl-btn active" id="btn-play" onclick="togglePlay()">⏸ PAUSE</button>
+  <button class="ctrl-btn" onclick="stepFrame(-1)" title="Previous frame">⏮</button>
+  <button class="ctrl-btn" onclick="stepFrame(1)"  title="Next frame">⏭</button>
+  <div class="ctrl-sep"></div>
+  <span class="ctrl-label">FRAMES</span>
+  <select class="ctrl-select" onchange="setFrameCount(this.value)">
+    <option value="6">6 frames (~30 min)</option>
+    <option value="10" selected>10 frames (~50 min)</option>
+    <option value="14">14 frames (~70 min)</option>
+    <option value="20">20 frames (~100 min)</option>
+  </select>
+  <div class="ctrl-sep"></div>
+  <span class="ctrl-label">SPEED</span>
+  <div class="loop-speed-wrap">
+    <span style="font-size:10px;color:var(--muted)">Slow</span>
+    <input type="range" class="speed-slider" min="200" max="1400" value="500" step="100" oninput="setSpeed(this.value)">
+    <span style="font-size:10px;color:var(--muted)">Fast</span>
+  </div>
+  <div class="ctrl-sep"></div>
+  <span class="ctrl-label">OVERLAY</span>
+  <button class="ctrl-btn active" id="btn-county"   onclick="toggleLayer('county')">Counties</button>
+  <button class="ctrl-btn active" id="btn-highways" onclick="toggleLayer('highways')">Roads</button>
+  <button class="ctrl-btn active" id="btn-labels"   onclick="toggleLayer('labels')">Labels</button>
+  <div class="ctrl-sep"></div>
+  <span class="frame-counter" id="frame-counter">Frame — / —</span>
+  <div class="status-pill loading" id="status-pill">⟳ LOADING</div>
+</div>
+
+<div id="map-wrap">
+  <div id="radar-map"></div>
+  <div id="ts-overlay">Loading radar…</div>
+  <div class="spinner" id="spinner"></div>
+
+  <div id="offline-overlay" class="hidden">
+    <div class="offline-icon">🌩</div>
+    <div class="offline-title">RADAR UNAVAILABLE</div>
+    <div class="offline-sub">
+      NWS NEXRAD animated radar requires an active internet connection.<br>
+      InstyConnect cellular or Starlink satellite must be online.
+    </div>
+    <div class="wan-hint">WAN Status → http://192.168.50.1/wan-status.html</div>
+    <button class="offline-retry" onclick="checkAndLoad()">⟳ Retry Connection</button>
+  </div>
+
+  <div class="radar-legend">
+    <div class="legend-title">DBZ REFLECTIVITY</div>
+    <div class="legend-bar"></div>
+    <div class="legend-labels"><span>Light</span><span>Mod</span><span>Heavy</span><span>Extreme</span></div>
+  </div>
+</div>
+
+<script>
+const CENTER     = [42.32, -88.26];
+const ZOOM       = 7;
+let map, radarLayers = [], radarFrames = [];
+let countyLayer, highwayLayer, labelLayer;
+let frameIndex = 0, playing = true, loopTimer = null;
+let frameDelay = 500, frameCount = 10, isOnline = false;
+let layerOn = { county:true, highways:true, labels:true };
+
+function initMap() {
+  map = L.map('radar-map', { center:CENTER, zoom:ZOOM });
+
+  // Dark base — radar colors pop on dark background
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+    attribution:'© OpenStreetMap © CARTO', subdomains:'abcd', maxZoom:12
+  }).addTo(map);
+
+  // County borders from IEM
+  countyLayer = L.tileLayer(
+    'https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/usnws_county/{z}/{x}/{y}.png',
+    { maxZoom:12, opacity:0.55, attribution:'© IEM / NWS' }
+  );
+  if (layerOn.county) countyLayer.addTo(map);
+
+  // Roads
+  highwayLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { maxZoom:12, opacity:0.12, attribution:'© OpenStreetMap' });
+  if (layerOn.highways) highwayLayer.addTo(map);
+
+  // Labels
+  labelLayer = L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',
+    { subdomains:'abcd', maxZoom:12, opacity:0.85, attribution:'© CARTO' }
+  );
+  if (layerOn.labels) labelLayer.addTo(map);
+
+  // McHenry County ring
+  L.circle([42.32,-88.26], { radius:22000, color:'#f0c040', weight:2.5, fill:false, dashArray:'8 5' }).addTo(map);
+  L.marker([42.32,-88.26], {
+    icon: L.divIcon({
+      html:'<div style="background:rgba(240,192,64,0.9);color:#1a3a6b;font-weight:bold;font-size:10px;padding:2px 6px;border-radius:3px;white-space:nowrap">McHenry Co.</div>',
+      className:'', iconAnchor:[-4,0]
+    })
+  }).addTo(map);
+}
+
+// IEM NEXRAD composite — free, no API key, updates every 5 min
+function buildFrames(count) {
+  const frames = [];
+  const now = new Date();
+  now.setUTCMinutes(Math.floor(now.getUTCMinutes()/5)*5, 0, 0);
+  for (let i = count-1; i >= 0; i--) {
+    const t = new Date(now.getTime() - i*5*60*1000);
+    const p = n => String(n).padStart(2,'0');
+    const ts = `${t.getUTCFullYear()}-${p(t.getUTCMonth()+1)}-${p(t.getUTCDate())}T${p(t.getUTCHours())}${p(t.getUTCMinutes())}Z`;
+    const localTime = new Date(t.getTime());
+    const localStr = localTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    frames.push({
+      ts,
+      label: `${p(t.getUTCHours())}:${p(t.getUTCMinutes())} UTC  (${localStr} local)${i===0?' ◀ LATEST':''}`,
+      url: `https://mesonet.agron.iastate.edu/cache/tile.py/1.0.0/nexrad-n0q-900913/${ts}/{z}/{x}/{y}.png`
+    });
+  }
+  return frames;
+}
+
+async function loadFrames() {
+  showSpinner(true); setPill('loading','⟳ LOADING');
+  radarLayers.forEach(l => { try { map.removeLayer(l); } catch(e){} });
+  radarLayers = [];
+  radarFrames = buildFrames(frameCount);
+  radarFrames.forEach(f => {
+    f.layer = L.tileLayer(f.url, {
+      opacity:0.80, maxZoom:12, zIndex:200,
+      attribution:'© Iowa Environmental Mesonet / NOAA NWS',
+      errorTileUrl:'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='
+    });
+    radarLayers.push(f.layer);
+  });
+  frameIndex = radarFrames.length - 1;
+  showFrame(frameIndex); updateCounter();
+  showSpinner(false); setPill('online','✓ LIVE NEXRAD');
+  if (playing) startLoop();
+}
+
+function showFrame(idx) {
+  radarLayers.forEach(l => { try { map.removeLayer(l); } catch(e){} });
+  const f = radarFrames[idx];
+  if (!f) return;
+  f.layer.addTo(map);
+  // Keep annotation layers on top
+  if (layerOn.county)   try { countyLayer.bringToFront(); } catch(e){}
+  if (layerOn.labels)   try { labelLayer.bringToFront();  } catch(e){}
+  document.getElementById('ts-overlay').textContent = `NEXRAD Composite  ·  ${f.label}`;
+}
+
+function updateCounter() {
+  document.getElementById('frame-counter').textContent = `Frame ${frameIndex+1} / ${radarFrames.length}`;
+}
+
+function startLoop() {
+  stopLoop();
+  loopTimer = setInterval(() => {
+    const next = (frameIndex + 1) % radarFrames.length;
+    frameIndex = next;
+    showFrame(frameIndex); updateCounter();
+    // Pause longer on latest frame
+    if (next === radarFrames.length - 1) {
+      stopLoop();
+      loopTimer = setTimeout(() => { if (playing) startLoop(); }, frameDelay * 3);
+    }
+  }, frameDelay);
+}
+
+function stopLoop() {
+  if (loopTimer) { clearInterval(loopTimer); clearTimeout(loopTimer); loopTimer = null; }
+}
+
+function togglePlay() {
+  playing = !playing;
+  const btn = document.getElementById('btn-play');
+  if (playing) { btn.textContent='⏸ PAUSE'; btn.classList.add('active'); startLoop(); }
+  else         { btn.textContent='⏵ PLAY';  btn.classList.remove('active'); stopLoop(); }
+}
+
+function stepFrame(dir) {
+  stopLoop(); playing = false;
+  const btn = document.getElementById('btn-play');
+  btn.textContent='⏵ PLAY'; btn.classList.remove('active');
+  frameIndex = (frameIndex + dir + radarFrames.length) % radarFrames.length;
+  showFrame(frameIndex); updateCounter();
+}
+
+function setSpeed(val) { frameDelay = parseInt(val); if (playing) startLoop(); }
+function setFrameCount(val) { frameCount = parseInt(val); if (isOnline) loadFrames(); }
+
+function toggleLayer(name) {
+  layerOn[name] = !layerOn[name];
+  document.getElementById('btn-' + name).classList.toggle('active', layerOn[name]);
+  const layers = { county:countyLayer, highways:highwayLayer, labels:labelLayer };
+  const l = layers[name];
+  if (!l) return;
+  if (layerOn[name]) l.addTo(map); else map.removeLayer(l);
+}
+
+async function checkAndLoad() {
+  setPill('loading','⟳ CHECKING');
+  document.getElementById('offline-overlay').classList.add('hidden');
+  try {
+    const r = await fetch('https://mesonet.agron.iastate.edu/robots.txt',
+      { signal:AbortSignal.timeout(5000), cache:'no-store' });
+    isOnline = r.ok;
+  } catch { isOnline = false; }
+
+  if (isOnline) {
+    await loadFrames();
+  } else {
+    document.getElementById('offline-overlay').classList.remove('hidden');
+    setPill('offline','✗ NO INTERNET');
+  }
+}
+
+function setPill(state, text) {
+  const p = document.getElementById('status-pill');
+  p.className = 'status-pill ' + state;
+  p.textContent = text;
+}
+function showSpinner(show) {
+  document.getElementById('spinner').classList.toggle('hidden', !show);
+}
+
+// Auto-refresh every 5 min
+setInterval(() => { if (isOnline) loadFrames(); }, 5*60*1000);
+
+window.addEventListener('DOMContentLoaded', () => { initMap(); checkAndLoad(); });
+</script>
+</body>
+</html>
