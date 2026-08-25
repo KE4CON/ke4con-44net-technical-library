@@ -1,0 +1,103 @@
+{
+  "order": 3,
+  "title": "Page Types, Callouts & the Build Pipeline",
+  "subtitle": "How a Project AROC document is actually assembled, and the quality bar before it ships.",
+  "in_this_chapter": [
+    "Standard page types and header/footer rules",
+    "The four callout styles and when to use each",
+    "Figure and table presentation",
+    "How to build a document with the Claude Code pipeline",
+    "The pre-publication quality checklist"
+  ],
+  "blocks": [
+    {
+      "h1": "Headers and Footers"
+    },
+    {
+      "p": "Headers identify the project and document title; footers identify ownership and carry automatic page numbers (\"Page X of Y\"). Headers and footers are intentionally conservative — their purpose is navigation and identification, not decoration. A reader should always know which Project AROC document is open and where it belongs in the library."
+    },
+    {
+      "h1": "Standard Page Types"
+    },
+    {
+      "bullets": [
+        "**Cover page** — title, document kind, revision, project owner, motto (navy panel, gold marquee rule)",
+        "**Document control page** — document number, owner, author, status, applicability",
+        "**Revision history page** — revision, date, author, description, status",
+        "**Table of contents** — auto-generated from chapter headings",
+        "**Chapter pages** — each opens with a numbered navy block + gold rule, an optional \"In This Chapter\" summary"
+      ]
+    },
+    {
+      "h1": "Callout Styles"
+    },
+    {
+      "p": "Four callout kinds are available, matching the shared house style. Use the kind whose intent matches what you're writing — the visual style (fill, border, label color) is applied automatically:"
+    },
+    {
+      "table": {
+        "headers": ["Kind", "Use for", "Color"],
+        "rows": [
+          ["`note`", "Engineering Notes — technical reasoning a reader benefits from understanding", "Blue"],
+          ["`important`", "Design Decisions — why one approach was chosen over another", "Amber/gold"],
+          ["`tip`", "Future Expansion — ideas deferred to a later milestone, not blocking current work", "Green"],
+          ["`warning`", "Cautions and pitfalls — things that will break something if skipped", "Red"]
+        ],
+        "widths": [1.3, 3.9, 1.3]
+      }
+    },
+    {
+      "h1": "Figure and Table Presentation"
+    },
+    {
+      "bullets": [
+        "Figure format: `Figure <chapter>-<number>: <caption>`",
+        "Table format: `Table <chapter>-<number>: <caption>`",
+        "Every diagram shall have a title and a stated purpose",
+        "Screenshots shall be cropped for readability and annotated when needed",
+        "Diagrams are authored as SVG where practical (renders cleanly, stays editable, no binary diffing)"
+      ]
+    },
+    {
+      "h1": "The Build Pipeline"
+    },
+    {
+      "p": "**Markdown is the living source of truth.** Every formal document is authored as JSON chapter files under a `chapters/` folder next to a `build.py` script. Running `build.py` regenerates both a `.md` (source-of-record) and a styled `.docx` from scratch — nothing is hand-edited in Word, so a document can always be rebuilt exactly from its source."
+    },
+    {
+      "code": [
+        "cd \"00 Engineering/<document folder>\"",
+        "python build.py"
+      ]
+    },
+    {
+      "p": "`build.py` imports the shared renderer from `docs/docs_generators/style.py` (one copy, used by every document in this repository) and turns each chapter's `blocks` array into styled Word content. Supported block types: `h1`, `h2`, `p`, `steps`, `bullets`, `callout`, `screenshot`, `code`, `table`. Inline text supports `**bold**`, `` `code` ``, and `__italic__`."
+    },
+    {
+      "callout": {
+        "kind": "note",
+        "label": "NO AUTOMATIC PDF",
+        "text": "The pipeline produces `.md` and `.docx` only — there is no PDF step (no LibreOffice/Word automation is installed). Export a PDF from Word by hand (File > Save As > PDF) when a document is ready to publish, if a PDF copy is wanted."
+      }
+    },
+    {
+      "h1": "Quality Checklist"
+    },
+    {
+      "p": "Before a document is marked **Approved**:"
+    },
+    {
+      "bullets": [
+        "Cover page present and correct (title, document number, revision)",
+        "Document control page present (owner, author, status)",
+        "Revision history entry added for this revision",
+        "Document number and revision match the filename",
+        "Headers, footers, and page numbers render correctly",
+        "Callout kinds used consistently with Chapter 3's table above",
+        "Figures and tables numbered per the `<chapter>-<number>` convention",
+        "`build.py` runs clean with no errors and the `.md` / `.docx` are both committed",
+        "Superseded prior revisions moved to `99 Archive/`, not deleted"
+      ]
+    }
+  ]
+}

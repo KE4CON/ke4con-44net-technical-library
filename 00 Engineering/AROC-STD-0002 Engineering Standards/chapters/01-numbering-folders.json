@@ -1,0 +1,71 @@
+{
+  "order": 1,
+  "title": "Document Numbering & Folder Structure",
+  "subtitle": "Milestone 0003B — how anything in this repository is identified and where it lives.",
+  "in_this_chapter": [
+    "The document numbering scheme in full",
+    "What each numbered top-level folder is for",
+    "Where repo-engineering-only material (not part of the library) lives"
+  ],
+  "blocks": [
+    {
+      "h1": "Document Numbering"
+    },
+    {
+      "p": "Every formal document carries a number in the form `AROC-<TYPE>-<NUMBER>`. `<NUMBER>` is a 4-digit sequence, assigned in order within its `<TYPE>`, never reused even if a document is retired. A milestone-scoped document (a release, a phase deliverable) may append a letter suffix (`0003A`, `0003B`, `0003C`, ...) for sub-parts of the same milestone."
+    },
+    {
+      "table": {
+        "headers": ["Prefix", "Category", "Numbering scope"],
+        "rows": [
+          ["**STD**", "Publishing / engineering standards", "Sequential, never reused (AROC-STD-0001, -0002, ...)"],
+          ["**BRAND**", "Visual identity / branding", "Sequential (typically stays at 0001 — revised in place via Revision History, not renumbered)"],
+          ["**REL**", "Milestone / release notes", "One per milestone, letter-suffixed for sub-releases (AROC-REL-0003A)"],
+          ["**BOOK**", "Technical library volumes", "Matches the Book number in the README (AROC-BOOK-0001 = Book 1, ...)"],
+          ["**OPS**", "Operations runbooks (Book 6 material)", "Sequential per runbook"]
+        ],
+        "widths": [1.1, 2.9, 2.5]
+      }
+    },
+    {
+      "h1": "Top-Level Folder Structure"
+    },
+    {
+      "p": "The `README.md` repository-structure list is the authoritative folder set. Each folder's purpose:"
+    },
+    {
+      "table": {
+        "headers": ["Folder", "Purpose"],
+        "rows": [
+          ["`00 Engineering`", "Formal engineering documents: publishing/engineering standards, branding, standards for the library itself — each formal document gets its own sub-folder holding `chapters/` + `build.py`, with the built `.md`/`.docx` one level up"],
+          ["`01 Publications`", "The technical library itself once it exists — Books 0-10, one sub-folder per book"],
+          ["`02 Operations`", "Runbooks, checklists, and standard operating procedures for running the actual Operations Center"],
+          ["`03 Software Development`", "Any AROC-specific software (dashboards, automation, integrations) — not the general-purpose apps that live in their own separate repos"],
+          ["`04 Website`", "Source for any AROC-facing web presence, if it ends up separate from the main KE4CON website"],
+          ["`05 Media`", "Logos, diagrams source files, palettes, and other reusable media assets referenced by documents or the website"],
+          ["`06 Downloads`", "Point-in-time release packages handed to readers (e.g. Milestone Release Notes) — historical snapshots, not living documents"],
+          ["`07 Templates`", "Reusable starting points — today that means the chapters/build.py pattern itself (see AROC-STD-0001 Chapter 3), not hand-edited `.docx` templates"],
+          ["`99 Archive`", "Superseded material, kept for history via `git mv` rather than deleted — e.g. `99 Archive/0003A-chatgpt-draft-rev0.1/`"]
+        ],
+        "widths": [1.7, 4.8]
+      }
+    },
+    {
+      "h1": "Repo-Engineering-Only Material"
+    },
+    {
+      "p": "Material that exists to help build/maintain this repository but is not itself part of the published library — pipeline planning notes, recovered project history, audit checklists — lives under `docs/internal/`, per the global KE4CON documentation standard. It is deliberately kept out of the numbered `00`-`99` structure so a reader of the library never has to wonder whether a numbered folder holds real content or repo housekeeping."
+    },
+    {
+      "table": {
+        "headers": ["Path", "Holds"],
+        "rows": [
+          ["`docs/docs_generators/style.py`", "The one shared house-style renderer, imported by every document's `build.py` in this repo"],
+          ["`docs/internal/`", "Repo-engineering-only material — see `docs/internal/README.md`"],
+          ["`docs/internal/planning/`", "Project history/origin notes, milestone planning"]
+        ],
+        "widths": [2.6, 3.9]
+      }
+    }
+  ]
+}

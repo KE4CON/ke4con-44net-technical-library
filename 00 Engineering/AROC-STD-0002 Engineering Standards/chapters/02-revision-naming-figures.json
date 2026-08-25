@@ -1,0 +1,54 @@
+{
+  "order": 2,
+  "title": "Revision Control, File Naming & Figure Numbering",
+  "subtitle": "Keeping the library consistent as it grows past a handful of documents.",
+  "in_this_chapter": [
+    "How revisions are tracked (git + a Revision History table, not filename churn for drafts)",
+    "File and folder naming conventions",
+    "Figure, table, and diagram numbering"
+  ],
+  "blocks": [
+    {
+      "h1": "Revision Control"
+    },
+    {
+      "p": "Git is the authoritative revision history for every source file (`.json` chapters, `.py` build scripts, `.md`). The **Revision History table** inside each formal document is the authoritative history for *that document's meaning to a reader* — it should read clearly on its own, without needing `git log`."
+    },
+    {
+      "bullets": [
+        "A revision number bumps (`0.1` → `0.2` → `1.0`) only when the built `.docx`/`.md` actually changes for a reader — not for every commit.",
+        "Whole-number revisions (`1.0`, `2.0`, ...) mark a document reaching **Approved** status for the first time, or a rewrite substantial enough to treat as a new baseline.",
+        "Decimal revisions (`0.1`, `0.2`, ...) are drafts and in-progress updates.",
+        "Every revision bump gets one row in the Revision History table: revision, date, author, one-line description, status.",
+        "Superseded formal `.docx`/`.pdf`/`.md` files move to `99 Archive/` via `git mv` — never deleted, so the reasoning behind an old revision stays readable."
+      ]
+    },
+    {
+      "h1": "File and Folder Naming"
+    },
+    {
+      "table": {
+        "headers": ["What", "Convention", "Example"],
+        "rows": [
+          ["Formal document source folder", "`<DOC-NUMBER> <Document Title>` under `00 Engineering`", "`AROC-STD-0002 Engineering Standards/`"],
+          ["Chapter JSON files", "`<2-digit order>-<kebab-case-slug>.json`", "`01-numbering-folders.json`"],
+          ["Built `.docx`/`.md`", "`<DOC-NUMBER> <Document Title> Rev<Revision>.<ext>`", "`AROC-STD-0002 Engineering Standards Rev1.0.docx`"],
+          ["Media / palette / template assets", "`Project_AROC_<Purpose>.<ext>` (underscores)", "`Project_AROC_Color_Palette.json`"],
+          ["Archived material", "Original filename, unchanged, under a dated sub-folder", "`99 Archive/0003A-chatgpt-draft-rev0.1/...`"]
+        ],
+        "widths": [2.1, 2.6, 2.0]
+      }
+    },
+    {
+      "h1": "Figure and Table Numbering"
+    },
+    {
+      "bullets": [
+        "Figures: `Figure <chapter>-<number>: <caption>` — numbered per chapter, restarting at each chapter",
+        "Tables: `Table <chapter>-<number>: <caption>` — same rule",
+        "Diagrams are authored as SVG under `05 Media/diagrams/` where practical (create that folder when the first diagram is needed) — text-diffable, no binary churn, easy to edit",
+        "Every diagram states its purpose in one sentence directly below its caption — a reader should never have to guess why a diagram exists"
+      ]
+    }
+  ]
+}

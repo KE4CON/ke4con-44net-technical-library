@@ -1,0 +1,76 @@
+{
+  "order": 2,
+  "title": "Branding, Typography & Color Palette",
+  "subtitle": "The shared KE4CON visual identity Project AROC documents are built on.",
+  "in_this_chapter": [
+    "Project identity — name, motto, visual theme",
+    "The navy + gold house palette and where each color is used",
+    "Typography rules for body text, headings, and code"
+  ],
+  "blocks": [
+    {
+      "h1": "Project AROC Branding"
+    },
+    {
+      "p": "Project AROC branding identifies every document as part of the KE4CON Amateur Radio Operations Center library. Branding shall remain consistent across every formal document."
+    },
+    {
+      "bullets": [
+        "Project name: **Project AROC**",
+        "Expanded name: **Amateur Radio Operations Center**",
+        "Station identity: **KE4CON**",
+        "Motto: __Build with Purpose. Document with Precision. Learn without End.__",
+        "Primary visual theme: professional engineering, amateur radio, network infrastructure, long-term maintainability"
+      ]
+    },
+    {
+      "callout": {
+        "kind": "important",
+        "label": "DESIGN DECISION — HOUSE STYLE ADOPTED",
+        "text": "Milestone 0003A (2026-06-30, drafted in ChatGPT chat) shipped Project AROC with its own draft navy/blue identity (`#1F4E79` / `#2E86C1`) and a custom radio-tower logo. As part of moving the project onto the Claude Code documentation pipeline (2026-08-25), Project AROC adopted the **shared KE4CON navy + gold house style** — the same one used by APRS-Command, OpenTrack, and ActivationPlanner — so every KE4CON project's documents look like one family. See **AROC-BRAND-0001 Rev0.2** for the full rationale; the original draft identity is preserved in `99 Archive/0003A-chatgpt-draft-rev0.1/` for history."
+      }
+    },
+    {
+      "h1": "Color Palette"
+    },
+    {
+      "p": "The house palette is implemented in `docs/docs_generators/style.py` and used automatically by every document's build script — authors never pick colors by hand."
+    },
+    {
+      "table": {
+        "headers": ["Name", "Hex", "Usage"],
+        "rows": [
+          ["**navy**", "#1F3A5F", "Cover panel, chapter-number block, headings, header text"],
+          ["**gold**", "#D9A521", "Marquee rules under headers/covers, subtitle text on the cover"],
+          ["**accent2 (medium blue)**", "#2E6DA4", "Section (H2) headings, bullet markers"],
+          ["**panel**", "#EAF0F6", "Pale chapter-title banner fill"],
+          ["**ink**", "#222B38", "Body text"],
+          ["**muted**", "#64748B", "Captions, footer text, subtitles"]
+        ],
+        "widths": [2.0, 1.1, 3.4]
+      }
+    },
+    {
+      "p": "Callout colors (note / tip / important / warning) are listed in Chapter 3, §\"Callout Styles.\""
+    },
+    {
+      "h1": "Typography"
+    },
+    {
+      "bullets": [
+        "Primary body font: **Segoe UI**, 10.5 point",
+        "Heading font: **Segoe UI Semibold**",
+        "Code / configuration font: **Consolas**",
+        "Body line spacing: 1.15, with spacing after each paragraph",
+        "Avoid decorative fonts in technical content"
+      ]
+    },
+    {
+      "callout": {
+        "kind": "note",
+        "label": "WHY SEGOE UI",
+        "text": "The original draft specified Arial/Aptos. Segoe UI is the font the shared `style.py` renders with across every KE4CON document — it ships with Windows, reads cleanly on screen and in print, and keeps Project AROC visually identical to the rest of the library without requiring a font install step for anyone reading a generated `.docx`."
+      }
+    }
+  ]
+}

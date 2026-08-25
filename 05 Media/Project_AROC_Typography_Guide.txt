@@ -1,4 +1,8 @@
-Body: Arial/Aptos 10.5 pt
-Headings: Arial/Aptos Bold
-Code: Consolas/Courier New
+Body: Segoe UI, 10.5 pt
+Headings: Segoe UI Semibold
+Code: Consolas
 Use high contrast and avoid decorative fonts in technical procedures.
+
+Rev0.2 (2026-08-25): switched from Arial/Aptos to Segoe UI to match the shared
+KE4CON navy+gold house style (docs/docs_generators/style.py). See
+AROC-BRAND-0001 Rev0.2 for the full rationale.
