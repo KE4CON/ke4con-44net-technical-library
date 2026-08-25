@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Callsign Lookup — Incident Management</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.main-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+.hero {
+  background: linear-gradient(135deg, var(--panel) 0%, var(--bg) 100%);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 24px; margin-bottom: 24px; text-align: center;
+}
+.hero h1 { font-family: var(--font-hd); font-size: 22px; color: var(--amber); letter-spacing: 3px; margin: 0 0 8px; }
+.hero p { color: var(--muted); font-size: 13px; margin: 0; }
+
+.search-box {
+  display: flex; gap: 8px; margin: 20px 0 0; justify-content: center; flex-wrap: wrap;
+}
+.search-box input {
+  font-size: 24px; font-family: var(--font-hd); letter-spacing: 4px;
+  text-transform: uppercase; width: 260px; text-align: center; padding: 10px 16px;
+}
+.search-box button { font-size: 14px; padding: 10px 20px; }
+
+.result-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px;
+  margin-bottom: 16px; display: none;
+}
+.result-card.show { display: block; }
+.result-card.not-found { border-color: var(--red); }
+
+.call-display {
+  font-family: var(--font-hd); font-size: 36px; color: var(--amber);
+  letter-spacing: 6px; text-shadow: 0 0 20px rgba(245,166,35,0.3); margin-bottom: 4px;
+}
+.license-class { display: inline-block; padding: 3px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-bottom: 16px; }
+.class-T { background: rgba(80,200,80,0.15); color: var(--green); border: 1px solid var(--green); }
+.class-G { background: rgba(26,58,107,0.10); color: var(--amber); border: 1px solid var(--amber); }
+.class-E { background: rgba(220,60,60,0.15); color: var(--red); border: 1px solid var(--red); }
+.class-N { background: rgba(96,170,255,0.15); color: var(--blue); border: 1px solid var(--blue); }
+.class-P { background: rgba(224,64,251,0.15); color: var(--purple); border: 1px solid var(--purple); }
+
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.detail-item { display: flex; flex-direction: column; gap: 2px; }
+.detail-item .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+.detail-item .val { font-size: 14px; color: var(--txt); }
+
+.history-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+.history-table th { background: var(--panel2); color: var(--muted); padding: 6px 10px; text-align: left; font-weight: normal; }
+.history-table td { padding: 6px 10px; border-top: 1px solid var(--line); }
+
+.search-section-hdr {
+  font-family: var(--font-hd); font-size: 11px; letter-spacing: 0.2em; color: var(--muted);
+  text-transform: uppercase; margin: 24px 0 12px; display: flex; align-items: center; gap: 10px;
+}
+.search-section-hdr::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+/* Advanced search */
+.adv-panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
+  margin-bottom: 16px;
+}
+.adv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.adv-grid .form-group { display: flex; flex-direction: column; gap: 3px; }
+.adv-grid label { font-size: 11px; color: var(--muted); }
+.adv-grid input, .adv-grid select { padding: 6px 8px; font-size: 12px; }
+
+/* Results table */
+.results-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.results-table th { background: var(--panel2); color: var(--muted); padding: 8px 12px; text-align: left; font-weight: normal; cursor: pointer; }
+.results-table th:hover { color: var(--amber); }
+.results-table td { padding: 8px 12px; border-top: 1px solid var(--line); }
+.results-table tr:hover td { background: var(--panel2); }
+.results-table .callsign-link { color: var(--amber); cursor: pointer; font-family: var(--font-hd); letter-spacing: 1px; }
+.results-table .callsign-link:hover { text-decoration: underline; }
+
+.loading { text-align: center; padding: 30px; color: var(--muted); font-size: 14px; }
+.error-msg { color: var(--red); background: rgba(220,60,60,0.1); border: 1px solid var(--red); border-radius: 6px; padding: 10px 16px; font-size: 13px; }
+
+.tag-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--panel2); color: var(--muted); }
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="index.html" class="nav-logo">⬡ Incident Management</a>
+  <div class="nav-links">
+    <a href="index.html">Dashboard</a>
+    <a href="netcontrol.html">Net Control</a>
+    <a href="callsign.html" class="active">Callsign Lookup</a>
+    <a href="repeaters.html">Repeaters</a>
+  </div>
+  <div class="nav-right">
+    <span id="utc-clock" style="font-family:var(--font-hd);color:var(--green);font-size:13px;letter-spacing:1px;"></span>
+  </div>
+</nav>
+
+<div class="main-wrap">
+  <div class="hero">
+    <h1>📻 CALLSIGN LOOKUP</h1>
+    <p>FCC Amateur Radio License Database · Offline SQLite · Updated weekly</p>
+    <div class="search-box">
+      <input type="text" id="call-input" placeholder="W8XYZ" maxlength="10"
+             oninput="this.value=this.value.toUpperCase()"
+             onkeydown="if(event.key==='Enter')lookupCallsign()">
+      <button class="btn btn-primary" onclick="lookupCallsign()" style="font-size:16px;padding:10px 24px;">Look Up</button>
+    </div>
+    <div style="margin-top:12px;font-size:11px;color:var(--dim);">
+      Press Enter or click Look Up · Results from local FCC database
+    </div>
+  </div>
+
+  <!-- Single callsign result -->
+  <div class="result-card" id="result-card">
+    <div id="result-content"></div>
+  </div>
+
+  <!-- Advanced search -->
+  <div class="search-section-hdr">Advanced Search</div>
+  <div class="adv-panel">
+    <div class="adv-grid">
+      <div class="form-group">
+        <label>Last Name / Entity Name</label>
+        <input type="text" id="s-last" placeholder="Smith">
+      </div>
+      <div class="form-group">
+        <label>First Name</label>
+        <input type="text" id="s-first" placeholder="John">
+      </div>
+      <div class="form-group">
+        <label>State</label>
+        <select id="s-state">
+          <option value="">All States</option>
+          <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+          <option>CA</option><option>CO</option><option>CT</option><option>DE</option>
+          <option>FL</option><option>GA</option><option>HI</option><option>ID</option>
+          <option>IL</option><option>IN</option><option>IA</option><option>KS</option>
+          <option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+          <option>MA</option><option>MI</option><option>MN</option><option>MS</option>
+          <option>MO</option><option>MT</option><option>NE</option><option>NV</option>
+          <option>NH</option><option>NJ</option><option>NM</option><option>NY</option>
+          <option>NC</option><option>ND</option><option>OH</option><option>OK</option>
+          <option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+          <option>SD</option><option>TN</option><option>TX</option><option>UT</option>
+          <option>VT</option><option>VA</option><option>WA</option><option>WV</option>
+          <option>WI</option><option>WY</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>License Class</label>
+        <select id="s-class">
+          <option value="">All Classes</option>
+          <option value="T">Technician</option>
+          <option value="G">General</option>
+          <option value="E">Amateur Extra</option>
+          <option value="N">Novice</option>
+          <option value="P">Advanced</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>City</label>
+        <input type="text" id="s-city" placeholder="Columbus">
+      </div>
+      <div class="form-group">
+        <label>Grid Square</label>
+        <input type="text" id="s-grid" placeholder="EN80" maxlength="6" oninput="this.value=this.value.toUpperCase()">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
+      <button class="btn btn-primary" onclick="advSearch()">Search</button>
+      <button class="btn btn-secondary" onclick="clearAdv()">Clear</button>
+      <span style="font-size:11px;color:var(--muted);margin-left:auto;" id="result-count"></span>
+    </div>
+  </div>
+
+  <!-- Advanced results -->
+  <div id="adv-results"></div>
+
+  <!-- Recent lookups -->
+  <div class="search-section-hdr">Recent Lookups</div>
+  <div id="recent-list" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;"></div>
+</div>
+
+<script>
+const API = 'http://192.168.50.1:5050';
+let recentLookups = JSON.parse(localStorage.getItem('fc_recent_callsigns')||'[]');
+
+setInterval(()=>{ document.getElementById('utc-clock').textContent = new Date().toUTCString().slice(17,22)+'Z'; },1000);
+
+function addRecent(call) {
+  recentLookups = recentLookups.filter(c=>c!==call);
+  recentLookups.unshift(call);
+  if(recentLookups.length>20) recentLookups=recentLookups.slice(0,20);
+  localStorage.setItem('fc_recent_callsigns', JSON.stringify(recentLookups));
+  renderRecent();
+}
+
+function renderRecent() {
+  const el = document.getElementById('recent-list');
+  if(!recentLookups.length) {
+    el.innerHTML = '<span style="font-size:12px;color:var(--dim);">No recent lookups.</span>';
+    return;
+  }
+  el.innerHTML = recentLookups.map(c=>`
+    <button class="btn btn-secondary" onclick="lookupDirect('${c}')" style="font-family:var(--font-hd);letter-spacing:2px;font-size:12px;">${c}</button>
+  `).join('');
+}
+
+function lookupDirect(call) {
+  document.getElementById('call-input').value = call;
+  lookupCallsign();
+}
+
+async function lookupCallsign() {
+  const call = document.getElementById('call-input').value.trim().toUpperCase();
+  if(!call) return;
+
+  const card = document.getElementById('result-card');
+  const content = document.getElementById('result-content');
+  card.className = 'result-card show';
+  content.innerHTML = '<div class="loading">🔍 Looking up ' + call + '…</div>';
+  card.scrollIntoView({behavior:'smooth'});
+
+  try {
+    const r = await fetch(`${API}/fcc/${call}`);
+    const data = await r.json();
+
+    if(!data || data.error || !data.callsign) {
+      card.className = 'result-card show not-found';
+      content.innerHTML = `<div class="error-msg">❌ Callsign <strong>${call}</strong> not found in FCC database.</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;">
+          The local database may not include this callsign. Try searching by name below, or verify the FCC database is up to date (updated weekly).
+        </div>`;
+      return;
+    }
+
+    addRecent(call);
+    card.className = 'result-card show';
+
+    const classLabels = {T:'Technician',G:'General',E:'Extra',N:'Novice',P:'Advanced','A':'Advanced'};
+    const cls = data.license_class||data.op_class||'';
+    const clsLabel = classLabels[cls]||cls||'Unknown';
+    const clsTag = cls ? `<span class="license-class class-${cls}">${clsLabel}</span>` : '';
+
+    const statusColor = data.status==='A' ? 'var(--green)' : 'var(--red)';
+    const statusLabel = data.status==='A' ? 'Active' : (data.status||'Unknown');
+
+    content.innerHTML = `
+      <div class="call-display">${data.callsign}</div>
+      <div style="margin-bottom:12px;">${clsTag}
+        <span style="font-size:12px;color:${statusColor};margin-left:8px;">● ${statusLabel}</span>
+      </div>
+      <div class="detail-grid">
+        <div class="detail-item">
+          <div class="lbl">Name</div>
+          <div class="val">${esc(data.name||[data.first_name,data.last_name].filter(Boolean).join(' ')||'—')}</div>
+        </div>
+        <div class="detail-item">
+          <div class="lbl">City, State</div>
+          <div class="val">${esc(data.city||'—')}${data.state ? ', '+data.state : ''}</div>
+        </div>
+        <div class="detail-item">
+          <div class="lbl">Zip Code</div>
+          <div class="val">${esc(data.zip||'—')}</div>
+        </div>
+        <div class="detail-item">
+          <div class="lbl">Country</div>
+          <div class="val">${esc(data.country||'US')}</div>
+        </div>
+        <div class="detail-item">
+          <div class="lbl">Grant Date</div>
+          <div class="val">${esc(data.grant_date||'—')}</div>
+        </div>
+        <div class="detail-item">
+          <div class="lbl">Expiration Date</div>
+          <div class="val" style="${isExpired(data.expired_date)?'color:var(--red);':''}">${esc(data.expired_date||'—')}</div>
+        </div>
+        <div class="detail-item">
+          <div class="lbl">FRN</div>
+          <div class="val">${esc(data.frn||'—')}</div>
+        </div>
+        <div class="detail-item">
+          <div class="lbl">License ID</div>
+          <div class="val">${esc(data.license_id||'—')}</div>
+        </div>
+        ${data.grid_square ? `<div class="detail-item"><div class="lbl">Grid Square</div><div class="val">${esc(data.grid_square)}</div></div>` : ''}
+      </div>
+      <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="https://wireless2.fcc.gov/UlsApp/UlsSearch/results.jsp?searchMode=A&licKey=${data.license_id||''}&uls_type=l&uls_category=l"
+           target="_blank" class="btn btn-secondary" style="font-size:12px;">FCC ULS ↗</a>
+        <button class="btn btn-secondary" onclick="addToRoster('${data.callsign}')" style="font-size:12px;">+ Add to Roster</button>
+        <button class="btn btn-secondary" onclick="copyInfo('${data.callsign}')" style="font-size:12px;">📋 Copy</button>
+      </div>
+    `;
+  } catch(e) {
+    card.className = 'result-card show not-found';
+    content.innerHTML = `<div class="error-msg">⚠ Could not reach local FCC database. Ensure the Incident Management API server is running on port 5050.</div>`;
+  }
+}
+
+function isExpired(dateStr) {
+  if(!dateStr) return false;
+  return new Date(dateStr) < new Date();
+}
+
+async function advSearch() {
+  const params = new URLSearchParams();
+  const last = document.getElementById('s-last').value.trim();
+  const first = document.getElementById('s-first').value.trim();
+  const state = document.getElementById('s-state').value;
+  const cls = document.getElementById('s-class').value;
+  const city = document.getElementById('s-city').value.trim();
+  const grid = document.getElementById('s-grid').value.trim();
+
+  if(last) params.append('last_name', last);
+  if(first) params.append('first_name', first);
+  if(state) params.append('state', state);
+  if(cls) params.append('license_class', cls);
+  if(city) params.append('city', city);
+  if(grid) params.append('grid', grid);
+
+  if(!params.toString()) { alert('Enter at least one search criterion.'); return; }
+
+  const container = document.getElementById('adv-results');
+  container.innerHTML = '<div class="loading">🔍 Searching FCC database…</div>';
+
+  try {
+    const r = await fetch(`${API}/fcc/search?${params.toString()}&limit=100`);
+    const results = await r.json();
+
+    document.getElementById('result-count').textContent = `${results.length} result${results.length!==1?'s':''} found`;
+
+    if(!results.length) {
+      container.innerHTML = '<div class="error-msg">No results found. Try broader search criteria.</div>';
+      return;
+    }
+
+    const classLabels = {T:'Tech',G:'General',E:'Extra',N:'Novice',P:'Advanced'};
+
+    container.innerHTML = `
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Callsign</th>
+            <th>Name</th>
+            <th>Class</th>
+            <th>City</th>
+            <th>State</th>
+            <th>Status</th>
+            <th>Expires</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${results.map(r=>`<tr>
+            <td><span class="callsign-link" onclick="lookupDirect('${r.callsign}')">${esc(r.callsign)}</span></td>
+            <td>${esc(r.name||[r.first_name,r.last_name].filter(Boolean).join(' ')||'—')}</td>
+            <td>${classLabels[r.license_class||r.op_class]||r.license_class||r.op_class||'—'}</td>
+            <td>${esc(r.city||'—')}</td>
+            <td>${esc(r.state||'—')}</td>
+            <td style="color:${r.status==='A'?'var(--green)':'var(--red)'};">
+              ${r.status==='A'?'Active':'Expired'}
+            </td>
+            <td>${esc(r.expired_date||'—')}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch {
+    container.innerHTML = '<div class="error-msg">⚠ Could not reach FCC database. Ensure API server is running on port 5050.</div>';
+  }
+}
+
+function clearAdv() {
+  ['s-last','s-first','s-city','s-grid'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('s-state').value='';
+  document.getElementById('s-class').value='';
+  document.getElementById('adv-results').innerHTML='';
+  document.getElementById('result-count').textContent='';
+}
+
+function addToRoster(callsign) {
+  // Navigate to roster with pre-filled callsign
+  window.location.href = `roster.html?callsign=${encodeURIComponent(callsign)}`;
+}
+
+function copyInfo(callsign) {
+  navigator.clipboard.writeText(callsign).then(()=>alert(`Copied: ${callsign}`)).catch(()=>{});
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Check for ?call= param
+const urlCall = new URLSearchParams(location.search).get('call');
+if(urlCall) {
+  document.getElementById('call-input').value = urlCall.toUpperCase();
+  lookupCallsign();
+}
+
+renderRecent();
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

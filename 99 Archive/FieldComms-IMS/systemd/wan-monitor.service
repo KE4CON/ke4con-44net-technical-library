@@ -1,0 +1,20 @@
+[Unit]
+Description=WAN Status Monitor (InstyConnect + Starlink)
+Documentation=https://github.com/KE4CON/CrossPlatformAPRS
+After=network.target fcc-lookup.service
+Wants=network.target
+
+[Service]
+Type=simple
+User=fieldcomms
+Group=fieldcomms
+WorkingDirectory=/opt/fieldcomms
+ExecStart=/opt/fieldcomms/venv/bin/python /opt/fieldcomms/python/wan_monitor.py
+Restart=always
+RestartSec=15
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=wan-monitor
+
+[Install]
+WantedBy=multi-user.target

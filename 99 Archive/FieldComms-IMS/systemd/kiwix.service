@@ -1,0 +1,28 @@
+[Unit]
+Description=Kiwix Offline Library Server (Port 8081)
+Documentation=https://www.kiwix.org/
+After=network.target
+
+[Service]
+Type=simple
+User=kiwix
+Group=kiwix
+WorkingDirectory=/opt/kiwix
+
+# Serves all ZIMs registered in library.xml
+# Add ZIMs with: sudo bash /opt/fieldcomms/scripts/kiwix_setup.sh --tier N
+ExecStart=/usr/bin/kiwix-serve \
+    --port=8081 \
+    --library /opt/kiwix/library.xml
+
+Restart=on-failure
+RestartSec=15
+MemoryMax=512M
+TasksMax=64
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=kiwix
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — ICS Platform</title>
+<link rel="stylesheet" href="../theme.css">
+<style>
+.page-header {
+  background: linear-gradient(135deg, var(--eoc) 0%, var(--eoc-lt) 100%);
+  border-bottom: 2px solid var(--eoc);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.page-header a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; }
+.page-header a:hover { color: #fff; }
+.page-title { font-family: var(--font-hd); font-size: 18px; color: var(--eoc); letter-spacing: 2px; }
+
+/* ICS nav bar */
+.ics-nav {
+  background: var(--panel2); border-bottom: 1px solid var(--line);
+  padding: 0; display: flex; overflow-x: auto;
+}
+.ics-nav a {
+  display: flex; align-items: center; gap: 6px;
+  padding: 11px 18px; text-decoration: none;
+  color: var(--muted); font-family: var(--font-hd); font-size: 11px;
+  letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+  border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s;
+}
+.ics-nav a:hover { color: var(--txt); }
+.ics-nav a.active { color: var(--eoc); border-bottom-color: var(--eoc); }
+.ics-nav a .dot {
+  width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: 0.6;
+}
+
+.container { max-width: 1100px; margin: 0 auto; padding: 20px 20px 40px; }
+
+.sec-label {
+  font-family: var(--font-hd); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--eoc); padding: 16px 0 8px;
+  display: flex; align-items: center; gap: 10px;
+}
+.sec-label::after { content:''; flex:1; height:1px; background: var(--line); }
+
+/* Incident selector */
+.incident-bar {
+  background: var(--panel); border: 1px solid var(--amber); border-radius: 8px;
+  padding: 14px 18px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.incident-name { font-family: var(--font-hd); font-size: 20px; color: var(--amber); }
+.incident-meta { font-size: 12px; color: var(--muted); }
+.incident-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.ibadge {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 4px;
+  padding: 3px 8px; font-size: 11px; color: var(--muted);
+}
+
+/* Section cards */
+.section-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.section-card {
+  background: var(--input-bg); border: 1px solid var(--line); border-radius: 10px;
+  padding: 20px; text-decoration: none; color: var(--txt);
+  display: flex; flex-direction: column; gap: 10px;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  position: relative; overflow: hidden;
+}
+.section-card::before {
+  content:''; position:absolute; top:0; left:0; bottom:0; width:4px;
+  background: var(--card-color, var(--eoc));
+}
+.section-card:hover { border-color: var(--card-color); background: var(--panel2); transform: translateY(-2px); text-decoration: none; }
+.sc-icon { font-size: 32px; }
+.sc-name { font-family: var(--font-hd); font-size: 16px; color: var(--txt); letter-spacing: 0.5px; }
+.sc-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.sc-stats { display: flex; gap: 12px; margin-top: 4px; }
+.sc-stat { font-size: 11px; }
+.sc-stat .sv { font-family: var(--font-hd); font-size: 18px; display: block; }
+
+/* Activity feed */
+.activity-list { display: flex; flex-direction: column; gap: 0; }
+.activity-row {
+  display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); align-items: flex-start;
+}
+.activity-row:last-child { border-bottom: none; }
+.ac-time { font-family: var(--font-hd); font-size: 10px; color: var(--muted); min-width: 50px; padding-top: 1px; }
+.ac-badge {
+  font-size: 9px; font-family: var(--font-hd); letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 2px 6px; border-radius: 3px; white-space: nowrap;
+}
+.ac-text { font-size: 12px; color: var(--txt); line-height: 1.4; }
+.ac-section { font-size: 10px; color: var(--muted); }
+
+/* New incident modal */
+.modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:50; align-items:center; justify-content:center; }
+.modal-bg.open { display:flex; }
+.modal { background:var(--panel); border:2px solid var(--amber); border-radius:10px; width:min(540px,95vw); padding:24px; position:relative; }
+.modal-close { position:absolute; top:12px; right:16px; background:none; border:none; color:var(--muted); font-size:22px; cursor:pointer; }
+.modal-close:hover { color:var(--txt); }
+.modal-title { font-family:var(--font-hd); font-size:18px; color:var(--eoc); margin-bottom:16px; }
+.field { margin-bottom:12px; }
+.field label { font-size:11px; color:var(--muted); display:block; margin-bottom:4px; }
+.field input, .field select, .field textarea {
+  width:100%; box-sizing:border-box;
+  background:var(var(--input-bg); border:1px solid var(--line); border-radius:4px;
+  color:var(--txt); padding:7px 10px; font-size:13px;
+}
+.field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color: var(--eoc-lt); }
+.two-f { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <a href="../index.html">⌂ Home</a>
+  <span style="color:var(--line)">›</span>
+  <span class="page-title">🏛 ICS PLATFORM</span>
+  <span style="margin-left:auto;display:flex;gap:8px">
+    <button class="btn btn-sm" onclick="openNewIncident()">+ New Incident</button>
+    <button class="btn btn-sm" onclick="advancePeriod()" style="background:var(--panel2)" id="advBtn" disabled title="Closes current operational period and opens the next one. All forms remain accessible — they are attached to the incident, not the period. New assignments start fresh.">⏭ Advance Period</button>
+  </span>
+</div>
+
+<nav class="ics-nav">
+  <a href="index.html" class="active">🏛 Overview</a>
+  <a href="command.html">⭐ Command</a>
+  <a href="operations.html">🔴 Operations</a>
+  <a href="planning.html">📋 Planning</a>
+  <a href="logistics.html">🟢 Logistics</a>
+  <a href="finance.html">💜 Finance</a>
+  <a href="planningp.html">🅿 Planning P</a>
+</nav>
+
+<div class="container">
+
+  <!-- Incident bar -->
+  <div id="incidentBar" style="display:none" class="incident-bar">
+    <div>
+      <div class="incident-name" id="incName">—</div>
+      <div class="incident-meta" id="incMeta">Loading…</div>
+    </div>
+    <div class="incident-badges" id="incBadges"></div>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="btn btn-sm" onclick="loadIncidents()" style="background:var(--panel2)">⟳</button>
+    </div>
+  </div>
+
+  <!-- No incident -->
+  <div id="noIncident" style="text-align:center;padding:60px 20px">
+    <div style="font-size:48px;margin-bottom:12px">🏛</div>
+    <div style="font-family:var(--font-hd);font-size:18px;color:var(--txt);margin-bottom:8px">No Active Incident</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Create a new incident to activate the ICS platform.</div>
+    <button class="btn" onclick="openNewIncident()">+ Create Incident</button>
+  </div>
+
+  <!-- ICS Sections -->
+  <div id="mainContent" style="display:none">
+    <div class="sec-label">📂 ICS Sections</div>
+    <div class="section-grid">
+      <a href="command.html" class="section-card" style="--card-color:var(--eoc)">
+        <div class="sc-icon">⭐</div>
+        <div class="sc-name">Command</div>
+        <div class="sc-desc">Incident objectives, safety messages, public info, agency liaison.</div>
+        <div class="sc-stats">
+          <div class="sc-stat" style="color:var(--eoc)"><span class="sv" id="sc-obj">—</span>Objectives</div>
+          <div class="sc-stat" style="color:var(--muted)"><span class="sv" id="sc-period">—</span>Op Period</div>
+        </div>
+      </a>
+      <a href="operations.html" class="section-card" style="--card-color:var(--red)">
+        <div class="sc-icon">🔴</div>
+        <div class="sc-name">Operations</div>
+        <div class="sc-desc">Tactical resources, assignments, T-cards, division/group management.</div>
+        <div class="sc-stats">
+          <div class="sc-stat" style="color:var(--red)"><span class="sv" id="sc-res">—</span>Resources</div>
+          <div class="sc-stat" style="color:var(--muted)"><span class="sv" id="sc-tcards">—</span>T-Cards</div>
+        </div>
+      </a>
+      <a href="planning.html" class="section-card" style="--card-color:var(--blue)">
+        <div class="sc-icon">📋</div>
+        <div class="sc-name">Planning</div>
+        <div class="sc-desc">IAP forms, situation status, resource status board, documentation.</div>
+        <div class="sc-stats">
+          <div class="sc-stat" style="color:var(--blue)"><span class="sv" id="sc-forms">—</span>IAP Forms</div>
+          <div class="sc-stat" style="color:var(--muted)"><span class="sv" id="sc-docs">—</span>Docs</div>
+        </div>
+      </a>
+      <a href="logistics.html" class="section-card" style="--card-color:var(--green)">
+        <div class="sc-icon">🟢</div>
+        <div class="sc-name">Logistics</div>
+        <div class="sc-desc">Communications plan, supply chain, facilities, transportation, food.</div>
+        <div class="sc-stats">
+          <div class="sc-stat" style="color:var(--green)"><span class="sv" id="sc-supply">—</span>Supply Items</div>
+          <div class="sc-stat" style="color:var(--muted)"><span class="sv" id="sc-meals">—</span>Meals Served</div>
+        </div>
+      </a>
+      <a href="finance.html" class="section-card" style="--card-color:#c850ff">
+        <div class="sc-icon">💜</div>
+        <div class="sc-name">Finance / Admin</div>
+        <div class="sc-desc">Cost accounting, time tracking, procurement, compensation.</div>
+        <div class="sc-stats">
+          <div class="sc-stat" style="color:#c850ff"><span class="sv" id="sc-cost">$0</span>Total Cost</div>
+          <div class="sc-stat" style="color:var(--muted)"><span class="sv" id="sc-personnel">—</span>Personnel</div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Activity feed -->
+    <div class="sec-label" style="margin-top:8px">⚡ Recent Activity</div>
+    <div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px">
+      <div class="activity-list" id="activityFeed">
+        <div style="text-align:center;padding:20px;color:var(--muted)">No activity yet</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- New incident modal -->
+<div class="modal-bg" id="newIncModal" onclick="if(event.target===this)closeNewInc()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeNewInc()">✕</button>
+    <div class="modal-title">New Incident</div>
+    <div class="field">
+      <label>Incident Name *</label>
+      <input type="text" id="niName" placeholder="Winter Storm Alpha">
+    </div>
+    <div class="two-f">
+      <div class="field">
+        <label>Type</label>
+        <select id="niType">
+          <option value="natural">Natural Disaster</option>
+          <option value="hazmat">HazMat</option>
+          <option value="search">Search &amp; Rescue</option>
+          <option value="mass_casualty">Mass Casualty</option>
+          <option value="communications">Communications</option>
+          <option value="training">Training / Exercise</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Jurisdiction</label>
+        <input type="text" id="niJurisdiction" placeholder="Franklin County">
+      </div>
+    </div>
+    <div class="two-f">
+      <div class="field">
+        <label>Incident Commander</label>
+        <input type="text" id="niIC" placeholder="Jane Smith W8ABC">
+      </div>
+      <div class="field">
+        <label>Op Period Duration (hrs)</label>
+        <input type="number" id="niPeriodHrs" value="12" min="1" max="24">
+      </div>
+    </div>
+    <div class="field">
+      <label>Location</label>
+      <input type="text" id="niLocation" placeholder="Columbus, Ohio">
+    </div>
+    <div class="field">
+      <label>Situation Summary</label>
+      <textarea id="niSummary" placeholder="Brief description…" style="min-height:60px"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-sm" onclick="closeNewInc()" style="background:var(--panel2)">Cancel</button>
+      <button class="btn" onclick="createIncident()">🏛 Activate Incident</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://192.168.50.1:5055/api/ics';
+let activeIncident = null;
+
+async function loadIncidents() {
+  try {
+    const res = await fetch(`${API}/incidents`);
+    const data = await res.json();
+    const incidents = data.incidents || [];
+    const active = incidents.find(i => i.status === 'active') || incidents[0];
+    if (active) {
+      activeIncident = active;
+      showIncident(active);
+      loadStats(active.id);
+      loadActivity(active.id);
+      document.getElementById('advBtn').disabled = false;
+    } else {
+      showEmpty();
+    }
+  } catch(e) {
+    showEmpty();
+    console.warn('ICS server unavailable');
+  }
+}
+
+function showEmpty() {
+  document.getElementById('noIncident').style.display = '';
+  document.getElementById('mainContent').style.display = 'none';
+  document.getElementById('incidentBar').style.display = 'none';
+}
+
+function showIncident(inc) {
+  document.getElementById('noIncident').style.display = 'none';
+  document.getElementById('mainContent').style.display = '';
+  document.getElementById('incidentBar').style.display = '';
+  document.getElementById('incName').textContent = inc.name;
+  document.getElementById('incMeta').textContent =
+    `${inc.type || 'Incident'} · ${inc.jurisdiction || ''} · IC: ${inc.incident_commander || '—'}`;
+  const badges = [
+    `Op Period ${inc.current_period || 1}`,
+    `Started ${new Date(inc.start_time).toLocaleDateString()}`,
+    inc.status ? inc.status.toUpperCase() : '',
+  ].filter(Boolean);
+  document.getElementById('incBadges').innerHTML = badges.map(b =>
+    `<span class="ibadge">${b}</span>`).join('');
+}
+
+async function loadStats(incId) {
+  try {
+    const res = await fetch(`${API}/incidents/${incId}/stats`);
+    const s = await res.json();
+    document.getElementById('sc-obj').textContent = s.objectives ?? '—';
+    document.getElementById('sc-period').textContent = s.current_period ?? '—';
+    document.getElementById('sc-res').textContent = s.resources ?? '—';
+    document.getElementById('sc-tcards').textContent = s.tcards ?? '—';
+    document.getElementById('sc-forms').textContent = s.iap_forms ?? '—';
+    document.getElementById('sc-docs').textContent = s.documents ?? '—';
+    document.getElementById('sc-supply').textContent = s.supply_items ?? '—';
+    document.getElementById('sc-meals').textContent = s.meals ?? '—';
+    document.getElementById('sc-cost').textContent = s.total_cost != null ? `$${s.total_cost.toLocaleString()}` : '$0';
+    document.getElementById('sc-personnel').textContent = s.personnel ?? '—';
+  } catch(e) {}
+}
+
+async function loadActivity(incId) {
+  try {
+    const res = await fetch(`${API}/incidents/${incId}/activity`);
+    const data = await res.json();
+    const feed = document.getElementById('activityFeed');
+    const items = data.activity || data.items || [];
+    if (!items.length) { feed.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">No activity yet</div>'; return; }
+    const sectionColors = { command:'var(--amber)', operations:'var(--red)', planning:'var(--blue)', logistics:'var(--green)', finance:'#c850ff' };
+    feed.innerHTML = items.slice(0,30).map(a => {
+      const sc = (a.section || 'command').toLowerCase();
+      const c = sectionColors[sc] || 'var(--muted)';
+      const t = new Date(a.timestamp);
+      const hm = t.getUTCHours().toString().padStart(2,'0') + ':' + t.getUTCMinutes().toString().padStart(2,'0');
+      return `<div class="activity-row">
+        <span class="ac-time">${hm}Z</span>
+        <span class="ac-badge" style="background:${c}22;color:${c};border:1px solid ${c}55">${a.section || 'CMD'}</span>
+        <div><div class="ac-text">${a.message || a.text || '—'}</div><div class="ac-section">${a.user || ''}</div></div>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+function openNewIncident() { document.getElementById('newIncModal').classList.add('open'); }
+function closeNewInc() { document.getElementById('newIncModal').classList.remove('open'); }
+
+async function createIncident() {
+  const name = document.getElementById('niName').value.trim();
+  if (!name) { alert('Incident name required'); return; }
+  const body = {
+    name, type: document.getElementById('niType').value,
+    jurisdiction: document.getElementById('niJurisdiction').value.trim(),
+    incident_commander: document.getElementById('niIC').value.trim(),
+    period_duration_hours: parseInt(document.getElementById('niPeriodHrs').value) || 12,
+    location: document.getElementById('niLocation').value.trim(),
+    summary: document.getElementById('niSummary').value.trim(),
+  };
+  try {
+    const res = await fetch(`${API}/incidents`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    if (!res.ok) throw new Error('Server error');
+    closeNewInc(); loadIncidents();
+  } catch(e) {
+    alert('ICS server unavailable. Start ics_platform_server.py first.');
+  }
+}
+
+async function advancePeriod() {
+  if (!activeIncident) return;
+  if (!confirm(`Advance to Operational Period ${(activeIncident.current_period || 1) + 1}?`)) return;
+  try {
+    await fetch(`${API}/incidents/${activeIncident.id}/advance_period`, { method:'POST' });
+    loadIncidents();
+  } catch(e) { alert('Failed to advance period'); }
+}
+
+window.addEventListener('load', loadIncidents);
+setInterval(() => { if (activeIncident) { loadStats(activeIncident.id); loadActivity(activeIncident.id); } }, 30000);
+</script>
+
+<script src="../lib/identity.js"></script>
+</body>
+</html>

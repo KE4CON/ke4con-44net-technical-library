@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NTS Radiogram — Incident Management</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.main-wrap { max-width: 900px; margin: 0 auto; padding: 20px 16px; }
+
+.page-header {
+  background: var(--panel); border: 1px solid var(--amber); border-radius: 8px;
+  padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.page-header h1 { font-family: var(--font-hd); font-size: 16px; color: var(--amber); letter-spacing: 2px; margin: 0; }
+
+.form-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px;
+  margin-bottom: 16px;
+}
+.form-card h2 {
+  font-family: var(--font-hd); font-size: 11px; letter-spacing: 0.2em; color: var(--amber);
+  text-transform: uppercase; margin: 0 0 14px; display: flex; align-items: center; gap: 10px;
+}
+.form-card h2::after { content:''; flex:1; height:1px; background: var(--line); }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+.full { grid-column: 1/-1; }
+
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 11px; color: var(--muted); }
+.form-group input, .form-group select, .form-group textarea { font-size: 13px; }
+
+.word-count { font-size: 11px; color: var(--muted); text-align: right; margin-top: 4px; }
+.word-count .num { color: var(--amber); font-weight: bold; }
+
+/* Rendered radiogram */
+.radiogram-preview {
+  background: #fff; color: #000; border: 2px solid #000;
+  border-radius: 0; padding: 20px; font-family: 'Courier New', monospace;
+  font-size: 13px; line-height: 1.7; display: none; margin-bottom: 16px;
+}
+.radiogram-preview.show { display: block; }
+.rg-header { text-align: center; font-weight: bold; font-size: 15px; letter-spacing: 2px; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+.rg-preamble { margin-bottom: 8px; }
+.rg-preamble-label { font-weight: bold; }
+.rg-address { margin-bottom: 8px; }
+.rg-text { background: #f5f5f5; padding: 8px; border: 1px solid #ccc; margin: 8px 0; line-height: 1.8; }
+.rg-sig { margin-top: 8px; }
+
+/* Precedence colors */
+.prec-R { color: #333; }
+.prec-W { color: #0066cc; }
+.prec-P { color: #cc6600; }
+.prec-E { color: #cc0000; font-weight: bold; }
+
+/* Log table */
+.log-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.log-table th { background: var(--panel2); color: var(--muted); padding: 7px 10px; text-align: left; font-weight: normal; }
+.log-table td { padding: 7px 10px; border-top: 1px solid var(--line); }
+.log-table tr:hover td { background: var(--panel2); }
+
+.prec-badge { padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: bold; }
+.pb-R { background: rgba(100,100,100,0.2); color: #aaa; }
+.pb-W { background: rgba(96,170,255,0.2); color: var(--blue); }
+.pb-P { background: rgba(245,166,35,0.2); color: var(--amber); }
+.pb-E { background: rgba(220,60,60,0.2); color: var(--red); }
+
+@media print {
+  .nav-bar, .page-header, .form-card, .action-bar, #form-section { display: none !important; }
+  .radiogram-preview { display: block !important; border: 2px solid #000; }
+  body { background: white; }
+}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="index.html" class="nav-logo">⬡ Incident Management</a>
+  <div class="nav-links">
+    <a href="index.html">Dashboard</a>
+    <a href="netcontrol.html">Net Control</a>
+    <a href="nts.html" class="active">NTS Radiogram</a>
+    <a href="ics213.html">ICS-213</a>
+  </div>
+  <div class="nav-right">
+    <span id="utc-clock" style="font-family:var(--font-hd);color:var(--green);font-size:13px;letter-spacing:1px;"></span>
+  </div>
+</nav>
+
+<div class="main-wrap">
+  <div class="page-header">
+    <div>
+      <h1>📋 NTS RADIOGRAM GENERATOR</h1>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px;">ARRL National Traffic System standard format</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="clearForm()">↺ New Form</button>
+      <button class="btn btn-secondary" onclick="loadFromLog()">📂 Load Saved</button>
+    </div>
+  </div>
+
+  <div id="form-section">
+    <!-- Preamble -->
+    <div class="form-card">
+      <h2>Preamble (Header)</h2>
+      <div class="grid-4">
+        <div class="form-group">
+          <label>Message Number *</label>
+          <input type="text" id="msg-number" placeholder="001">
+        </div>
+        <div class="form-group">
+          <label>Precedence *</label>
+          <select id="msg-prec" onchange="updatePrecHelp()">
+            <option value="R">R — Routine</option>
+            <option value="W">W — Welfare</option>
+            <option value="P">P — Priority</option>
+            <option value="E">E — Emergency</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Handling Instructions</label>
+          <select id="msg-handling">
+            <option value="">None</option>
+            <option value="HXA">HXA — Collect on delivery</option>
+            <option value="HXB">HXB — Cancel if not del. in __hrs</option>
+            <option value="HXC">HXC — Report date/time delivery</option>
+            <option value="HXD">HXD — Report to originating stn</option>
+            <option value="HXE">HXE — Serving stn report reply</option>
+            <option value="HXF">HXF — Hold for arrival __</option>
+            <option value="HXG">HXG — Delivery by mail</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>HX Supplement (if any)</label>
+          <input type="text" id="msg-hx-sup" placeholder="hours or name">
+        </div>
+        <div class="form-group">
+          <label>Station of Origin *</label>
+          <input type="text" id="msg-origin" placeholder="W8XYZ" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="form-group">
+          <label>Check (word count) *</label>
+          <input type="text" id="msg-check" placeholder="auto" readonly style="background:var(--panel2);">
+        </div>
+        <div class="form-group">
+          <label>Place of Origin *</label>
+          <input type="text" id="msg-place" placeholder="COLUMBUS OH">
+        </div>
+        <div class="form-group">
+          <label>Date / Time Filed *</label>
+          <input type="text" id="msg-datetime" placeholder="0930 JUN 7">
+        </div>
+      </div>
+      <div id="prec-help" style="margin-top:10px;padding:8px 12px;border-radius:6px;font-size:12px;background:rgba(100,100,100,0.1);color:var(--muted);"></div>
+    </div>
+
+    <!-- Address -->
+    <div class="form-card">
+      <h2>Address</h2>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Addressee Name *</label>
+          <input type="text" id="addr-name" placeholder="John Smith">
+        </div>
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input type="text" id="addr-phone" placeholder="614-555-1234">
+        </div>
+        <div class="form-group full">
+          <label>Street Address</label>
+          <input type="text" id="addr-street" placeholder="123 Main St">
+        </div>
+        <div class="form-group">
+          <label>City</label>
+          <input type="text" id="addr-city" placeholder="Columbus">
+        </div>
+        <div class="form-group">
+          <label>State / Zip</label>
+          <input type="text" id="addr-state-zip" placeholder="OH 43215">
+        </div>
+      </div>
+    </div>
+
+    <!-- Message text -->
+    <div class="form-card">
+      <h2>Message Text</h2>
+      <div class="form-group">
+        <label>Message Text * — Use plain words; avoid punctuation (spell out X for period)</label>
+        <textarea id="msg-text" rows="5" placeholder="ARRIVED SAFELY X EVERYONE FINE X WILL CALL WHEN SETTLED X LOVE" oninput="countWords()"></textarea>
+        <div class="word-count">Word count: <span class="num" id="word-count-display">0</span></div>
+      </div>
+    </div>
+
+    <!-- Signature -->
+    <div class="form-card">
+      <h2>Signature</h2>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Sender Name / Callsign</label>
+          <input type="text" id="sig-name" placeholder="Jane Smith / W8ABC">
+        </div>
+        <div class="form-group">
+          <label>Phone / Email</label>
+          <input type="text" id="sig-contact" placeholder="614-555-9999">
+        </div>
+      </div>
+    </div>
+
+    <div class="action-bar" style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="generateRadiogram()">📋 Generate Radiogram</button>
+      <button class="btn btn-secondary" onclick="autofillDateTime()">⏰ Auto-fill Date/Time</button>
+      <button class="btn btn-secondary" onclick="autofillNumber()">🔢 Auto-fill Msg #</button>
+    </div>
+  </div>
+
+  <!-- Preview -->
+  <div class="radiogram-preview" id="radiogram-preview">
+    <div class="rg-header">ARRL NATIONAL TRAFFIC SYSTEM — RADIOGRAM</div>
+    <div id="rg-body"></div>
+  </div>
+
+  <div id="preview-actions" style="display:none;margin-bottom:20px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="window.print()">🖨 Print Radiogram</button>
+      <button class="btn btn-secondary" onclick="saveToLog()">💾 Save to Log</button>
+      <button class="btn btn-secondary" onclick="copyText()">📋 Copy Text</button>
+      <button class="btn btn-secondary" onclick="sendToNet()">📻 Send to Net Log</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('form-section').style.display='block';document.getElementById('radiogram-preview').classList.remove('show');document.getElementById('preview-actions').style.display='none';">← Edit</button>
+    </div>
+  </div>
+
+  <!-- Saved log -->
+  <div style="font-family:var(--font-hd);font-size:11px;letter-spacing:0.2em;color:var(--eoc);margin-bottom:10px;display:flex;align-items:center;gap:10px;">
+    SAVED RADIOGRAMS
+    <div style="flex:1;height:1px;background:var(--line);"></div>
+    <button class="btn btn-secondary" onclick="clearLog()" style="font-size:10px;padding:3px 8px;">Clear All</button>
+  </div>
+  <div class="form-card" style="padding:0;overflow:hidden;">
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th>#</th><th>Prec</th><th>To</th><th>Origin</th><th>Date Filed</th><th>Check</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="log-tbody">
+        <tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted);">No radiograms saved.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const API = 'http://192.168.50.1:5050';
+let savedGrams = JSON.parse(localStorage.getItem('fc_nts_log')||'[]');
+let currentGram = null;
+
+setInterval(()=>{ document.getElementById('utc-clock').textContent = new Date().toUTCString().slice(17,22)+'Z'; },1000);
+
+const PREC_HELP = {
+  R:'ROUTINE — Normal message traffic with no urgency.',
+  W:'WELFARE — A message concerning the health and welfare of an individual. Sent after a disaster.',
+  P:'PRIORITY — Important messages with some degree of urgency. MARS or government traffic.',
+  E:'EMERGENCY — Any message with life-or-death urgency, disaster declaration, or official government communications.'
+};
+
+function updatePrecHelp() {
+  const p = document.getElementById('msg-prec').value;
+  document.getElementById('prec-help').textContent = PREC_HELP[p]||'';
+}
+
+function countWords() {
+  const text = document.getElementById('msg-text').value.trim();
+  const words = text ? text.split(/\s+/).filter(w=>w.length>0) : [];
+  const count = words.length;
+  document.getElementById('word-count-display').textContent = count;
+  document.getElementById('msg-check').value = count;
+  return count;
+}
+
+function autofillDateTime() {
+  const now = new Date();
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const utcH = String(now.getUTCHours()).padStart(2,'0');
+  const utcM = String(now.getUTCMinutes()).padStart(2,'0');
+  const mon = months[now.getUTCMonth()];
+  const day = now.getUTCDate();
+  document.getElementById('msg-datetime').value = `${utcH}${utcM} ${mon} ${day}`;
+}
+
+function autofillNumber() {
+  const max = savedGrams.reduce((m,g)=>Math.max(m,parseInt(g.number)||0),0);
+  document.getElementById('msg-number').value = String(max+1).padStart(3,'0');
+}
+
+function buildPreamble() {
+  const num    = document.getElementById('msg-number').value.trim();
+  const prec   = document.getElementById('msg-prec').value;
+  const hx     = document.getElementById('msg-handling').value;
+  const hxsup  = document.getElementById('msg-hx-sup').value.trim();
+  const origin = document.getElementById('msg-origin').value.trim();
+  const check  = countWords();
+  const place  = document.getElementById('msg-place').value.trim();
+  const dt     = document.getElementById('msg-datetime').value.trim();
+
+  let preamble = `NR ${num} `;
+  preamble += prec;
+  if(hx) preamble += ' ' + hx + (hxsup?' '+hxsup:'');
+  preamble += ` ${origin} ${check} ${place} ${dt}`;
+  return preamble.toUpperCase();
+}
+
+function generateRadiogram() {
+  const num    = document.getElementById('msg-number').value.trim();
+  const origin = document.getElementById('msg-origin').value.trim();
+  const text   = document.getElementById('msg-text').value.trim();
+  const addrName = document.getElementById('addr-name').value.trim();
+
+  if(!num||!origin||!text||!addrName) {
+    alert('Please fill in: Message #, Station of Origin, Addressee Name, and Message Text.');
+    return;
+  }
+
+  const prec      = document.getElementById('msg-prec').value;
+  const hx        = document.getElementById('msg-handling').value;
+  const hxsup     = document.getElementById('msg-hx-sup').value.trim();
+  const check     = countWords();
+  const place     = document.getElementById('msg-place').value.trim();
+  const dt        = document.getElementById('msg-datetime').value.trim();
+  const phone     = document.getElementById('addr-phone').value.trim();
+  const street    = document.getElementById('addr-street').value.trim();
+  const citystate = document.getElementById('addr-state-zip').value.trim();
+  const city      = document.getElementById('addr-city').value.trim();
+  const sigName   = document.getElementById('sig-name').value.trim();
+  const sigCon    = document.getElementById('sig-contact').value.trim();
+
+  const precLabel = {R:'ROUTINE',W:'WELFARE',P:'PRIORITY',E:'EMERGENCY'};
+
+  let hxLine = '';
+  if(hx) hxLine = hx + (hxsup?' '+hxsup:'');
+
+  const bodyHtml = `
+    <div class="rg-preamble">
+      <span class="rg-preamble-label">PREAMBLE: </span>
+      <span class="prec-${prec}">
+        NR ${num} ${prec} ${hxLine} ${origin} ${check} ${place} ${dt}
+      </span>
+    </div>
+    <div style="margin-bottom:4px;"><strong>Precedence:</strong> <span class="prec-${prec}">${precLabel[prec]}</span></div>
+    <hr style="border-color:#ccc;margin:8px 0;">
+    <div class="rg-address">
+      <strong>TO:</strong> ${esc(addrName)}<br>
+      ${phone?`<strong>TEL:</strong> ${esc(phone)}<br>`:''}
+      ${street?esc(street)+'<br>':''}
+      ${[city,citystate].filter(Boolean).join(', ')}
+    </div>
+    <hr style="border-color:#ccc;margin:8px 0;">
+    <div class="rg-text">${esc(text.toUpperCase())}</div>
+    <hr style="border-color:#ccc;margin:8px 0;">
+    <div class="rg-sig">
+      <strong>FROM:</strong> ${esc(sigName||origin)}<br>
+      ${sigCon?esc(sigCon):''}
+    </div>
+    <div style="margin-top:16px;font-size:11px;color:#555;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+      <div>Received from: _____________ <br>at: _____ UTC ____</div>
+      <div>Sent to: _______________ <br>at: _____ UTC ____</div>
+      <div>Station: _______________ <br>Op: ________________</div>
+    </div>
+  `;
+
+  document.getElementById('rg-body').innerHTML = bodyHtml;
+  document.getElementById('radiogram-preview').classList.add('show');
+  document.getElementById('preview-actions').style.display='block';
+  document.getElementById('form-section').style.display='none';
+  document.getElementById('radiogram-preview').scrollIntoView({behavior:'smooth'});
+
+  currentGram = {
+    number:num, prec, origin, check,
+    place, datetime:dt, to:addrName,
+    text, sig:sigName||origin,
+    saved_at: new Date().toISOString()
+  };
+}
+
+function saveToLog() {
+  if(!currentGram) return;
+  savedGrams.unshift(currentGram);
+  if(savedGrams.length>50) savedGrams=savedGrams.slice(0,50);
+  localStorage.setItem('fc_nts_log', JSON.stringify(savedGrams));
+  // Also send to server
+  fetch(`${API}/api/forms`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(currentGram)}).catch(()=>{});
+  renderLog();
+  alert('Radiogram saved to log.');
+}
+
+function renderLog() {
+  const tbody = document.getElementById('log-tbody');
+  if(!savedGrams.length) {
+    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted);">No radiograms saved.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = savedGrams.map((g,i)=>`<tr>
+    <td style="font-family:var(--font-hd);">${esc(g.number)}</td>
+    <td><span class="prec-badge pb-${g.prec}">${g.prec}</span></td>
+    <td>${esc(g.to)}</td>
+    <td>${esc(g.origin)}</td>
+    <td>${esc(g.datetime)}</td>
+    <td>${esc(g.check)}</td>
+    <td style="display:flex;gap:4px;">
+      <button class="btn btn-secondary" onclick="loadGram(${i})" style="font-size:10px;padding:3px 6px;">Load</button>
+      <button class="btn btn-danger" onclick="deleteGram(${i})" style="font-size:10px;padding:3px 6px;">✕</button>
+    </td>
+  </tr>`).join('');
+}
+
+function loadGram(i) {
+  const g = savedGrams[i]; if(!g) return;
+  document.getElementById('msg-number').value = g.number||'';
+  document.getElementById('msg-prec').value = g.prec||'R';
+  document.getElementById('msg-origin').value = g.origin||'';
+  document.getElementById('msg-place').value = g.place||'';
+  document.getElementById('msg-datetime').value = g.datetime||'';
+  document.getElementById('msg-text').value = g.text||'';
+  document.getElementById('sig-name').value = g.sig||'';
+  document.getElementById('addr-name').value = g.to||'';
+  countWords(); updatePrecHelp();
+}
+
+function deleteGram(i) {
+  if(!confirm('Delete this radiogram?')) return;
+  savedGrams.splice(i,1);
+  localStorage.setItem('fc_nts_log', JSON.stringify(savedGrams));
+  renderLog();
+}
+
+function clearLog() {
+  if(!confirm('Clear all saved radiograms?')) return;
+  savedGrams=[];
+  localStorage.setItem('fc_nts_log','[]');
+  renderLog();
+}
+
+function loadFromLog() {
+  document.querySelector('.log-table').scrollIntoView({behavior:'smooth'});
+}
+
+function copyText() {
+  const text = [
+    buildPreamble(),
+    'TO: '+document.getElementById('addr-name').value,
+    document.getElementById('addr-phone').value,
+    document.getElementById('addr-street').value,
+    [document.getElementById('addr-city').value,document.getElementById('addr-state-zip').value].filter(Boolean).join(', '),
+    '',
+    document.getElementById('msg-text').value.toUpperCase(),
+    '',
+    'FROM: '+(document.getElementById('sig-name').value||document.getElementById('msg-origin').value),
+  ].filter(l=>l!==undefined).join('\n');
+  navigator.clipboard.writeText(text).then(()=>alert('Copied to clipboard.')).catch(()=>{});
+}
+
+function sendToNet() {
+  alert('Feature: In Net Control, this radiogram\'s traffic will be logged as a message entry. Navigate to Net Control and use the Traffic Log tab.');
+}
+
+function clearForm() {
+  ['msg-number','msg-origin','msg-place','msg-datetime','msg-hx-sup',
+   'addr-name','addr-phone','addr-street','addr-city','addr-state-zip',
+   'msg-text','sig-name','sig-contact'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('msg-prec').value='R';
+  document.getElementById('msg-handling').value='';
+  document.getElementById('msg-check').value='';
+  document.getElementById('word-count-display').textContent='0';
+  document.getElementById('radiogram-preview').classList.remove('show');
+  document.getElementById('preview-actions').style.display='none';
+  document.getElementById('form-section').style.display='block';
+  updatePrecHelp();
+  currentGram=null;
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+updatePrecHelp();
+renderLog();
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+[Unit]
+Description=FieldComms Offline Map Tile Server (Port 8083)
+After=network.target
+Documentation=man:python3(1)
+
+[Service]
+Type=simple
+User=fieldcomms
+Group=fieldcomms
+WorkingDirectory=/opt/fieldcomms
+
+Environment=FC_TILE_DIR=/opt/fieldcomms/tiles
+Environment=FC_TILE_PORT=8083
+Environment=FC_TILE_HOST=0.0.0.0
+Environment=FC_TILE_CACHE=86400
+
+ExecStart=/opt/fieldcomms/venv/bin/python /opt/fieldcomms/python/tile_server.py
+
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fieldcomms-tiles
+
+[Install]
+WantedBy=multi-user.target

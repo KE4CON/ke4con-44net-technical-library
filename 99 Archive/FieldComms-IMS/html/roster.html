@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Member Roster — Incident Management</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.tabs { display:flex; border-bottom:1px solid var(--line); margin-bottom:16px; }
+.tab { padding:10px 20px; cursor:pointer; font-size:13px; border-bottom:2px solid transparent; color:var(--muted); }
+.tab.active { color:var(--blue); border-bottom-color:var(--blue); }
+.member-card {
+  background: var(--input-bg); border:1px solid var(--line); border-radius:8px; padding:14px 16px;
+  display:flex; align-items:flex-start; gap:14px; cursor:pointer;
+  transition: border-color 0.15s;
+}
+.member-card:hover { border-color:var(--blue); }
+.member-avatar {
+  width:44px; height:44px; border-radius:50%; background:var(--panel2);
+  display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0;
+}
+.member-ids { display:flex; gap:4px; flex-wrap:wrap; margin-top:6px; }
+.cert-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin:1px; }
+.cert-green { background:var(--green); }
+.cert-gray  { background:var(--dim); }
+.walkin-badge { background: #fef3d8; border:1px solid var(--amber); color:var(--eoc); padding:2px 8px; border-radius:10px; font-size:10px; }
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:100; display:flex; align-items:center; justify-content:center; }
+.modal-box { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:24px; width:600px; max-width:95vw; max-height:90vh; overflow-y:auto; }
+.field-group { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+.field-group.three { grid-template-columns:1fr 1fr 1fr; }
+.certs-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:6px; }
+.cert-check { display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; }
+.act-row { display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--panel2); border-radius:6px; margin-bottom:6px; }
+.act-status { padding:3px 10px; border-radius:10px; font-size:11px; font-weight:bold; }
+.act-active   { background: #d4f0de; color:var(--green); }
+.act-standby  { background: #fef3d8; color:var(--eoc); }
+.act-released { background:#2a2a2a; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="nav-bar no-print">
+  <span class="logo">👥 ROSTER</span>
+  <a href="index.html">Dashboard</a>
+  <a href="netcontrol.html">Net Control</a>
+  <a href="resources.html">Resources</a>
+</div>
+
+<div class="page-wrap">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+  <div style="font-family:var(--font-hd);font-size:20px;letter-spacing:2px">MEMBER ROSTER</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <input type="text" id="searchInput" placeholder="🔍 Search name, callsign, ID…" style="width:240px" oninput="filterMembers()">
+    <button onclick="openAddMember()">+ Add Member</button>
+    <button onclick="document.getElementById('importFile').click()" title="CSV columns: member_id, callsign, radio_id, first_name, last_name, role, phone, email, grid&#10;Optional: license_class, roles (semicolon-separated)&#10;&#10;• callsign: leave blank for non-ham members&#10;• member_id: ESV member number (e.g. ESV-042)&#10;• radio_id: Starcom radio ID (all members)">📥 Import CSV ⓘ</button>
+    <input type="file" id="importFile" accept=".csv" style="display:none" onchange="importCSV(this)">
+    <button onclick="exportCSV()">📤 Export CSV</button>
+    <button onclick="window.print()">🖨 Print</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('directory')">📋 Directory (<span id="memberCount">0</span>)</div>
+  <div class="tab" onclick="showTab('activation')">✅ Activation (<span id="actCount">0</span>)</div>
+</div>
+
+<!-- Directory tab -->
+<div id="tabDirectory">
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:12px" id="memberList">
+  <div style="color:var(--muted);text-align:center;padding:30px">Loading roster…</div>
+</div>
+</div>
+
+<!-- Activation tab -->
+<div id="tabActivation" style="display:none">
+  <div class="panel" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <input type="text" id="actSearch" placeholder="Search member to check in…" style="flex:1;max-width:300px" oninput="filterActivation()">
+    <button onclick="openWalkIn()" style="background:var(--amber);border-color: var(--eoc-lt);color:#000">+ Walk-In Check-In</button>
+    <button onclick="exportActivationLog()" class="no-print">📤 Export Log</button>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <!-- Roster to check from -->
+    <div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;letter-spacing:1px">ROSTER — CLICK TO CHECK IN</div>
+      <div id="actRosterList" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+    <!-- Currently activated -->
+    <div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;letter-spacing:1px">ACTIVATED PERSONNEL (<span id="actCount2">0</span>)</div>
+      <div id="actActiveList" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Add/Edit Member Modal -->
+<div id="memberModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeMemberModal()">
+<div class="modal-box">
+  <div style="font-family:var(--font-hd);font-size:16px;margin-bottom:16px" id="modalTitle">Add Member</div>
+  <input type="hidden" id="memberId">
+
+  <div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase">Identifiers</div>
+  <div class="field-group three">
+    <div><label style="font-size:10px;color:var(--muted)">Callsign</label><input type="text" id="fCallsign" placeholder="W8XXX" oninput="this.value=this.value.toUpperCase()"></div>
+    <div><label style="font-size:10px;color:var(--muted)">Radio ID / Unit #</label><input type="text" id="fRadioId" placeholder="P25/DMR/GMRS"></div>
+    <div><label style="font-size:10px;color:var(--muted)">Member ID</label><input type="text" id="fMemberId" placeholder="ARES/RACES/ARRL"></div>
+  </div>
+
+  <div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase">Personal Info</div>
+  <div class="field-group three">
+    <div><label style="font-size:10px;color:var(--muted)">First Name</label><input type="text" id="fFirst"></div>
+    <div><label style="font-size:10px;color:var(--muted)">Last Name</label><input type="text" id="fLast"></div>
+    <div>
+      <label style="font-size:10px;color:var(--muted)">License Class</label>
+      <select id="fClass">
+        <option value="">—</option>
+        <option>Amateur Extra</option><option>General</option><option>Technician</option>
+        <option>Novice</option><option>Advanced</option><option>GMRS</option>
+        <option>No amateur license</option>
+      </select>
+    </div>
+  </div>
+  <div class="field-group">
+    <div><label style="font-size:10px;color:var(--muted)">Phone</label><input type="tel" id="fPhone"></div>
+    <div><label style="font-size:10px;color:var(--muted)">Email</label><input type="email" id="fEmail"></div>
+  </div>
+  <div class="field-group">
+    <div><label style="font-size:10px;color:var(--muted)">Address</label><input type="text" id="fAddress"></div>
+    <div><label style="font-size:10px;color:var(--muted)">Grid Square</label><input type="text" id="fGrid" maxlength="8" placeholder="EN90"></div>
+  </div>
+  <div><label style="font-size:10px;color:var(--muted)">Emergency Contact</label><input type="text" id="fEmContact" style="width:100%"></div>
+
+  <div style="font-size:11px;color:var(--muted);margin:12px 0 6px;text-transform:uppercase">Roles</div>
+  <div class="certs-grid" id="roleChecks">
+    <label class="cert-check"><input type="checkbox" name="role" value="Net Control (NCS)"> Net Control (NCS)</label>
+    <label class="cert-check"><input type="checkbox" name="role" value="Operator"> Operator</label>
+    <label class="cert-check"><input type="checkbox" name="role" value="Liaison"> Liaison</label>
+    <label class="cert-check"><input type="checkbox" name="role" value="Emergency Coordinator (EC)"> Emergency Coordinator (EC)</label>
+  </div>
+
+  <div style="font-size:11px;color:var(--muted);margin:12px 0 6px;text-transform:uppercase">Certifications</div>
+  <div class="certs-grid">
+    <label class="cert-check"><input type="checkbox" id="cICS100"> ICS-100</label>
+    <label class="cert-check"><input type="checkbox" id="cICS200"> ICS-200</label>
+    <label class="cert-check"><input type="checkbox" id="cICS300"> ICS-300</label>
+    <label class="cert-check"><input type="checkbox" id="cICS400"> ICS-400</label>
+    <label class="cert-check"><input type="checkbox" id="cICS700"> ICS-700</label>
+    <label class="cert-check"><input type="checkbox" id="cICS800"> ICS-800</label>
+    <label class="cert-check"><input type="checkbox" id="cEmComm1"> EmComm I</label>
+    <label class="cert-check"><input type="checkbox" id="cEmComm2"> EmComm II</label>
+    <label class="cert-check"><input type="checkbox" id="cCPR"> CPR/AED</label>
+    <label class="cert-check"><input type="checkbox" id="cFirstAid"> First Aid</label>
+    <label class="cert-check"><input type="checkbox" id="cCERT"> CERT</label>
+  </div>
+
+  <div style="font-size:11px;color:var(--muted);margin:12px 0 6px;text-transform:uppercase">Equipment</div>
+  <div class="certs-grid">
+    <label class="cert-check"><input type="checkbox" id="eHF"> HF Radio</label>
+    <label class="cert-check"><input type="checkbox" id="eVHF"> VHF/UHF</label>
+    <label class="cert-check"><input type="checkbox" id="eDigital"> Digital</label>
+    <label class="cert-check"><input type="checkbox" id="ePacket"> Packet</label>
+    <label class="cert-check"><input type="checkbox" id="ePACTOR"> PACTOR Modem</label>
+    <label class="cert-check"><input type="checkbox" id="eVARAHF"> VARA HF</label>
+    <label class="cert-check"><input type="checkbox" id="eVARAFM"> VARA FM</label>
+    <label class="cert-check"><input type="checkbox" id="eAPRS"> APRS</label>
+    <label class="cert-check"><input type="checkbox" id="eWinlink"> Winlink</label>
+    <label class="cert-check"><input type="checkbox" id="eGoBox"> Go-Box</label>
+    <label class="cert-check"><input type="checkbox" id="eGenerator"> Generator</label>
+    <label class="cert-check"><input type="checkbox" id="eBattery"> Battery/Solar</label>
+    <label class="cert-check"><input type="checkbox" id="eVehicle"> Vehicle Mount</label>
+  </div>
+
+  <div style="font-size:11px;color:var(--muted);margin:12px 0 6px;text-transform:uppercase">Notes</div>
+  <textarea id="fNotes" style="width:100%;height:60px" placeholder="Additional notes…"></textarea>
+
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button onclick="saveMember()" style="flex:1;background:var(--blue);border-color:var(--blue);color:#fff;font-weight:bold">Save Member</button>
+    <button id="deleteMemberBtn" onclick="deleteMember()" style="background:var(--red);border-color:var(--red);display:none">Delete</button>
+    <button onclick="closeMemberModal()">Cancel</button>
+  </div>
+</div>
+</div>
+
+<!-- Walk-In Modal -->
+<div id="walkInModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+<div class="modal-box" style="width:400px">
+  <div style="font-family:var(--font-hd);font-size:16px;margin-bottom:16px;color:var(--eoc)">Walk-In Check-In</div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <input type="text" id="wiCall" placeholder="Callsign or Radio ID">
+    <input type="text" id="wiName" placeholder="Name">
+    <input type="text" id="wiOrg"  placeholder="Organization">
+    <input type="text" id="wiAssign" placeholder="Assignment">
+  </div>
+  <div style="font-size:11px;color:var(--eoc);margin-top:10px">⚠ Walk-ins appear with WALK-IN badge. Use "+ Roster" to permanently save.</div>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button onclick="checkInWalkIn()" style="flex:1;background:var(--amber);border-color: var(--eoc-lt);color:#000;font-weight:bold">Check In Walk-In</button>
+    <button onclick="document.getElementById('walkInModal').style.display='none'">Cancel</button>
+  </div>
+</div>
+</div>
+
+<script>
+const API = "http://192.168.50.1:5050";
+let allMembers = [];
+let activations = [];
+let editingId   = null;
+
+function showTab(name) {
+  document.querySelector(".tab:nth-child(1)").classList.toggle("active", name==="directory");
+  document.querySelector(".tab:nth-child(2)").classList.toggle("active", name==="activation");
+  document.getElementById("tabDirectory").style.display  = name==="directory" ? "" : "none";
+  document.getElementById("tabActivation").style.display = name==="activation"? "" : "none";
+  if (name==="activation") renderActivation();
+}
+
+async function loadRoster() {
+  try {
+    const r = await fetch(`${API}/api/roster`);
+    const data = await r.json();
+    allMembers = data.members || [];
+    activations= data.activations || [];
+    filterMembers();
+    document.getElementById("memberCount").textContent = allMembers.length;
+    document.getElementById("actCount").textContent    = activations.filter(a=>a.status!=="Released").length;
+  } catch(e) {
+    document.getElementById("memberList").innerHTML = '<div style="color:var(--red)">Cannot reach API</div>';
+  }
+}
+
+function filterMembers() {
+  const q = document.getElementById("searchInput").value.toLowerCase();
+  const filtered = allMembers.filter(m =>
+    !q ||
+    (m.callsign||"").toLowerCase().includes(q) ||
+    (m.first_name||"").toLowerCase().includes(q) ||
+    (m.last_name||"").toLowerCase().includes(q) ||
+    (m.radio_id||"").toLowerCase().includes(q) ||
+    (m.member_id||"").toLowerCase().includes(q)
+  );
+  renderMembers(filtered);
+}
+
+function renderMembers(members) {
+  const list = document.getElementById("memberList");
+  if (members.length === 0) {
+    list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:30px">No members found</div>';
+    return;
+  }
+  list.innerHTML = members.map(m => {
+    const name = [m.first_name, m.last_name].filter(Boolean).join(" ") || "—";
+    const certs = ["ICS-100","ICS-200","ICS-700","EmComm I","CPR/AED"];
+    const certDots = certs.map(c => {
+      const has = m.certifications && m.certifications[c];
+      return `<span class="cert-dot ${has?'cert-green':'cert-gray'}" title="${c}: ${has?'Yes':'No'}"></span>`;
+    }).join("");
+    const roles = (m.roles||[]).map(r=>`<span class="badge badge-blue" style="font-size:9px">${r}</span>`).join("");
+    return `<div class="member-card" onclick="openEditMember('${m.id}')">
+      <div class="member-avatar">${m.first_name?m.first_name[0]:"?"}</div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <strong style="font-size:15px">${name}</strong>
+          ${m.license_class?`<span class="badge badge-blue" style="font-size:10px">${m.license_class}</span>`:""}
+          ${roles}
+        </div>
+        <div class="member-ids">
+          ${m.callsign?`<span class="badge badge-green" style="font-size:10px">📻 ${m.callsign}</span>`:""}
+          ${m.radio_id?`<span class="badge badge-blue" style="font-size:10px">📡 ${m.radio_id}</span>`:""}
+          ${m.member_id?`<span class="badge badge-purple" style="font-size:10px">🪪 ${m.member_id}</span>`:""}
+        </div>
+        <div style="margin-top:6px">${certDots}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderActivation() {
+  const q = (document.getElementById("actSearch")||{value:""}).value.toLowerCase();
+  const roster = document.getElementById("actRosterList");
+  const filtered = allMembers.filter(m => !q ||
+    (m.callsign||"").toLowerCase().includes(q) || (m.first_name||"").toLowerCase().includes(q) ||
+    (m.last_name||"").toLowerCase().includes(q)
+  );
+  roster.innerHTML = filtered.map(m => {
+    const name = [m.first_name,m.last_name].filter(Boolean).join(" ") || m.callsign;
+    const already = activations.find(a => a.member_id===m.id && a.status!=="Released");
+    return `<div class="panel2" style="padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="checkInMember('${m.id}')">
+      <div style="flex:1">
+        <strong>${name}</strong>
+        <div style="font-size:11px;color:var(--muted)">${m.callsign||""} ${m.radio_id?'· '+m.radio_id:""}</div>
+      </div>
+      ${already?`<span class="act-status act-${already.status.toLowerCase()}">${already.status}</span>`:
+                `<button style="font-size:11px;padding:3px 10px;background:var(--green);border-color:var(--green);color:#000">Check In</button>`}
+    </div>`;
+  }).join("") || '<div style="color:var(--muted);text-align:center;padding:16px">No members found</div>';
+
+  const active = activations.filter(a=>a.status!=="Released");
+  document.getElementById("actCount2").textContent = active.length;
+  document.getElementById("actCount").textContent  = active.length;
+
+  const activeList = document.getElementById("actActiveList");
+  activeList.innerHTML = active.length===0 ?
+    '<div style="color:var(--muted);text-align:center;padding:16px">No activated personnel</div>' :
+    active.map(a => {
+      const m = allMembers.find(x=>x.id===a.member_id)||{};
+      const name = [m.first_name,m.last_name].filter(Boolean).join(" ") || a.name || "Walk-In";
+      return `<div class="act-row">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:6px">
+            <strong>${name}</strong>
+            ${a.walkin?'<span class="walkin-badge">WALK-IN</span>':""}
+          </div>
+          <div style="font-size:11px;color:var(--muted)">${m.callsign||a.callsign||""} · ${a.assignment||"Unassigned"}</div>
+        </div>
+        <select style="font-size:11px;padding:3px" onchange="updateActStatus('${a.id}',this.value)">
+          <option ${a.status==="Active"?"selected":""}>Active</option>
+          <option ${a.status==="Standby"?"selected":""}>Standby</option>
+          <option ${a.status==="Released"?"selected":""}>Released</option>
+        </select>
+        ${a.walkin?`<button onclick="saveWalkInToRoster('${a.id}')" style="font-size:10px;padding:2px 6px">+ Roster</button>`:""}
+      </div>`;
+    }).join("");
+}
+
+async function checkInMember(memberId) {
+  const m = allMembers.find(x=>x.id===memberId);
+  if (!m) return;
+  const already = activations.find(a=>a.member_id===memberId&&a.status!=="Released");
+  if (already) { alert("Member already checked in"); return; }
+  const assign = prompt(`Assignment for ${m.first_name} ${m.last_name}:`,"");
+  const act = { member_id: memberId, callsign: m.callsign, radio_id: m.radio_id,
+                name: [m.first_name,m.last_name].filter(Boolean).join(" "),
+                assignment: assign||"", status:"Active", walkin: false };
+  try {
+    await fetch(`${API}/api/roster/activations`,{
+      method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(act)
+    });
+    await loadRoster();
+    renderActivation();
+  } catch(e) { alert("Failed: "+e); }
+}
+
+async function updateActStatus(actId, status) {
+  const act = activations.find(a=>a.id===actId);
+  if (!act) return;
+  act.status = status;
+  try {
+    await fetch(`${API}/api/roster/activations`,{
+      method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(act)
+    });
+    await loadRoster();
+    renderActivation();
+  } catch(e) {}
+}
+
+function openWalkIn() { document.getElementById("walkInModal").style.display="flex"; }
+
+async function checkInWalkIn() {
+  const call = document.getElementById("wiCall").value.trim().toUpperCase();
+  const name = document.getElementById("wiName").value.trim();
+  const org  = document.getElementById("wiOrg").value.trim();
+  const assign = document.getElementById("wiAssign").value.trim();
+  if (!call && !name) { alert("Enter callsign or name"); return; }
+  const act = { callsign:call, name, org, assignment:assign, status:"Active", walkin:true,
+                id:"wi-"+Date.now() };
+  try {
+    await fetch(`${API}/api/roster/activations`,{
+      method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(act)
+    });
+    document.getElementById("walkInModal").style.display="none";
+    ["wiCall","wiName","wiOrg","wiAssign"].forEach(id=>document.getElementById(id).value="");
+    await loadRoster();
+    renderActivation();
+    showTab("activation");
+  } catch(e) { alert("Failed: "+e); }
+}
+
+async function saveWalkInToRoster(actId) {
+  const act = activations.find(a=>a.id===actId);
+  if (!act) return;
+  const m = { callsign:act.callsign||"", first_name:(act.name||"").split(" ")[0]||"",
+              last_name:(act.name||"").split(" ").slice(1).join(" ")||"",
+              radio_id:"", member_id:"", license_class:"", created: new Date().toISOString() };
+  try {
+    await fetch(`${API}/api/roster/members`,{
+      method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(m)
+    });
+    alert("Walk-in saved to roster!");
+    await loadRoster();
+    renderActivation();
+  } catch(e) { alert("Failed: "+e); }
+}
+
+function filterActivation() { renderActivation(); }
+
+// ── Member modal ──────────────────────────────────────────────────────
+function openAddMember() {
+  editingId = null;
+  document.getElementById("modalTitle").textContent = "Add Member";
+  document.getElementById("deleteMemberBtn").style.display = "none";
+  document.querySelectorAll("#memberModal input[type=text], #memberModal input[type=email], #memberModal input[type=tel]").forEach(i=>i.value="");
+  document.querySelectorAll("#memberModal input[type=checkbox]").forEach(i=>i.checked=false);
+  document.getElementById("fClass").value = "";
+  document.getElementById("memberId").value = "";
+  document.getElementById("memberModal").style.display="flex";
+}
+
+function openEditMember(id) {
+  const m = allMembers.find(x=>x.id===id);
+  if (!m) return;
+  editingId = id;
+  document.getElementById("modalTitle").textContent = "Edit Member";
+  document.getElementById("deleteMemberBtn").style.display = "";
+  document.getElementById("memberId").value = id;
+  document.getElementById("fCallsign").value = m.callsign||"";
+  document.getElementById("fRadioId").value  = m.radio_id||"";
+  document.getElementById("fMemberId").value = m.member_id||"";
+  document.getElementById("fFirst").value    = m.first_name||"";
+  document.getElementById("fLast").value     = m.last_name||"";
+  document.getElementById("fClass").value    = m.license_class||"";
+  document.getElementById("fPhone").value    = m.phone||"";
+  document.getElementById("fEmail").value    = m.email||"";
+  document.getElementById("fAddress").value  = m.address||"";
+  document.getElementById("fGrid").value     = m.grid||"";
+  document.getElementById("fEmContact").value= m.emergency_contact||"";
+  document.getElementById("fNotes").value    = m.notes||"";
+  // Certs
+  const certs = m.certifications||{};
+  [["cICS100","ICS-100"],["cICS200","ICS-200"],["cICS300","ICS-300"],["cICS400","ICS-400"],
+   ["cICS700","ICS-700"],["cICS800","ICS-800"],["cEmComm1","EmComm I"],["cEmComm2","EmComm II"],
+   ["cCPR","CPR/AED"],["cFirstAid","First Aid"],["cCERT","CERT"]].forEach(([id,k]) => {
+    document.getElementById(id).checked = !!certs[k];
+  });
+  // Equipment
+  const eq = m.equipment||{};
+  [["eHF","HF"],["eVHF","VHF"],["eDigital","Digital"],["ePacket","Packet"],["ePACTOR","PACTOR"],
+   ["eVARAHF","VARA HF"],["eVARAFM","VARA FM"],["eAPRS","APRS"],["eWinlink","Winlink"],
+   ["eGoBox","Go-Box"],["eGenerator","Generator"],["eBattery","Battery"],["eVehicle","Vehicle"]].forEach(([id,k]) => {
+    document.getElementById(id).checked = !!eq[k];
+  });
+  // Roles
+  document.querySelectorAll("input[name=role]").forEach(cb => {
+    cb.checked = (m.roles||[]).includes(cb.value);
+  });
+  document.getElementById("memberModal").style.display="flex";
+}
+
+function closeMemberModal() { document.getElementById("memberModal").style.display="none"; }
+
+async function saveMember() {
+  const certs = {};
+  [["cICS100","ICS-100"],["cICS200","ICS-200"],["cICS300","ICS-300"],["cICS400","ICS-400"],
+   ["cICS700","ICS-700"],["cICS800","ICS-800"],["cEmComm1","EmComm I"],["cEmComm2","EmComm II"],
+   ["cCPR","CPR/AED"],["cFirstAid","First Aid"],["cCERT","CERT"]].forEach(([id,k]) => {
+    certs[k] = document.getElementById(id).checked;
+  });
+  const equipment = {};
+  [["eHF","HF"],["eVHF","VHF"],["eDigital","Digital"],["ePacket","Packet"],["ePACTOR","PACTOR"],
+   ["eVARAHF","VARA HF"],["eVARAFM","VARA FM"],["eAPRS","APRS"],["eWinlink","Winlink"],
+   ["eGoBox","Go-Box"],["eGenerator","Generator"],["eBattery","Battery"],["eVehicle","Vehicle"]].forEach(([id,k]) => {
+    equipment[k] = document.getElementById(id).checked;
+  });
+  const roles = [...document.querySelectorAll("input[name=role]:checked")].map(cb=>cb.value);
+
+  const m = {
+    id:        document.getElementById("memberId").value || ("m-"+Date.now()),
+    callsign:  document.getElementById("fCallsign").value.trim().toUpperCase(),
+    radio_id:  document.getElementById("fRadioId").value.trim(),
+    member_id: document.getElementById("fMemberId").value.trim(),
+    first_name:document.getElementById("fFirst").value.trim(),
+    last_name: document.getElementById("fLast").value.trim(),
+    license_class: document.getElementById("fClass").value,
+    phone:     document.getElementById("fPhone").value.trim(),
+    email:     document.getElementById("fEmail").value.trim(),
+    address:   document.getElementById("fAddress").value.trim(),
+    grid:      document.getElementById("fGrid").value.trim().toUpperCase(),
+    emergency_contact: document.getElementById("fEmContact").value.trim(),
+    notes:     document.getElementById("fNotes").value.trim(),
+    certifications: certs, equipment, roles
+  };
+  try {
+    await fetch(`${API}/api/roster/members`,{
+      method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(m)
+    });
+    closeMemberModal();
+    await loadRoster();
+  } catch(e) { alert("Failed: "+e); }
+}
+
+async function deleteMember() {
+  if (!editingId||!confirm("Delete this member permanently?")) return;
+  try {
+    await fetch(`${API}/api/roster/members/${editingId}`,{method:"DELETE"});
+    closeMemberModal();
+    await loadRoster();
+  } catch(e) { alert("Failed: "+e); }
+}
+
+// ── CSV Import / Export ───────────────────────────────────────────────
+async function importCSV(input) {
+  const file=input.files[0]; if(!file) return;
+  const txt=await file.text();
+  const lines=txt.split("\n").filter(l=>l.trim());
+  const hdrs=lines[0].split(",").map(h=>h.trim().toLowerCase().replace(/\s+/g,"_"));
+  const members=lines.slice(1).map(line=>{
+    // Handle quoted CSV values
+    const vals=line.match(/(".*?"|[^,]+|(?<=,)(?=,)|(?<=,)$|^(?=,))/g)||line.split(",");
+    const row={};hdrs.forEach((h,i)=>row[h]=(vals[i]||"").trim().replace(/^"|"$/g,""));
+    // roles: support both 'role' (singular, guide v1) and 'roles' (plural, semicolon-sep)
+    const rolesRaw = row.roles || row.role || "";
+    return {id:"m-"+Date.now()+Math.random().toString(36).slice(2),
+      member_id:(row.member_id||"").toUpperCase(),
+      callsign:(row.callsign||"").toUpperCase(),
+      radio_id:row.radio_id||"",
+      first_name:row.first_name||row.firstname||"",
+      last_name:row.last_name||row.lastname||"",
+      license_class:row.license_class||"",
+      phone:row.phone||"", email:row.email||"",
+      grid:row.grid||"",
+      roles:rolesRaw.includes(";") ? rolesRaw.split(";").map(r=>r.trim()).filter(Boolean)
+                                   : (rolesRaw ? [rolesRaw] : [])};
+  }).filter(m=>m.callsign||m.member_id||m.first_name);
+  try {
+    await fetch(`${API}/api/roster/import`,{
+      method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({members})
+    });
+    await loadRoster();
+    alert(`Imported ${members.length} members`);
+  } catch(e) { alert("Import failed: "+e); }
+  input.value="";
+}
+
+function exportCSV() {
+  const hdrs=["callsign","radio_id","member_id","first_name","last_name","license_class","phone","email","grid","roles"];
+  const rows=allMembers.map(m=>[m.callsign,m.radio_id,m.member_id,m.first_name,m.last_name,
+    m.license_class,m.phone,m.email,m.grid,(m.roles||[]).join(";")].map(v=>`"${v||""}"`).join(","));
+  const csv=[hdrs.join(","),...rows].join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download=`roster-${Date.now()}.csv`; a.click();
+}
+
+function exportActivationLog() {
+  const hdrs=["callsign","radio_id","name","assignment","status","checked_in"];
+  const rows=activations.map(a=>[a.callsign,a.radio_id||"",a.name,a.assignment,a.status,a.checked_in].map(v=>`"${v||""}"`).join(","));
+  const csv=[hdrs.join(","),...rows].join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download=`activation-${Date.now()}.csv`; a.click();
+}
+
+loadRoster();
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

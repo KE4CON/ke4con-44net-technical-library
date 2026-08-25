@@ -1,0 +1,71 @@
+# FieldComms GPS Device Rules
+# Creates a stable /dev/gps0 symlink regardless of which USB port the GPS is on.
+# Install to: /etc/udev/rules.d/99-fieldcomms-gps.rules
+# Reload with: sudo udevadm control --reload-rules && sudo udevadm trigger
+
+# ── USB Serial GPS receivers (GlobalSat BU-353, VK-162, etc.) ──────────────
+# These appear as /dev/ttyUSB0 via cp210x or ch341 driver
+SUBSYSTEM=="tty", \
+    ATTRS{idVendor}=="067b", \
+    SYMLINK+="gps0", \
+    TAG+="systemd", \
+    ENV{SYSTEMD_WANTS}="gpsd.socket"
+
+# Silicon Labs CP2102 (GlobalSat BU-353-S4, most common USB GPS)
+# NOTE: Digirig Mobile also uses 10c4:ea60 but has product="Digirig Mobile"
+# This rule excludes Digirig by checking the product string is NOT Digirig
+SUBSYSTEM=="tty", \
+    ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", \
+    ATTRS{product}!="Digirig Mobile", \
+    ATTRS{product}!="CP2102N USB to UART Bridge Controller", \
+    SYMLINK+="gps0", \
+    TAG+="systemd", \
+    ENV{SYSTEMD_WANTS}="gpsd.socket"
+
+# CH340/CH341 USB-Serial (cheap USB GPS modules)
+SUBSYSTEM=="tty", \
+    ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", \
+    SYMLINK+="gps0", \
+    TAG+="systemd", \
+    ENV{SYSTEMD_WANTS}="gpsd.socket"
+
+# ── USB CDC GPS receivers (u-blox NEO, Adafruit Ultimate GPS USB) ───────────
+# These appear as /dev/ttyACM0 via cdc_acm driver
+SUBSYSTEM=="tty", \
+    ATTRS{idVendor}=="1546", \
+    SYMLINK+="gps0", \
+    TAG+="systemd", \
+    ENV{SYSTEMD_WANTS}="gpsd.socket"
+
+# u-blox 7 / NEO-7M
+SUBSYSTEM=="tty", \
+    ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a7", \
+    SYMLINK+="gps0 gps_ublox7"
+
+# u-blox 8 / NEO-8M (very common on Pi GPS HATs)
+SUBSYSTEM=="tty", \
+    ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a8", \
+    SYMLINK+="gps0 gps_ublox8"
+
+# Adafruit Ultimate GPS (uses MTK3339)
+SUBSYSTEM=="tty", \
+    ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", \
+    ATTRS{product}=="*GPS*", \
+    SYMLINK+="gps0"
+
+# ── Prolific PL2303 USB-Serial (older GPS modules) ──────────────────────────
+SUBSYSTEM=="tty", \
+    ATTRS{idVendor}=="067b", ATTRS{idProduct}=="2303", \
+    SYMLINK+="gps0", \
+    TAG+="systemd", \
+    ENV{SYSTEMD_WANTS}="gpsd.socket"
+
+# ── FTDI FT232R (some GPS breakout boards) ──────────────────────────────────
+SUBSYSTEM=="tty", \
+    ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", \
+    SYMLINK+="gps_ftdi"
+
+# ── Raspberry Pi GPIO UART (GPS HAT on /dev/ttyAMA0) ────────────────────────
+# Enable by adding to /boot/config.txt: dtoverlay=disable-bt
+# Then: sudo systemctl disable hciuart
+# SUBSYSTEM=="tty", KERNEL=="ttyAMA0", SYMLINK+="gps0"

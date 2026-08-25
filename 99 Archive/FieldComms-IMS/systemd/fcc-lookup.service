@@ -1,0 +1,19 @@
+[Unit]
+Description=FieldComms FCC Lookup Server (Port 5050)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=fieldcomms
+Group=fieldcomms
+WorkingDirectory=/opt/fieldcomms
+ExecStart=/opt/fieldcomms/venv/bin/python /opt/fieldcomms/python/fcc_lookup_server.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fcc-lookup
+
+[Install]
+WantedBy=multi-user.target

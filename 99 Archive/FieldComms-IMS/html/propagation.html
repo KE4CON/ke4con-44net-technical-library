@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — HF Propagation</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.page-header {
+  background: linear-gradient(135deg, var(--eoc) 0%, var(--eoc-lt) 100%);
+  border-bottom: 2px solid var(--eoc);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.page-header a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; }
+.page-header a:hover { color: #fff; }
+.page-title { font-family: var(--font-hd); font-size: 18px; color: var(--eoc); letter-spacing: 2px; }
+
+.container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+.sec-label {
+  font-family: var(--font-hd); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--eoc); padding: 16px 0 8px;
+  display: flex; align-items: center; gap: 10px;
+}
+.sec-label::after { content:''; flex:1; height:1px; background: var(--line); }
+
+/* Solar data cards */
+.solar-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px; margin-bottom: 16px;
+}
+.solar-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 12px 14px; text-align: center;
+}
+.solar-label { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+.solar-val { font-family: var(--font-hd); font-size: 26px; line-height: 1; }
+.solar-sub { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+/* Band condition bars */
+.band-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+.band-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px;
+}
+.band-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.band-name { font-family: var(--font-hd); font-size: 15px; color: var(--eoc-lt); }
+.band-freq { font-size: 10px; color: var(--muted); }
+.band-bar-wrap { background: var(--bg); border-radius: 4px; height: 8px; overflow: hidden; margin-bottom: 6px; }
+.band-bar { height: 100%; border-radius: 4px; transition: width 0.5s; }
+.cond-good    { background: var(--green); }
+.cond-fair    { background: var(--amber); }
+.cond-poor    { background: #ff6040; }
+.cond-closed  { background: var(--muted); }
+.band-status { font-size: 12px; }
+.band-times { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+/* Two-panel layout */
+.two-col { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+@media(max-width:800px){ .two-col { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
+}
+.panel-title {
+  font-family: var(--font-hd); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--eoc); margin-bottom: 12px;
+}
+
+/* Ionosphere layer diagram */
+#ionoCanvas { width: 100%; border-radius: 6px; display: block; background: var(--bg); }
+
+/* Time chart */
+.timechart-wrap { overflow-x: auto; }
+#timeCanvas { display: block; }
+
+/* K/A index indicator */
+.kindex-strip { display: flex; gap: 4px; margin-top: 8px; }
+.k-cell {
+  flex: 1; text-align: center; border-radius: 4px; padding: 6px 2px;
+  font-family: var(--font-hd); font-size: 13px; cursor: default;
+}
+
+/* MUF/LUF table */
+.muf-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.muf-table th {
+  text-align: left; padding: 6px 8px; color: #ffffff;
+  font-family: var(--font-hd); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+.muf-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); color: var(--txt); font-size: 11px; }
+.muf-table tr:hover td { background: var(--panel2); }
+.muf-table .freq { font-family: var(--font-hd); color: var(--green); }
+
+/* Source note */
+.source-note { font-size: 10px; color: var(--dim); text-align: right; margin-top: 6px; }
+
+/* Refresh bar */
+.refresh-bar {
+  background: var(--input-bg); border-bottom: 1px solid var(--line);
+  padding: 8px 20px; font-size: 11px; color: var(--muted);
+  display: flex; justify-content: space-between; align-items: center;
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <a href="index.html">⌂ Home</a>
+  <span style="color:var(--line)">›</span>
+  <span class="page-title">☀ HF PROPAGATION</span>
+  <span style="margin-left:auto;font-size:11px;color:var(--muted)" id="lastUpdate">Fetching data…</span>
+</div>
+
+<div class="refresh-bar">
+  <span>Solar data updates every 15 minutes when internet is available. Band conditions are model-estimated based on solar indices.</span>
+  <button class="btn btn-sm" onclick="fetchAll()" style="background:var(--panel2)">⟳ Refresh</button>
+</div>
+
+<div class="container">
+
+  <!-- Solar indices strip -->
+  <div class="sec-label">☀ Solar Indices</div>
+  <div class="solar-strip" id="solarStrip">
+    <div class="solar-card"><div class="solar-label">SFI</div><div class="solar-val" id="siSFI">—</div><div class="solar-sub">Solar Flux</div></div>
+    <div class="solar-card"><div class="solar-label">SN</div><div class="solar-val" id="siSN">—</div><div class="solar-sub">Sunspot #</div></div>
+    <div class="solar-card"><div class="solar-label">A-Index</div><div class="solar-val" id="siA">—</div><div class="solar-sub">Geomagnetic</div></div>
+    <div class="solar-card"><div class="solar-label">K-Index</div><div class="solar-val" id="siK">—</div><div class="solar-sub">3-hr Planetary</div></div>
+    <div class="solar-card"><div class="solar-label">X-Ray</div><div class="solar-val" id="siX" style="font-size:18px">—</div><div class="solar-sub">Flux Class</div></div>
+    <div class="solar-card"><div class="solar-label">Proton</div><div class="solar-val" id="siProt" style="font-size:20px">—</div><div class="solar-sub">Event</div></div>
+    <div class="solar-card"><div class="solar-label">Signal</div><div class="solar-val" id="siNoise" style="font-size:18px">—</div><div class="solar-sub">Noise Level</div></div>
+  </div>
+
+  <!-- K-index bar -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-title">K-Index Scale (Geomagnetic Activity)</div>
+    <div class="kindex-strip" id="kindexBar"></div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px">
+      K0–K2: Quiet (good HF) &nbsp;·&nbsp; K3–K4: Unsettled &nbsp;·&nbsp; K5–K7: Storm (degraded HF) &nbsp;·&nbsp; K8–K9: Severe storm (HF blackout possible)
+    </div>
+  </div>
+
+  <!-- Band conditions -->
+  <div class="sec-label">📡 Band Conditions (Day/Night Model)</div>
+  <div class="band-grid" id="bandGrid"></div>
+
+  <div class="two-col" style="margin-top:16px">
+
+    <!-- MUF / LUF estimates -->
+    <div class="panel">
+      <div class="panel-title">MUF / LUF Estimates — Columbus OH (EN90)</div>
+      <table class="muf-table" id="mufTable">
+        <tr>
+          <th>Path</th><th>LUF (MHz)</th><th>MUF (MHz)</th><th>Best Band</th><th>Reliability</th>
+        </tr>
+      </table>
+      <div class="source-note">Estimated via simplified ionospheric model. Use propagation beacons to confirm.</div>
+    </div>
+
+    <!-- Ionosphere diagram -->
+    <div class="panel">
+      <div class="panel-title">Ionosphere Layers</div>
+      <canvas id="ionoCanvas" height="260"></canvas>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px">
+        Layer heights and reflection frequencies vary with solar activity and local time.
+      </div>
+    </div>
+  </div>
+
+  <!-- 24-hr band chart -->
+  <div class="panel" style="margin-top:16px">
+    <div class="panel-title">24-Hour Band Activity Guide (Columbus OH)</div>
+    <div class="timechart-wrap">
+      <canvas id="timeCanvas" height="200"></canvas>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px">
+      Typical usable bands by UTC hour for mid-latitude paths from EN90. Varies with season and solar activity.
+    </div>
+  </div>
+
+  <!-- Propagation tips -->
+  <div class="panel" style="margin-top:16px">
+    <div class="panel-title">📋 EmComm Propagation Quick Reference</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:12px">
+      <div>
+        <table class="muf-table">
+          <tr><th>Band</th><th>Day Use</th><th>Night Use</th></tr>
+          <tr><td class="freq">160m</td><td style="color:var(--muted)">Poor</td><td style="color:var(--green)">Regional skip</td></tr>
+          <tr><td class="freq">80m</td><td style="color:var(--eoc)">Regional</td><td style="color:var(--green)">Excellent DX</td></tr>
+          <tr><td class="freq">60m</td><td style="color:var(--green)">Good regional</td><td style="color:var(--green)">Good DX</td></tr>
+          <tr><td class="freq">40m</td><td style="color:var(--green)">Best day band</td><td style="color:var(--green)">Excellent</td></tr>
+          <tr><td class="freq">30m</td><td style="color:var(--green)">Good</td><td style="color:var(--green)">Good</td></tr>
+          <tr><td class="freq">20m</td><td style="color:var(--green)">Excellent DX</td><td style="color:var(--eoc)">Variable</td></tr>
+          <tr><td class="freq">17m</td><td style="color:var(--green)">Good DX</td><td style="color:var(--muted)">Poor</td></tr>
+          <tr><td class="freq">15m</td><td style="color:var(--eoc)">Solar-dependent</td><td style="color:var(--muted)">Closed</td></tr>
+          <tr><td class="freq">10m</td><td style="color:var(--eoc)">High SFI needed</td><td style="color:var(--muted)">Closed</td></tr>
+        </table>
+      </div>
+      <div>
+        <table class="muf-table">
+          <tr><th>Condition</th><th>Effect on HF</th></tr>
+          <tr><td>SFI &gt; 150</td><td style="color:var(--green)">Excellent — high bands open</td></tr>
+          <tr><td>SFI 100–150</td><td style="color:var(--green)">Good — 20m/17m reliable</td></tr>
+          <tr><td>SFI 70–100</td><td style="color:var(--eoc)">Moderate — 40m best</td></tr>
+          <tr><td>SFI &lt; 70</td><td style="color:var(--red)">Low — 80m/40m only</td></tr>
+          <tr><td>K ≥ 5</td><td style="color:var(--red)">Geomagnetic storm — polar paths degraded</td></tr>
+          <tr><td>K ≥ 7</td><td style="color:var(--red)">Severe — HF blackout possible</td></tr>
+          <tr><td>X-Ray Flare</td><td style="color:var(--red)">Sudden ionospheric disturbance (SID)</td></tr>
+          <tr><td>Proton Event</td><td style="color:var(--red)">Polar cap absorption (PCA)</td></tr>
+          <tr><td>Gray Line</td><td style="color:var(--green)">Excellent — DX path enhancement</td></tr>
+        </table>
+        <div style="margin-top:12px;font-size:11px;color:var(--muted);line-height:1.5">
+          <b style="color:var(--eoc)">EmComm priorities:</b> 40m is the backbone — reliable day and night for 
+          regional to national paths. 80m for local/regional at night. 
+          60m (5 channels) for interoperability with served agencies.
+          Always monitor 14.300 MHz for IARU distress traffic.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const STATION_LAT = 42.3153, STATION_LON = -88.4473;
+
+/* ── Solar data fetch ───────────────────────────────────────────── */
+async function fetchSolarData() {
+  try {
+    const res = await fetch('https://www.hamqsl.com/solarxml.php', { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error('fetch failed');
+    const text = await res.text();
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(text, 'text/xml');
+    const get = tag => xml.getElementsByTagName(tag)[0]?.textContent?.trim() || '—';
+    return {
+      sfi: get('solarflux'),
+      sn: get('sunspots'),
+      aindex: get('aindex'),
+      kindex: get('kindex'),
+      xray: get('xray'),
+      proton: get('proton'),
+      signalnoise: get('signalnoise'),
+      calculatedconditions: xml.getElementsByTagName('calculatedcondition'),
+      updated: get('updated'),
+    };
+  } catch(e) {
+    return null;
+  }
+}
+
+function condColor(cond) {
+  switch((cond||'').toLowerCase()) {
+    case 'good': return 'var(--green)';
+    case 'fair': return 'var(--amber)';
+    case 'poor': return 'var(--red)';
+    default: return 'var(--muted)';
+  }
+}
+
+function condWidth(cond) {
+  switch((cond||'').toLowerCase()) {
+    case 'good': return 85;
+    case 'fair': return 55;
+    case 'poor': return 25;
+    default: return 5;
+  }
+}
+
+function condClass(cond) {
+  switch((cond||'').toLowerCase()) {
+    case 'good': return 'cond-good';
+    case 'fair': return 'cond-fair';
+    case 'poor': return 'cond-poor';
+    default: return 'cond-closed';
+  }
+}
+
+const BAND_FREQ = {
+  '80m-40m': '3.5–7.3 MHz',
+  '30m-20m': '10.1–14.35 MHz',
+  '17m-15m': '18.1–21.45 MHz',
+  '10m': '28–29.7 MHz',
+};
+
+function renderBands(conditions) {
+  const grid = document.getElementById('bandGrid');
+  if (!conditions || conditions.length === 0) {
+    // fallback model-based estimates
+    const sfi = parseInt(document.getElementById('siSFI').textContent) || 90;
+    const k   = parseInt(document.getElementById('siK').textContent) || 2;
+    const h   = new Date().getUTCHours();
+    const day = h >= 11 && h <= 23;
+    const bands = estimateBands(sfi, k, day);
+    renderBandCards(bands);
+    return;
+  }
+  const bands = {};
+  for (const el of conditions) {
+    const name = el.getAttribute('name');
+    const time = el.getAttribute('time');
+    const cond = el.textContent.trim();
+    if (!bands[name]) bands[name] = {};
+    bands[name][time] = cond;
+  }
+  renderBandCards(bands);
+}
+
+function renderBandCards(bands) {
+  const grid = document.getElementById('bandGrid');
+  grid.innerHTML = '';
+  Object.entries(bands).forEach(([name, times]) => {
+    const dayC  = times.day || times.Day || '—';
+    const nightC = times.night || times.Night || '—';
+    grid.innerHTML += `
+      <div class="band-card">
+        <div class="band-header">
+          <span class="band-name">${name}</span>
+          <span class="band-freq">${BAND_FREQ[name] || ''}</span>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Day</div>
+        <div class="band-bar-wrap">
+          <div class="band-bar ${condClass(dayC)}" style="width:${condWidth(dayC)}%"></div>
+        </div>
+        <div class="band-status" style="color:${condColor(dayC)}">${dayC}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px;margin-bottom:3px">Night</div>
+        <div class="band-bar-wrap">
+          <div class="band-bar ${condClass(nightC)}" style="width:${condWidth(nightC)}%"></div>
+        </div>
+        <div class="band-status" style="color:${condColor(nightC)}">${nightC}</div>
+      </div>`;
+  });
+}
+
+function estimateBands(sfi, k, day) {
+  const good  = sfi > 130 && k <= 2;
+  const fair  = sfi > 80 && k <= 4;
+  const storm = k >= 5;
+  const cond = (d, n) => ({ day: storm ? 'Poor' : (day ? d : n), night: storm ? 'Poor' : (day ? d : n) });
+  return {
+    '80m-40m': { day: k>=5?'Poor':'Fair', night: k>=5?'Poor':'Good' },
+    '30m-20m': { day: sfi>100?'Good':'Fair', night: sfi>100?'Fair':'Poor' },
+    '17m-15m': { day: sfi>130?'Good':sfi>100?'Fair':'Poor', night: 'Poor' },
+    '10m':     { day: sfi>150?'Good':sfi>130?'Fair':'Poor', night: 'Poor' },
+  };
+}
+
+/* ── K-index bar ─────────────────────────────────────────────────── */
+function renderKBar(k) {
+  const levels = [
+    { label:'K0', color:'#00cc44' },{ label:'K1', color:'#44cc00' },
+    { label:'K2', color:'#88cc00' },{ label:'K3', color:'#ccaa00' },
+    { label:'K4', color:'#cc8800' },{ label:'K5', color:'#cc4400' },
+    { label:'K6', color:'#cc2200' },{ label:'K7', color:'#aa0000' },
+    { label:'K8', color:'#880000' },{ label:'K9', color:'#660000' },
+  ];
+  const kval = parseInt(k) || 0;
+  document.getElementById('kindexBar').innerHTML = levels.map((l, i) =>
+    `<div class="k-cell" style="background:${i <= kval ? l.color : 'var(--bg)'};
+      color:${i <= kval ? '#fff' : 'var(--muted)'};
+      border:1px solid ${i === kval ? '#fff' : 'var(--line)'};
+      font-weight:${i === kval ? 'bold' : 'normal'}">${l.label}</div>`
+  ).join('');
+}
+
+/* ── MUF/LUF table ──────────────────────────────────────────────── */
+function renderMUF(sfi) {
+  sfi = parseInt(sfi) || 90;
+  const paths = [
+    { path:'Local (0–500km)', luf:1.8, mufFactor:0.3 },
+    { path:'Regional (500–2000km)', luf:3.5, mufFactor:0.55 },
+    { path:'DX (2000–5000km)', luf:7.0, mufFactor:0.75 },
+    { path:'Long Path (>5000km)', luf:14.0, mufFactor:0.9 },
+  ];
+  const bestBand = muf => {
+    if (muf >= 28) return '10m';
+    if (muf >= 21) return '15m';
+    if (muf >= 18) return '17m';
+    if (muf >= 14) return '20m';
+    if (muf >= 10) return '30m';
+    if (muf >= 7)  return '40m';
+    if (muf >= 3.5) return '80m';
+    return '160m';
+  };
+  const relColor = r => r >= 80 ? 'var(--green)' : r >= 50 ? 'var(--amber)' : 'var(--red)';
+  const table = document.getElementById('mufTable');
+  const rows = paths.map(p => {
+    const muf = Math.round(p.mufFactor * sfi * 0.25 + p.luf);
+    const rel = Math.min(95, Math.round(60 + (sfi - 70) * 0.3 + p.mufFactor * 10));
+    return `<tr>
+      <td>${p.path}</td>
+      <td class="freq">${p.luf.toFixed(1)}</td>
+      <td class="freq">${muf.toFixed(1)}</td>
+      <td class="freq">${bestBand(muf)}</td>
+      <td style="color:${relColor(rel)}">${rel}%</td>
+    </tr>`;
+  });
+  // preserve header
+  table.innerHTML = table.rows[0].outerHTML + rows.join('');
+}
+
+/* ── Ionosphere canvas ───────────────────────────────────────────── */
+function drawIono() {
+  const canvas = document.getElementById('ionoCanvas');
+  const W = canvas.offsetWidth || 340, H = 260;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const cs = getComputedStyle(document.documentElement);
+  const bg   = cs.getPropertyValue('--bg').trim();
+  const line = cs.getPropertyValue('--line').trim();
+  const amber= cs.getPropertyValue('--amber').trim();
+  const green= cs.getPropertyValue('--green').trim();
+  const muted= cs.getPropertyValue('--muted').trim();
+  const blue = cs.getPropertyValue('--blue').trim();
+
+  ctx.fillStyle = '#eef2f7'; ctx.fillRect(0,0,W,H);
+
+  const layers = [
+    { name:'F2', alt:300, color:'#f5a623', thick:30, note:'14–30 MHz DX reflection' },
+    { name:'F1', alt:200, color:'#ff8c00', thick:20, note:'10–20 MHz day only' },
+    { name:'E',  alt:110, color:'#4488ff', thick:15, note:'Day layer; sporadic-E' },
+    { name:'D',  alt: 70, color:'#666',    thick:20, note:'HF absorber; day only' },
+  ];
+
+  const altToY = alt => H - 20 - (alt / 350) * (H - 50);
+
+  // Earth surface
+  ctx.fillStyle = '#2a4a2a'; ctx.fillRect(0, H-20, W, 20);
+  ctx.fillStyle = '#39ff14'; ctx.font = '10px monospace';
+  ctx.fillText('Earth Surface', 8, H-6);
+
+  // Layers
+  layers.forEach(l => {
+    const y = altToY(l.alt);
+    const h = (l.thick / 350) * (H-50);
+    const grad = ctx.createLinearGradient(0, y-h/2, 0, y+h/2);
+    grad.addColorStop(0, l.color + '00');
+    grad.addColorStop(0.5, l.color + '55');
+    grad.addColorStop(1, l.color + '00');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, y-h/2, W, h);
+
+    ctx.strokeStyle = l.color + '88'; ctx.lineWidth = 1; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W*0.55, y); ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = l.color;
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText(l.name, W*0.58, y+4);
+    ctx.fillStyle = muted; ctx.font = '9px monospace';
+    ctx.fillText(`~${l.alt}km`, W*0.58, y+16);
+    ctx.fillText(l.note, 6, y-4);
+  });
+
+  // Altitude axis
+  ctx.strokeStyle = line; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(W-30, 10); ctx.lineTo(W-30, H-20); ctx.stroke();
+  ctx.fillStyle = muted; ctx.font = '9px monospace';
+  [50,100,200,300].forEach(alt => {
+    const y = altToY(alt);
+    ctx.fillText(alt+'km', W-28, y+3);
+    ctx.beginPath(); ctx.moveTo(W-33, y); ctx.lineTo(W-30, y); ctx.stroke();
+  });
+  ctx.fillText('Altitude', W-28, 8);
+
+  // Ray path sketch
+  ctx.strokeStyle = amber + 'cc'; ctx.lineWidth = 1.5; ctx.setLineDash([3,2]);
+  const tx = 20, rx = W*0.5-10, fy = altToY(300);
+  ctx.beginPath();
+  ctx.moveTo(tx, H-20);
+  ctx.quadraticCurveTo(W*0.25, fy-10, rx, H-20);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = amber;
+  ctx.font = '9px monospace';
+  ctx.fillText('HF skip path', tx+4, H-26);
+}
+
+/* ── 24-hr band chart ────────────────────────────────────────────── */
+function drawTimeChart(sfi) {
+  sfi = parseInt(sfi) || 90;
+  const canvas = document.getElementById('timeCanvas');
+  const W = Math.max(700, document.querySelector('.container').offsetWidth - 64);
+  const H = 200;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const cs = getComputedStyle(document.documentElement);
+  const bg    = cs.getPropertyValue('--bg').trim();
+  const line  = cs.getPropertyValue('--line').trim();
+  const amber = cs.getPropertyValue('--amber').trim();
+  const green = cs.getPropertyValue('--green').trim();
+  const muted = cs.getPropertyValue('--muted').trim();
+  const blue  = cs.getPropertyValue('--blue').trim();
+
+  ctx.fillStyle = '#eef2f7'; ctx.fillRect(0,0,W,H);
+
+  const bands = ['80m','40m','20m','15m','10m'];
+  const bandColors = ['#4488ff','#f5a623','#39ff14','#ff8c00','#ff4040'];
+  const rowH = (H - 40) / bands.length;
+  const colW = (W - 60) / 24;
+
+  // Band guide: [utc_start, utc_end] open windows per band
+  // simplified model
+  const schedule = (sfi) => [
+    // 80m: night-oriented
+    { open:[[0,14],[19,24]], color:'#4488ff' },
+    // 40m: day + night
+    { open:[[0,24]], color:'#f5a623' },
+    // 20m: mainly day
+    { open:[[10,22]], color:'#39ff14' },
+    // 15m: mid-day only if SFI > 100
+    { open: sfi > 100 ? [[12,20]] : [], color:'#ff8c00' },
+    // 10m: only high SFI
+    { open: sfi > 140 ? [[13,19]] : sfi > 110 ? [[13,18]] : [], color:'#ff4040' },
+  ];
+
+  const sched = schedule(sfi);
+
+  // Hour grid
+  ctx.strokeStyle = line; ctx.lineWidth = 0.5;
+  for (let h = 0; h <= 24; h++) {
+    const x = 60 + h * colW;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H-30); ctx.stroke();
+  }
+
+  // Band rows
+  bands.forEach((band, bi) => {
+    const y = bi * rowH;
+    ctx.fillStyle = muted + '18'; ctx.fillRect(60, y, W-60, rowH);
+    ctx.strokeStyle = line; ctx.lineWidth = 0.5;
+    ctx.strokeRect(60, y, W-60, rowH);
+
+    // Band label
+    ctx.fillStyle = bandColors[bi]; ctx.font = 'bold 12px monospace';
+    ctx.fillText(band, 6, y + rowH/2 + 4);
+
+    // Open windows
+    sched[bi].open.forEach(([start, end]) => {
+      ctx.fillStyle = bandColors[bi] + '55';
+      ctx.fillRect(60 + start*colW, y+2, (end-start)*colW, rowH-4);
+      ctx.strokeStyle = bandColors[bi] + '88'; ctx.lineWidth = 1;
+      ctx.strokeRect(60 + start*colW, y+2, (end-start)*colW, rowH-4);
+    });
+  });
+
+  // Current UTC time marker
+  const utcH = new Date().getUTCHours() + new Date().getUTCMinutes()/60;
+  const nowX = 60 + utcH * colW;
+  ctx.strokeStyle = '#ffffff88'; ctx.lineWidth = 2; ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(nowX, 0); ctx.lineTo(nowX, H-30); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#fff'; ctx.font = '9px monospace';
+  ctx.fillText('NOW', nowX+3, 12);
+
+  // Hour labels
+  ctx.fillStyle = muted; ctx.font = '9px monospace';
+  for (let h = 0; h <= 24; h += 2) {
+    ctx.fillText(h.toString().padStart(2,'0'), 57 + h*colW, H-14);
+  }
+  ctx.fillText('UTC Hour →', W/2-30, H-2);
+}
+
+/* ── Main fetch & render ─────────────────────────────────────────── */
+async function fetchAll() {
+  document.getElementById('lastUpdate').textContent = 'Updating…';
+  const data = await fetchSolarData();
+
+  let sfi = '90', sn = '—', aindex = '—', kindex = '2', xray = 'A', proton = 'None', noise = '—';
+
+  if (data) {
+    sfi = data.sfi; sn = data.sn; aindex = data.aindex; kindex = data.kindex;
+    xray = data.xray; proton = data.proton; noise = data.signalnoise;
+
+    const xColor = xray[0]==='X'?'var(--red)':xray[0]==='M'?'var(--amber)':'var(--green)';
+    document.getElementById('siSFI').style.color = parseInt(sfi)>130?'var(--green)':parseInt(sfi)>90?'var(--amber)':'var(--red)';
+    document.getElementById('siSFI').textContent = sfi;
+    document.getElementById('siSN').textContent = sn;
+    const aval = parseInt(aindex);
+    document.getElementById('siA').style.color = aval<10?'var(--green)':aval<30?'var(--amber)':'var(--red)';
+    document.getElementById('siA').textContent = aindex;
+    const kval = parseInt(kindex);
+    document.getElementById('siK').style.color = kval<=2?'var(--green)':kval<=4?'var(--amber)':'var(--red)';
+    document.getElementById('siK').textContent = kindex;
+    document.getElementById('siX').style.color = xColor;
+    document.getElementById('siX').textContent = xray || 'A';
+    document.getElementById('siProt').style.color = proton==='None'||proton==='No'?'var(--green)':'var(--red)';
+    document.getElementById('siProt').textContent = proton;
+    document.getElementById('siNoise').textContent = noise;
+
+    renderBands(data.calculatedconditions);
+    document.getElementById('lastUpdate').textContent = `Updated ${data.updated}`;
+  } else {
+    // offline fallback
+    document.getElementById('siSFI').textContent = 'N/A';
+    document.getElementById('siSN').textContent = 'N/A';
+    document.getElementById('siA').textContent = 'N/A';
+    document.getElementById('siK').textContent = 'N/A';
+    document.getElementById('siX').textContent = 'N/A';
+    document.getElementById('siProt').textContent = 'N/A';
+    document.getElementById('siNoise').textContent = 'N/A';
+    renderBands(null);
+    document.getElementById('lastUpdate').textContent = 'Offline — internet unavailable';
+  }
+
+  renderKBar(kindex);
+  renderMUF(sfi);
+  drawIono();
+  drawTimeChart(sfi);
+}
+
+window.addEventListener('load', fetchAll);
+window.addEventListener('resize', () => { drawIono(); drawTimeChart(document.getElementById('siSFI').textContent); });
+setInterval(fetchAll, 15 * 60 * 1000);
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

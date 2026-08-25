@@ -1,0 +1,71 @@
+# FieldComms TNC / Radio Interface Device Rules
+# Creates stable /dev/tnc0 symlink regardless of which USB port the TNC is on.
+# Install to: /etc/udev/rules.d/99-fieldcomms-tnc.rules
+# Reload with: sudo udevadm control --reload-rules && sudo udevadm trigger
+#
+# Verify your device's IDs with:
+#   lsusb                          (shows vendor:product)
+#   udevadm info -a -n /dev/ttyUSBx | grep -E "idVendor|idProduct|product"
+#
+# K9ESV · McHenry County Emergency Services Volunteers
+#       and McHenry County Emergency Management Agency (MCESV/MCEMA)
+# FieldComms Incident Management System v1.0
+
+# ── Digirig Mobile ──────────────────────────────────────────────────────────
+# Digirig Mobile v1.x uses Silicon Labs CP2102N (same VID:PID as some GPS units)
+# Distinguish by USB product string "Digirig Mobile"
+SUBSYSTEM=="tty", \
+    ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", \
+    ATTRS{product}=="Digirig Mobile", \
+    SYMLINK+="tnc0 digirig", \
+    MODE="0666", \
+    TAG+="systemd"
+
+# Digirig v1.9+ uses CP2102N with updated product string
+SUBSYSTEM=="tty", \
+    ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", \
+    ATTRS{product}=="CP2102N USB to UART Bridge Controller", \
+    ATTRS{serial}=="*Digirig*", \
+    SYMLINK+="tnc0 digirig", \
+    MODE="0666", \
+    TAG+="systemd"
+
+# ── SignaLink USB ────────────────────────────────────────────────────────────
+# SignaLink USB uses Texas Instruments PCM2904 USB audio codec
+# Appears as both a USB audio device AND ttyUSB — no conflict with GPS
+SUBSYSTEM=="tty", \
+    ATTRS{idVendor}=="08bb", ATTRS{idProduct}=="2904", \
+    SYMLINK+="tnc0 signalink", \
+    MODE="0666", \
+    TAG+="systemd"
+
+# ── Tigertronics SignaLink ───────────────────────────────────────────────────
+SUBSYSTEM=="tty", \
+    ATTRS{idVendor}=="08bb", ATTRS{idProduct}=="29b0", \
+    SYMLINK+="tnc0 signalink", \
+    MODE="0666", \
+    TAG+="systemd"
+
+# ── FTDI FT232R based TNCs ───────────────────────────────────────────────────
+# Many TNCs use FTDI FT232R chips — identified by product string
+# RigBlaster, BayPac, MFJ-1275, TNC-Pi (USB), etc.
+SUBSYSTEM=="tty", \
+    ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", \
+    ATTRS{product}!="*GPS*", \
+    ATTRS{product}!="*gps*", \
+    SYMLINK+="tnc_ftdi", \
+    MODE="0666", \
+    TAG+="systemd"
+
+# ── WinLink Express TNC (Raspberry Pi direct) ────────────────────────────────
+# If using a hardware TNC connected directly (not Digirig/SignaLink)
+# KISS TNC over serial — add your specific TNC's VID:PID here
+# Example: TNC-Pi, Kenwood TNC, MFJ-1270D
+# SUBSYSTEM=="tty", \
+#     ATTRS{idVendor}=="XXXX", ATTRS{idProduct}=="XXXX", \
+#     SYMLINK+="tnc0", MODE="0666"
+
+# ── Generic fallback — second USB serial device ──────────────────────────────
+# If your TNC is not listed above and no specific rule matches,
+# it will appear as /dev/ttyUSB0 or /dev/ttyUSB1.
+# Find your device IDs with: lsusb and udevadm info (see instructions at top)

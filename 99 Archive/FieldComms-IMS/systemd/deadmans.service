@@ -1,0 +1,19 @@
+[Unit]
+Description=FieldComms Dead Man's Switch Monitor
+After=fcc-lookup.service
+Requires=fcc-lookup.service
+
+[Service]
+Type=simple
+User=fieldcomms
+Group=fieldcomms
+WorkingDirectory=/opt/fieldcomms
+ExecStart=/opt/fieldcomms/venv/bin/python /opt/fieldcomms/python/deadmans.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=deadmans
+
+[Install]
+WantedBy=multi-user.target

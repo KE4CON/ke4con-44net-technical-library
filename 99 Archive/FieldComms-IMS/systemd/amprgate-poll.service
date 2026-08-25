@@ -1,0 +1,20 @@
+[Unit]
+Description=AMPRNet Gateway Status Poller
+Documentation=https://github.com/KE4CON/CrossPlatformAPRS
+After=network.target fcc-lookup.service
+Wants=network.target
+
+[Service]
+Type=simple
+User=fieldcomms
+Group=fieldcomms
+WorkingDirectory=/opt/fieldcomms
+ExecStart=/opt/fieldcomms/venv/bin/python /opt/fieldcomms/python/amprgate_poll.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=amprgate-poll
+
+[Install]
+WantedBy=multi-user.target

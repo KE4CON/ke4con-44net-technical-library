@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — ICS Finance/Admin</title>
+<link rel="stylesheet" href="../theme.css">
+<style>
+.page-header{background: linear-gradient(135deg, var(--eoc) 0%, var(--eoc-lt) 100%);border-bottom:2px solid #c850ff;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.page-header a{color: rgba(255,255,255,0.7);text-decoration:none;font-size:13px;}
+.page-header a:hover{color: #fff;}
+.page-title{font-family:var(--font-hd);font-size:18px;color:#c850ff;letter-spacing:2px;}
+.ics-nav{background:var(--panel2);border-bottom:1px solid var(--line);padding:0;display:flex;overflow-x:auto;}
+.ics-nav a{display:flex;align-items:center;gap:6px;padding:11px 18px;text-decoration:none;color:var(--muted);font-family:var(--font-hd);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;border-bottom:3px solid transparent;transition:color 0.15s,border-color 0.15s;}
+.ics-nav a:hover{color:var(--txt);}
+.ics-nav a.active{color:#c850ff;border-bottom-color:#c850ff;}
+.container{max-width:1100px;margin:0 auto;padding:20px 20px 40px;}
+.sec-label{font-family:var(--font-hd);font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#c850ff;padding:16px 0 8px;display:flex;align-items:center;gap:10px;}
+.sec-label::after{content:'';flex:1;height:1px;background: var(--line);}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;}
+.panel-title{font-family:var(--font-hd);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:#c850ff;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.field{margin-bottom:10px;}
+.field label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;}
+.field input,.field select,.field textarea{width:100%;box-sizing:border-box;background:var(var(--input-bg);border:1px solid var(--line);border-radius:4px;color:var(--txt);padding:7px 10px;font-size:13px;}
+.field textarea{resize:vertical;min-height:70px;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#c850ff;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:700px){.two-col{grid-template-columns:1fr;}}
+.tab-bar{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:16px;}
+.tab{background:none;border:none;border-bottom:3px solid transparent;color:var(--muted);font-family:var(--font-hd);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;padding:10px 16px;cursor:pointer;transition:color 0.15s,border-color 0.15s;}
+.tab:hover{color:var(--txt);}
+.tab.active{color:#c850ff;border-bottom-color:#c850ff;}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* Cost summary cards */
+.cost-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px;}
+.cost-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;text-align:center;}
+.cost-label{font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;}
+.cost-val{font-family:var(--font-hd);font-size:22px;color:#c850ff;}
+.cost-sub{font-size:10px;color:var(--muted);margin-top:3px;}
+
+/* Tables */
+.fin-table{width:100%;border-collapse:collapse;font-size:12px;}
+.fin-table th{text-align:left;padding:6px 8px;color:#c850ff;font-family:var(--font-hd);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;border-bottom:2px solid var(--line);background:var(--panel);}
+.fin-table td{padding:7px 8px;border-bottom:1px solid var(--line);color:var(--txt);}
+.fin-table tr:hover td{background:var(--panel2);}
+.fin-table .mono{font-family:var(--font-hd);}
+.fin-table .amt{font-family:var(--font-hd);color:#c850ff;}
+
+/* Time log */
+.time-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);}
+.time-row:last-child{border-bottom:none;}
+.time-name{font-family:var(--font-hd);font-size:12px;color:var(--eoc);min-width:120px;}
+.time-hours{font-family:var(--font-hd);font-size:14px;color:#c850ff;min-width:50px;}
+.time-rate{font-size:11px;color:var(--muted);}
+.time-total{font-family:var(--font-hd);font-size:12px;color:var(--green);min-width:70px;text-align:right;}
+
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:50;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--panel);border:2px solid #c850ff;border-radius:10px;width:min(520px,95vw);padding:24px;position:relative;max-height:85vh;overflow-y:auto;}
+.modal-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;}
+.modal-close:hover{color:var(--txt);}
+.modal-title{font-family:var(--font-hd);font-size:18px;color:#c850ff;margin-bottom:16px;}
+.two-f{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+</style>
+</head>
+<body>
+<div class="page-header">
+  <a href="../index.html">⌂ Home</a>
+  <span style="color:var(--line)">›</span>
+  <a href="index.html">ICS Platform</a>
+  <span style="color:var(--line)">›</span>
+  <span class="page-title">💜 FINANCE / ADMIN</span>
+  <span style="margin-left:auto;display:flex;gap:8px">
+    <button class="btn btn-sm" onclick="saveAll()" style="border-color:#c850ff;color:#c850ff">💾 Save</button>
+    <button class="btn btn-sm" onclick="exportCSV()" style="background:var(--panel2)">⬇ CSV</button>
+    <button class="btn btn-sm" onclick="window.print()" style="background:var(--panel2)">🖨 Print</button>
+  </span>
+</div>
+<nav class="ics-nav">
+  <a href="index.html">🏛 Overview</a>
+  <a href="command.html">⭐ Command</a>
+  <a href="operations.html">🔴 Operations</a>
+  <a href="planning.html">📋 Planning</a>
+  <a href="logistics.html">🟢 Logistics</a>
+  <a href="finance.html" class="active">💜 Finance</a>
+</nav>
+
+<div class="container">
+
+  <!-- Cost summary -->
+  <div class="cost-strip" id="costStrip">
+    <div class="cost-card"><div class="cost-label">Total Cost</div><div class="cost-val" id="cs-total">$0</div><div class="cost-sub">All categories</div></div>
+    <div class="cost-card"><div class="cost-label">Personnel</div><div class="cost-val" id="cs-personnel">$0</div><div class="cost-sub">Labor / overtime</div></div>
+    <div class="cost-card"><div class="cost-label">Equipment</div><div class="cost-val" id="cs-equip">$0</div><div class="cost-sub">Rental / use</div></div>
+    <div class="cost-card"><div class="cost-label">Supply</div><div class="cost-val" id="cs-supply">$0</div><div class="cost-sub">Materials / consumables</div></div>
+    <div class="cost-card"><div class="cost-label">Other</div><div class="cost-val" id="cs-other">$0</div><div class="cost-sub">Misc / contracts</div></div>
+    <div class="cost-card"><div class="cost-label">Hours Logged</div><div class="cost-val" id="cs-hours">0</div><div class="cost-sub">Total person-hours</div></div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('cost')">Cost Accounting</button>
+    <button class="tab" onclick="showTab('time')">Time Tracking</button>
+    <button class="tab" onclick="showTab('procurement')">Procurement</button>
+    <button class="tab" onclick="showTab('admin')">Admin</button>
+  </div>
+
+  <!-- COST ACCOUNTING -->
+  <div class="tab-pane active" id="tab-cost">
+    <div class="panel">
+      <div class="panel-title">
+        Cost / Expenditure Log
+        <button class="btn btn-sm" onclick="openAddCost()" style="border-color:#c850ff;color:#c850ff">+ Add Entry</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="fin-table">
+          <thead>
+            <tr><th>Date/Time</th><th>Category</th><th>Description</th><th>Vendor / Personnel</th><th style="text-align:right">Amount</th><th>Approved</th><th></th></tr>
+          </thead>
+          <tbody id="costBody"></tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4" style="text-align:right;font-family:var(--font-hd);font-size:12px;color:#c850ff;padding:8px">Total</td>
+              <td style="text-align:right;font-family:var(--font-hd);font-size:15px;color:#c850ff;padding:8px" id="costTotal">$0.00</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIME TRACKING -->
+  <div class="tab-pane" id="tab-time">
+    <div class="panel">
+      <div class="panel-title">
+        Personnel Time Log
+        <button class="btn btn-sm" onclick="openAddTime()" style="border-color:#c850ff;color:#c850ff">+ Log Time</button>
+      </div>
+      <div id="timeList"></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-title">Overtime / Comp Time</div>
+      <div class="field"><label>Agency Overtime Policy</label>
+        <textarea id="otPolicy" placeholder="Describe applicable overtime rules, approval requirements, comp time provisions…"></textarea>
+      </div>
+      <div class="field"><label>Overtime Authorization</label><input type="text" id="otAuth" placeholder="Authorized by / Date"></div>
+    </div>
+  </div>
+
+  <!-- PROCUREMENT -->
+  <div class="tab-pane" id="tab-procurement">
+    <div class="panel">
+      <div class="panel-title">
+        Procurement / Orders
+        <button class="btn btn-sm" onclick="openAddProcure()" style="border-color:#c850ff;color:#c850ff">+ Add Order</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="fin-table">
+          <thead>
+            <tr><th>Date</th><th>Item / Service</th><th>Vendor</th><th>PO / Ref #</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="procureBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-title">Procurement Authority</div>
+      <div class="two-col">
+        <div class="field"><label>Contracting Officer</label><input type="text" id="contractOfficer" placeholder="Name / Authority"></div>
+        <div class="field"><label>Purchase Card Holder</label><input type="text" id="pCardHolder" placeholder="Name / Last 4 digits"></div>
+      </div>
+      <div class="field"><label>Spending Limits / Restrictions</label>
+        <textarea id="spendingLimits" placeholder="Single purchase limit, pre-authorization requirements…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div class="tab-pane" id="tab-admin">
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-title">Finance / Admin Section Chief</div>
+        <div class="field"><label>Name / Callsign</label><input type="text" id="finChief" placeholder="Jane Smith W8ABC"></div>
+        <div class="field"><label>Agency</label><input type="text" id="finAgency" placeholder="Franklin County ARES"></div>
+        <div class="field"><label>Contact</label><input type="text" id="finContact" placeholder="(614) 555-0100"></div>
+        <div class="field"><label>Section Objectives</label>
+          <textarea id="finObjectives" placeholder="Key objectives for this section this operational period…"></textarea>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Cost Claim Instructions</div>
+        <div class="field"><label>Agency to Bill</label><input type="text" id="billAgency" placeholder="Franklin County EMA"></div>
+        <div class="field"><label>Billing Contact</label><input type="text" id="billContact" placeholder="Name / email / phone"></div>
+        <div class="field"><label>Cost Share / Reimbursement</label>
+          <select id="costShare">
+            <option value="">Not determined</option>
+            <option value="full">Full reimbursement</option>
+            <option value="partial">Partial — document costs</option>
+            <option value="volunteer">Volunteer — no reimbursement</option>
+            <option value="fema">FEMA PA eligible</option>
+          </select>
+        </div>
+        <div class="field"><label>Claim Deadline</label><input type="text" id="claimDeadline" placeholder="2026-07-10 — 30 days post-incident"></div>
+        <div class="field"><label>Supporting Documentation Required</label>
+          <textarea id="docRequired" placeholder="Receipts, time sheets, equipment logs, volunteer forms…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-title">Compensation / Claims Log</div>
+      <div class="field"><label>Injury Compensation Notes</label>
+        <textarea id="injuryComp" placeholder="Workers comp procedures, injury report forms, agency contacts…"></textarea>
+      </div>
+      <div class="field"><label>Equipment Loss / Damage Claims</label>
+        <textarea id="equipLoss" placeholder="Document damaged or lost equipment, replacement costs, responsible parties…"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Cost Modal -->
+<div class="modal-bg" id="addCostModal" onclick="if(event.target===this)closeModal('addCostModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('addCostModal')">✕</button>
+    <div class="modal-title">Add Cost Entry</div>
+    <div class="two-f">
+      <div class="field"><label>Category</label>
+        <select id="cCat">
+          <option value="personnel">Personnel</option>
+          <option value="equipment">Equipment</option>
+          <option value="supply">Supply</option>
+          <option value="food">Food / Water</option>
+          <option value="transport">Transportation</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Amount ($) *</label><input type="number" id="cAmount" step="0.01" min="0" placeholder="0.00"></div>
+    </div>
+    <div class="field"><label>Description *</label><input type="text" id="cDesc" placeholder="Fuel for generators — 50 gallons"></div>
+    <div class="field"><label>Vendor / Personnel</label><input type="text" id="cVendor" placeholder="Sunoco #1234 / Jane Smith"></div>
+    <div class="field"><label>Approved By</label><input type="text" id="cApproved" placeholder="IC / Finance Chief"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-sm" onclick="closeModal('addCostModal')" style="background:var(--panel2)">Cancel</button>
+      <button class="btn" onclick="saveCost()" style="border-color:#c850ff;color:#c850ff">Add Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Time Modal -->
+<div class="modal-bg" id="addTimeModal" onclick="if(event.target===this)closeModal('addTimeModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('addTimeModal')">✕</button>
+    <div class="modal-title">Log Personnel Time</div>
+    <div class="field"><label>Name / Callsign *</label><input type="text" id="tName" placeholder="Jane Smith W8ABC"></div>
+    <div class="two-f">
+      <div class="field"><label>Position</label><input type="text" id="tPosition" placeholder="Net Control"></div>
+      <div class="field"><label>Agency</label><input type="text" id="tAgency" placeholder="Franklin County ARES"></div>
+    </div>
+    <div class="two-f">
+      <div class="field"><label>Hours</label><input type="number" id="tHours" value="0" step="0.25" min="0"></div>
+      <div class="field"><label>Rate ($/hr if applicable)</label><input type="number" id="tRate" value="0" step="0.01" min="0" placeholder="0 = volunteer"></div>
+    </div>
+    <div class="field"><label>Notes</label><input type="text" id="tNotes" placeholder="Period 1 — 0800–2000"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-sm" onclick="closeModal('addTimeModal')" style="background:var(--panel2)">Cancel</button>
+      <button class="btn" onclick="saveTime()" style="border-color:#c850ff;color:#c850ff">Log Time</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Procurement Modal -->
+<div class="modal-bg" id="addProcureModal" onclick="if(event.target===this)closeModal('addProcureModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('addProcureModal')">✕</button>
+    <div class="modal-title">Add Procurement Order</div>
+    <div class="field"><label>Item / Service *</label><input type="text" id="pItem" placeholder="Portable generators (2)"></div>
+    <div class="two-f">
+      <div class="field"><label>Vendor</label><input type="text" id="pVendor" placeholder="Sunbelt Rentals"></div>
+      <div class="field"><label>PO / Reference #</label><input type="text" id="pPO" placeholder="PO-2026-001"></div>
+    </div>
+    <div class="two-f">
+      <div class="field"><label>Amount ($) *</label><input type="number" id="pAmount" step="0.01" min="0" placeholder="0.00"></div>
+      <div class="field"><label>Status</label>
+        <select id="pStatus">
+          <option value="requested">Requested</option>
+          <option value="ordered">Ordered</option>
+          <option value="delivered">Delivered</option>
+          <option value="returned">Returned / Closed</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-sm" onclick="closeModal('addProcureModal')" style="background:var(--panel2)">Cancel</button>
+      <button class="btn" onclick="saveProcure()" style="border-color:#c850ff;color:#c850ff">Add Order</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORE = 'ics_finance';
+let state = { costs:[], times:[], procure:[] };
+
+const catColors = { personnel:'var(--blue)', equipment:'var(--amber)', supply:'var(--green)', food:'#ff8c00', transport:'var(--muted)', other:'#888' };
+const statusColor = { requested:'var(--amber)', ordered:'var(--blue)', delivered:'var(--green)', 'returned / closed':'var(--muted)' };
+
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE)||'{}');
+    if(d.costs) state.costs = d.costs;
+    if(d.times) state.times = d.times;
+    if(d.procure) state.procure = d.procure;
+    const ids = ['otPolicy','otAuth','contractOfficer','pCardHolder','spendingLimits','finChief','finAgency','finContact','finObjectives','billAgency','billContact','costShare','claimDeadline','docRequired','injuryComp','equipLoss'];
+    ids.forEach(id => { if(d[id]!==undefined){ const el=document.getElementById(id); if(el) el.value=d[id]; } });
+  } catch(e) {}
+  renderAll(); updateSummary();
+}
+
+function renderAll() { renderCosts(); renderTimes(); renderProcure(); }
+
+function fmt(n) { return '$' + (parseFloat(n)||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+
+function renderCosts() {
+  document.getElementById('costBody').innerHTML = state.costs.map((c,i) => `
+    <tr>
+      <td style="font-size:11px;color:var(--muted)">${new Date(c.ts).toLocaleDateString()} ${new Date(c.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</td>
+      <td><span style="font-size:10px;font-family:var(--font-hd);padding:2px 6px;border-radius:3px;background:${catColors[c.cat]||'var(--muted)'}22;color:${catColors[c.cat]||'var(--muted)'};border:1px solid ${catColors[c.cat]||'var(--line)'}">${c.cat}</span></td>
+      <td>${c.desc}</td>
+      <td style="font-size:11px;color:var(--muted)">${c.vendor||'—'}</td>
+      <td style="text-align:right" class="amt">${fmt(c.amount)}</td>
+      <td style="font-size:11px;color:var(--muted)">${c.approved||'—'}</td>
+      <td><button onclick="delCost(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer">✕</button></td>
+    </tr>`).join('') ||
+    '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--muted)">No cost entries</td></tr>';
+  const total = state.costs.reduce((a,c)=>a+(parseFloat(c.amount)||0), 0);
+  document.getElementById('costTotal').textContent = fmt(total);
+}
+
+function renderTimes() {
+  document.getElementById('timeList').innerHTML = state.times.length
+    ? state.times.map((t,i) => {
+        const cost = (parseFloat(t.hours)||0) * (parseFloat(t.rate)||0);
+        return `<div class="time-row">
+          <span class="time-name">${t.name}</span>
+          <span class="time-hours">${parseFloat(t.hours)||0}h</span>
+          <span class="time-rate">${t.position||''} · ${t.agency||''} · ${parseFloat(t.rate||0)>0?'$'+t.rate+'/hr':'Volunteer'} ${t.notes?'· '+t.notes:''}</span>
+          <span class="time-total">${cost>0?fmt(cost):''}</span>
+          <button onclick="delTime(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer">✕</button>
+        </div>`;}).join('')
+    : '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">No time logged</div>';
+}
+
+function renderProcure() {
+  document.getElementById('procureBody').innerHTML = state.procure.map((p,i) => {
+    const sc = (p.status||'').toLowerCase();
+    const c = statusColor[sc] || 'var(--muted)';
+    return `<tr>
+      <td style="font-size:11px;color:var(--muted)">${new Date(p.ts).toLocaleDateString()}</td>
+      <td>${p.item}</td>
+      <td style="font-size:11px;color:var(--muted)">${p.vendor||'—'}</td>
+      <td style="font-family:var(--font-hd);font-size:11px">${p.po||'—'}</td>
+      <td style="text-align:right" class="amt">${fmt(p.amount)}</td>
+      <td><span style="font-size:10px;font-family:var(--font-hd);padding:2px 6px;border-radius:3px;background:${c}22;color:${c};border:1px solid ${c}">${p.status}</span></td>
+      <td><button onclick="delProcure(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer">✕</button></td>
+    </tr>`;}).join('') ||
+    '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--muted)">No orders</td></tr>';
+}
+
+function updateSummary() {
+  const bycat = (cat) => state.costs.filter(c=>c.cat===cat).reduce((a,c)=>a+(parseFloat(c.amount)||0),0);
+  const total = state.costs.reduce((a,c)=>a+(parseFloat(c.amount)||0),0);
+  const totalHours = state.times.reduce((a,t)=>a+(parseFloat(t.hours)||0),0);
+  document.getElementById('cs-total').textContent = fmt(total);
+  document.getElementById('cs-personnel').textContent = fmt(bycat('personnel') + state.times.reduce((a,t)=>a+(parseFloat(t.hours)||0)*(parseFloat(t.rate)||0),0));
+  document.getElementById('cs-equip').textContent = fmt(bycat('equipment'));
+  document.getElementById('cs-supply').textContent = fmt(bycat('supply'));
+  document.getElementById('cs-other').textContent = fmt(bycat('food')+bycat('transport')+bycat('other'));
+  document.getElementById('cs-hours').textContent = totalHours.toFixed(1);
+}
+
+function openAddCost() { document.getElementById('addCostModal').classList.add('open'); }
+function openAddTime() { document.getElementById('addTimeModal').classList.add('open'); }
+function openAddProcure() { document.getElementById('addProcureModal').classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function saveCost() {
+  const desc = document.getElementById('cDesc').value.trim();
+  const amount = parseFloat(document.getElementById('cAmount').value);
+  if(!desc || isNaN(amount)){ alert('Description and amount required'); return; }
+  state.costs.push({ cat:document.getElementById('cCat').value, desc, amount, vendor:document.getElementById('cVendor').value.trim(), approved:document.getElementById('cApproved').value.trim(), ts:new Date().toISOString() });
+  ['cDesc','cVendor','cApproved'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cAmount').value='';
+  closeModal('addCostModal'); renderCosts(); updateSummary();
+}
+
+function saveTime() {
+  const name = document.getElementById('tName').value.trim();
+  if(!name){ alert('Name required'); return; }
+  state.times.push({ name, position:document.getElementById('tPosition').value.trim(), agency:document.getElementById('tAgency').value.trim(), hours:parseFloat(document.getElementById('tHours').value)||0, rate:parseFloat(document.getElementById('tRate').value)||0, notes:document.getElementById('tNotes').value.trim(), ts:new Date().toISOString() });
+  ['tName','tPosition','tAgency','tNotes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('tHours').value='0'; document.getElementById('tRate').value='0';
+  closeModal('addTimeModal'); renderTimes(); updateSummary();
+}
+
+function saveProcure() {
+  const item = document.getElementById('pItem').value.trim();
+  const amount = parseFloat(document.getElementById('pAmount').value);
+  if(!item || isNaN(amount)){ alert('Item and amount required'); return; }
+  state.procure.push({ item, vendor:document.getElementById('pVendor').value.trim(), po:document.getElementById('pPO').value.trim(), amount, status:document.getElementById('pStatus').value, ts:new Date().toISOString() });
+  ['pItem','pVendor','pPO'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pAmount').value='';
+  closeModal('addProcureModal'); renderProcure(); updateSummary();
+}
+
+function delCost(i) { state.costs.splice(i,1); renderCosts(); updateSummary(); }
+function delTime(i) { state.times.splice(i,1); renderTimes(); updateSummary(); }
+function delProcure(i) { state.procure.splice(i,1); renderProcure(); }
+
+function saveAll() {
+  const ids = ['otPolicy','otAuth','contractOfficer','pCardHolder','spendingLimits','finChief','finAgency','finContact','finObjectives','billAgency','billContact','costShare','claimDeadline','docRequired','injuryComp','equipLoss'];
+  const d = { costs:state.costs, times:state.times, procure:state.procure };
+  ids.forEach(id => { const el=document.getElementById(id); if(el) d[id]=el.value; });
+  localStorage.setItem(STORE, JSON.stringify(d));
+  const btn = event.target; btn.textContent='✓ Saved'; setTimeout(()=>btn.textContent='💾 Save',1500);
+}
+
+function exportCSV() {
+  const rows = [['Type','Category/Name','Description','Amount','Date']];
+  state.costs.forEach(c => rows.push(['Cost',c.cat,c.desc,c.amount,c.ts]));
+  state.times.forEach(t => rows.push(['Time',t.name,`${t.hours}h @ $${t.rate}/hr — ${t.notes||''}`,((t.hours||0)*(t.rate||0)).toFixed(2),t.ts]));
+  state.procure.forEach(p => rows.push(['Procurement',p.vendor,p.item,p.amount,p.ts]));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n')],{type:'text/csv'}));
+  a.download = 'ics_finance.csv'; a.click();
+}
+
+function showTab(id) {
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+window.addEventListener('load', load);
+</script>
+
+<script src="../lib/identity.js"></script>
+</body>
+</html>

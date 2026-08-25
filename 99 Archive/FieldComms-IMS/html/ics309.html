@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ICS-309 Communications Log — Incident Management</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.main-wrap { max-width:1000px; margin:0 auto; padding:20px 16px; }
+.page-header { background:var(--panel); border:1px solid var(--amber); border-radius:8px; padding:14px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.page-header h1 { font-family:var(--font-hd); font-size:16px; color:var(--eoc); letter-spacing:2px; margin:0; }
+.form-card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:20px; margin-bottom:16px; }
+.form-card h2 { font-family:var(--font-hd); font-size:11px; letter-spacing:0.2em; color:var(--eoc); margin:0 0 14px; display:flex; align-items:center; gap:10px; }
+.form-card h2::after { content:''; flex:1; height:1px; background:var(--line); }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+.full { grid-column:1/-1; }
+.form-group { display:flex; flex-direction:column; gap:4px; }
+.form-group label { font-size:11px; color:var(--muted); }
+
+/* Log entry table (editable) */
+.log-table { width:100%; border-collapse:collapse; font-size:12px; }
+.log-table th { background:var(--panel2); color:var(--muted); padding:6px 8px; text-align:left; font-weight:normal; font-size:10px; }
+.log-table td { padding:4px 6px; border-top:1px solid var(--line); vertical-align:top; }
+.log-table input, .log-table textarea { width:100%; box-sizing:border-box; font-size:11px; padding:3px 6px; }
+.log-table .col-num { width:30px; text-align:center; color:var(--muted); padding-top:8px; }
+.log-table .col-dt { width:120px; }
+.log-table .col-fromto { width:110px; }
+.log-table .col-act { width:40px; }
+
+/* ICS-309 print form */
+.ics-form { background:#fff; color:#000; font-family:'Arial',sans-serif; font-size:12px; display:none; margin-bottom:16px; border:1px solid #000; }
+.ics-form.show { display:block; }
+.ics-hdr { border-bottom:2px solid #000; display:flex; align-items:stretch; }
+.ics-hdr-title { flex:1; padding:8px 12px; }
+.ics-hdr-title div:first-child { font-size:16px; font-weight:bold; }
+.ics-hdr-title div:last-child { font-size:11px; }
+.ics-hdr-num { border-left:1px solid #000; padding:8px 12px; min-width:80px; }
+.ics-field-row { display:flex; border-bottom:1px solid #000; }
+.ics-field { padding:5px 10px; border-right:1px solid #000; flex:1; }
+.ics-field:last-child { border-right:none; }
+.ics-field .lbl { font-size:9px; text-transform:uppercase; color:#555; margin-bottom:2px; }
+.ics-field .val { font-size:12px; min-height:16px; }
+.log-print-table { width:100%; border-collapse:collapse; }
+.log-print-table th { background:#e0e0e0; padding:5px 8px; font-size:10px; text-align:left; border:1px solid #ccc; }
+.log-print-table td { padding:5px 8px; border:1px solid #ccc; font-size:11px; vertical-align:top; }
+.drill-watermark { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-30deg); font-size:100px; opacity:0.1; color:orange; font-weight:bold; pointer-events:none; }
+
+@media print {
+  .nav-bar,.page-header,.form-card,.action-bar,#form-section { display:none !important; }
+  .ics-form { display:block !important; }
+  body { background:white; }
+}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="index.html" class="nav-logo">⬡ Incident Management</a>
+  <div class="nav-links">
+    <a href="index.html">Dashboard</a>
+    <a href="ics213.html">ICS-213</a>
+    <a href="ics214.html">ICS-214</a>
+    <a href="ics309.html" class="active">ICS-309</a>
+  </div>
+  <div class="nav-right">
+    <span id="utc-clock" style="font-family:var(--font-hd);color:var(--green);font-size:13px;letter-spacing:1px;"></span>
+  </div>
+</nav>
+
+<div class="main-wrap">
+  <div class="page-header">
+    <h1>📋 ICS-309 COMMUNICATIONS LOG</h1>
+    <span style="font-size:11px;color:var(--muted);">Log of message traffic for the incident / net</span>
+  </div>
+
+  <div id="form-section">
+    <div class="form-card">
+      <h2>Log Header</h2>
+      <div class="grid-2">
+        <div class="form-group full"><label>Incident / Event Name</label><input type="text" id="f-incident" placeholder="Severe Storm 2026-06"></div>
+        <div class="form-group"><label>Operational Period — From</label><input type="text" id="f-op-from" placeholder="Jun 16, 2026 0600"></div>
+        <div class="form-group"><label>Operational Period — To</label><input type="text" id="f-op-to" placeholder="Jun 16, 2026 1800"></div>
+        <div class="form-group"><label>Task No.</label><input type="text" id="f-task-no" placeholder="(optional)"></div>
+        <div class="form-group"><label>Operator (Name / Callsign)</label><input type="text" id="f-operator" placeholder="J. Smith W9XYZ"></div>
+        <div class="form-group"><label>Station / Net</label><input type="text" id="f-station" placeholder="Net Control / EOC"></div>
+        <div class="form-group"><label>Page</label><input type="text" id="f-page" placeholder="1 of 1"></div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h2>Log Entries</h2>
+      <table class="log-table">
+        <thead><tr>
+          <th class="col-num">#</th><th class="col-dt">Date / Time</th>
+          <th class="col-fromto">From</th><th class="col-fromto">To</th>
+          <th>Subject / Message</th><th class="col-act"></th>
+        </tr></thead>
+        <tbody id="log-tbody"></tbody>
+      </table>
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="addRow()" style="font-size:11px;">+ Add Entry</button>
+        <button class="btn btn-secondary" onclick="addRowNow()" style="font-size:11px;">+ Add (timestamp now)</button>
+      </div>
+    </div>
+
+    <div class="action-bar" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-primary" onclick="generateForm()">📄 Generate Form</button>
+      <button class="btn btn-secondary" onclick="saveToServer()">💾 Save to Incident</button>
+      <select id="incidentSel" style="padding:6px 10px;font-size:12px;min-width:180px;" title="Tag to incident">
+        <option value="">— Loading incidents —</option>
+      </select>
+      <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Print-ready ICS-309 -->
+  <div class="ics-form" id="ics-form">
+    <div id="drill-wm"></div>
+    <div class="ics-hdr">
+      <div class="ics-hdr-title"><div>COMMUNICATIONS LOG</div><div>ICS-309</div></div>
+      <div class="ics-hdr-num"><div class="lbl" style="font-size:9px;color:#555;">PAGE</div><div id="p-page">1 of 1</div></div>
+    </div>
+    <div class="ics-field-row">
+      <div class="ics-field"><div class="lbl">1. Incident Name</div><div class="val" id="p-incident"></div></div>
+      <div class="ics-field"><div class="lbl">2. Operational Period</div><div class="val" id="p-op"></div></div>
+    </div>
+    <div class="ics-field-row">
+      <div class="ics-field"><div class="lbl">3. Task No.</div><div class="val" id="p-task-no"></div></div>
+      <div class="ics-field"><div class="lbl">4. Operator (Name / Callsign)</div><div class="val" id="p-operator"></div></div>
+      <div class="ics-field"><div class="lbl">Station / Net</div><div class="val" id="p-station"></div></div>
+    </div>
+    <table class="log-print-table">
+      <thead><tr>
+        <th style="width:28px;">#</th><th style="width:120px;">Date/Time</th>
+        <th style="width:110px;">From</th><th style="width:110px;">To</th><th>Subject / Message</th>
+      </tr></thead>
+      <tbody id="p-log-body"></tbody>
+    </table>
+    <div style="padding:6px 10px;font-size:10px;border-top:1px solid #000;">
+      Prepared on Incident Management · <span id="p-print-time"></span>
+    </div>
+  </div>
+
+  <div class="action-bar" id="preview-actions" style="display:none;gap:10px;margin-top:10px;">
+    <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
+    <button class="btn btn-secondary" onclick="backToEdit()">← Back to Edit</button>
+  </div>
+</div>
+
+<script>
+const API='http://192.168.50.1:5050';
+let rows=[];   // {dt, from, to, subject}
+
+setInterval(()=>{ const e=document.getElementById('utc-clock'); if(e) e.textContent=new Date().toUTCString().slice(17,22)+'Z'; },1000);
+
+function addRow(dt='',from='',to='',subject=''){ rows.push({dt,from,to,subject}); renderRows(); }
+function addRowNow(){
+  const now=new Date();
+  const t=now.toISOString().slice(5,16).replace('T',' ')+'Z';
+  addRow(t,'','','');
+  setTimeout(()=>{const els=document.querySelectorAll('#log-tbody tr:last-child input');if(els.length)els[3].focus();},40);
+}
+function removeRow(i){ rows.splice(i,1); renderRows(); }
+function renderRows(){
+  const tb=document.getElementById('log-tbody');
+  tb.innerHTML=rows.map((r,i)=>`<tr>
+    <td class="col-num">${i+1}</td>
+    <td class="col-dt"><input type="text" value="${esc(r.dt)}" oninput="rows[${i}].dt=this.value" placeholder="DD HHMMZ"></td>
+    <td class="col-fromto"><input type="text" value="${esc(r.from)}" oninput="rows[${i}].from=this.value" placeholder="Callsign"></td>
+    <td class="col-fromto"><input type="text" value="${esc(r.to)}" oninput="rows[${i}].to=this.value" placeholder="Callsign"></td>
+    <td><input type="text" value="${esc(r.subject)}" oninput="rows[${i}].subject=this.value" placeholder="Subject / message"></td>
+    <td class="col-act"><button class="btn btn-danger" onclick="removeRow(${i})" style="padding:3px 6px;font-size:10px;">✕</button></td>
+  </tr>`).join('');
+}
+
+function generateForm(){
+  const f=id=>(document.getElementById(id).value||'').trim();
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v||'';};
+  set('p-incident',f('f-incident'));
+  set('p-op',[f('f-op-from'),f('f-op-to')].filter(Boolean).join(' – '));
+  set('p-task-no',f('f-task-no'));
+  set('p-operator',f('f-operator'));
+  set('p-station',f('f-station'));
+  set('p-page',f('f-page')||'1 of 1');
+  document.getElementById('p-log-body').innerHTML=rows.map((r,i)=>`<tr>
+    <td>${i+1}</td><td>${esc(r.dt)}</td><td>${esc(r.from)}</td><td>${esc(r.to)}</td><td>${esc(r.subject)}</td>
+  </tr>`).join('');
+  document.getElementById('p-print-time').textContent=new Date().toUTCString().slice(0,25);
+  document.getElementById('ics-form').classList.add('show');
+  document.getElementById('preview-actions').style.display='flex';
+  document.getElementById('form-section').style.display='none';
+  document.getElementById('ics-form').scrollIntoView({behavior:'smooth'});
+}
+function backToEdit(){
+  document.getElementById('ics-form').classList.remove('show');
+  document.getElementById('preview-actions').style.display='none';
+  document.getElementById('form-section').style.display='block';
+}
+
+function currentData(){
+  const f=id=>(document.getElementById(id).value||'').trim();
+  return {
+    incident:f('f-incident'), op_from:f('f-op-from'), op_to:f('f-op-to'),
+    task_no:f('f-task-no'), operator:f('f-operator'), station:f('f-station'),
+    page:f('f-page'), rows:rows.slice(),
+  };
+}
+async function loadIncidents(){
+  const sel=document.getElementById('incidentSel');
+  try{
+    const r=await fetch('http://192.168.50.1:5055/api/ics/incidents',{signal:AbortSignal.timeout(4000)});
+    if(r.ok){
+      const d=await r.json();
+      const list=Array.isArray(d)?d:(d.incidents||[]);
+      if(list.length){
+        sel.innerHTML=list.map(i=>`<option value="${i.id}">${i.name||i.id}</option>`).join('')+
+          '<option value="">(no incident / general archive)</option>';
+        return;
+      }
+    }
+  }catch(e){}
+  sel.innerHTML='<option value="">(no active incident)</option>';
+}
+
+async function saveToServer(){
+  const d=currentData();
+  const incidentId=document.getElementById('incidentSel').value;
+  const payload={ form_type:'ics309', incident_id:incidentId,
+    summary:`ICS-309 · ${d.station||d.operator||''} · ${rows.length} entries`,
+    data_fields:d, saved_at:new Date().toISOString() };
+  try{
+    const r=await fetch(`${API}/api/forms`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(r.ok) alert('Saved to incident record.');
+    else throw new Error('HTTP '+r.status);
+  }catch(e){
+    const local=JSON.parse(localStorage.getItem('fc_ics309_log')||'[]'); local.unshift(payload);
+    localStorage.setItem('fc_ics309_log',JSON.stringify(local.slice(0,50)));
+    alert('Server unreachable — saved locally on this device.');
+  }
+}
+function clearForm(){
+  ['f-incident','f-op-from','f-op-to','f-task-no','f-operator','f-station','f-page'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  rows=[]; renderRows(); backToEdit();
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── Winlink import hook (from winlink-import.html?import=1) ────────────────────
+function applyWinlinkImport(){
+  if(!new URLSearchParams(location.search).has('import')) return false;
+  let data; try{ data=JSON.parse(sessionStorage.getItem('fc_winlink_import')||'null'); }catch(e){ data=null; }
+  if(!data || data.formType!=='ics309' || !data.fields) return false;
+  const f=data.fields;
+  const setv=(id,v)=>{const el=document.getElementById(id);if(el&&v!=null)el.value=v;};
+  setv('f-incident',f.incident);
+  setv('f-op-from',f.op_from); setv('f-op-to',f.op_to);
+  setv('f-task-no',f.task_no); setv('f-operator',f.operator); setv('f-station',f.station);
+  setv('f-page',f.page);
+  rows=[];
+  // The importer passes log rows as an array (parsed from the Winlink 309 table),
+  // or as a newline blob in f.log if it couldn't structure them.
+  if(Array.isArray(data.rows) && data.rows.length){
+    data.rows.forEach(r=>rows.push({dt:r.dt||'',from:r.from||'',to:r.to||'',subject:r.subject||''}));
+  } else if(f.log){
+    f.log.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).forEach(line=>{
+      // Try tab- or multi-space- or comma-delimited: dt | from | to | subject
+      const parts=line.split(/\t|\s{2,}|\s*\|\s*/).map(s=>s.trim()).filter(Boolean);
+      if(parts.length>=4) rows.push({dt:parts[0],from:parts[1],to:parts[2],subject:parts.slice(3).join(' ')});
+      else if(parts.length===3) rows.push({dt:parts[0],from:parts[1],to:'',subject:parts[2]});
+      else rows.push({dt:'',from:'',to:'',subject:line});
+    });
+  }
+  if(!rows.length) rows=[{dt:'',from:'',to:'',subject:''}];
+  sessionStorage.removeItem('fc_winlink_import');
+  renderRows();
+  return true;
+}
+
+const _imported = applyWinlinkImport();
+if(!rows.length){ addRow();addRow();addRow();addRow();addRow(); }
+if(_imported){ generateForm(); }
+loadIncidents();
+</script>
+<script src="/lib/identity.js"></script>
+</body>
+</html>

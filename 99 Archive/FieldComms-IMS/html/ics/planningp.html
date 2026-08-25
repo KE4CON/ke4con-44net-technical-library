@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Planning P · ICS Platform</title>
+<style>
+:root {
+  --bg:#0d1117; --panel:#161b22; --panel2:#21262d; --txt:#c9d1d9;
+  --muted:#6e7681; --line:#30363d; --eoc:#1a3a6b; --eoc-lt:#2d6ab4;
+  --amber:#e3b341; --green:#3fb950; --red:#f85149; --blue:#58a6ff;
+  --purple:#bc8cff; --font-hd:'Courier New',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:Arial,sans-serif;font-size:13px;min-height:100vh}
+
+/* ── Nav ── */
+.page-header{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--eoc);border-bottom:2px solid var(--amber)}
+.page-header a{color:var(--amber);text-decoration:none;font-size:12px}
+.page-title{font-family:var(--font-hd);font-size:13px;letter-spacing:.1em;color:#fff;font-weight:bold}
+.ics-nav{display:flex;gap:2px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto}
+.ics-nav a{padding:9px 14px;font-size:11px;color:var(--muted);text-decoration:none;border-bottom:3px solid transparent;white-space:nowrap;font-family:var(--font-hd);letter-spacing:.05em}
+.ics-nav a:hover{color:var(--txt)}
+.ics-nav a.active{color:var(--amber);border-bottom-color:var(--amber)}
+
+/* ── Main layout ── */
+.container{padding:14px 16px;display:grid;grid-template-columns:auto 1fr 340px;gap:16px;align-items:start;max-width:1400px;margin:0 auto}
+
+/* ── Reference image ── */
+.img-wrap{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;flex-shrink:0}
+.img-wrap img{display:block;width:220px;border-radius:4px}
+.img-caption{font-size:9px;color:var(--muted);text-align:center;margin-top:6px;font-family:var(--font-hd)}
+
+/* ── Phase buttons panel ── */
+.phases-panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.phases-header{padding:10px 14px;background:var(--panel2);border-bottom:1px solid var(--line)}
+.phases-title{font-family:var(--font-hd);font-size:11px;letter-spacing:.1em;color:var(--eoc-lt);text-transform:uppercase}
+.phases-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.phases-list{padding:10px}
+
+/* Phase group headers */
+.phase-group{margin-bottom:8px}
+.group-label{font-size:9px;font-family:var(--font-hd);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:4px 6px;margin-bottom:4px}
+
+/* Phase buttons */
+.phase-btn{width:100%;padding:9px 12px;border-radius:6px;border:1px solid transparent;background:var(--panel2);color:var(--txt);text-align:left;cursor:pointer;display:flex;align-items:center;gap:10px;margin-bottom:3px;transition:all .15s;font-family:Arial,sans-serif;font-size:12px}
+.phase-btn:hover{border-color:var(--eoc-lt);background:rgba(26,58,107,0.2)}
+.phase-btn.active{border-color:var(--amber);background:rgba(227,179,65,0.1);color:var(--amber)}
+.phase-btn .pnum{font-family:var(--font-hd);font-size:10px;color:var(--muted);width:20px;flex-shrink:0;text-align:right}
+.phase-btn.active .pnum{color:var(--amber)}
+.phase-btn .pname{flex:1;font-weight:500;font-size:11px}
+.phase-btn .pforms{font-size:9px;color:var(--muted);font-family:var(--font-hd)}
+.phase-btn.active .pforms{color:rgba(227,179,65,0.7)}
+
+/* Color dots */
+.pdot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.dot-gray{background:#c8c8c8}
+.dot-yellow{background:#f5d08a}
+.dot-red{background:#e8534a}
+.dot-green{background:#5ab05a}
+.dot-teal{background:#5abfbf}
+
+/* ── Detail panel ── */
+.detail-panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;position:sticky;top:10px}
+.dp-header{padding:12px 14px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.dp-phase-label{font-size:10px;font-family:var(--font-hd);letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+.dp-title{font-size:16px;font-weight:bold;color:var(--amber);line-height:1.3}
+.dp-body{padding:12px 14px;max-height:calc(100vh - 300px);overflow-y:auto}
+.dp-section{margin-bottom:14px}
+.dp-section-label{font-size:10px;font-family:var(--font-hd);letter-spacing:.1em;color:var(--eoc-lt);text-transform:uppercase;margin-bottom:6px;padding-bottom:3px;border-bottom:1px solid var(--line)}
+.agenda-item{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px;color:var(--muted)}
+.agenda-item:last-child{border-bottom:none}
+.agenda-num{color:var(--eoc-lt);font-size:10px;font-weight:bold;font-family:var(--font-hd);flex-shrink:0;width:16px}
+.form-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:10px;background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.25);color:var(--blue);margin:2px;cursor:pointer;text-decoration:none;font-family:var(--font-hd)}
+.form-chip:hover{background:rgba(88,166,255,0.2);border-color:var(--blue)}
+.att-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line);font-size:11px}
+.att-row:last-child{border-bottom:none}
+.att-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.att-present{background:var(--green)}
+.att-missing{background:var(--red)}
+.att-optional{background:var(--muted)}
+.att-name{flex:1}
+.att-badge{font-size:9px;padding:1px 5px;border-radius:3px;font-family:var(--font-hd)}
+.att-badge.present{background:rgba(63,185,80,0.15);color:var(--green)}
+.att-badge.missing{background:rgba(248,81,73,0.15);color:var(--red)}
+.dp-actions{padding:12px 14px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:7px 14px;border-radius:5px;border:1px solid var(--line);background:var(--panel2);color:var(--txt);font-size:12px;cursor:pointer;font-family:inherit}
+.btn:hover{border-color:var(--eoc-lt);color:var(--blue)}
+.btn-primary{background:var(--eoc);border-color:var(--eoc-lt);color:#fff}
+.btn-primary:hover{background:var(--eoc-lt)}
+
+.placeholder{padding:20px;text-align:center;color:var(--muted);font-size:12px}
+.placeholder-icon{font-size:32px;margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <a href="../index.html">⌂ Home</a>
+  <span style="color:var(--line)">›</span>
+  <a href="index.html">🏛 ICS</a>
+  <span style="color:var(--line)">›</span>
+  <span class="page-title">📋 PLANNING P</span>
+</div>
+
+<nav class="ics-nav">
+  <a href="index.html">🏛 Overview</a>
+  <a href="command.html">⭐ Command</a>
+  <a href="operations.html">🔴 Operations</a>
+  <a href="planning.html">📋 Planning</a>
+  <a href="logistics.html">🟢 Logistics</a>
+  <a href="finance.html">💜 Finance</a>
+  <a href="planningp.html" class="active">🅿 Planning P</a>
+</nav>
+
+<div class="container">
+
+  <!-- LEFT: Reference image -->
+  <div class="img-wrap">
+    <img src="planning-p-ref.jpg" alt="ICS Planning P Reference">
+    <div class="img-caption">ICS Planning P<br>Reference Diagram</div>
+  </div>
+
+  <!-- CENTER: Phase buttons -->
+  <div class="phases-panel">
+    <div class="phases-header">
+      <div class="phases-title">Planning P — Phase Selection</div>
+      <div class="phases-sub">Select any phase to see agenda, forms, and who attends</div>
+    </div>
+    <div class="phases-list">
+
+      <!-- Initial Response -->
+      <div class="phase-group">
+        <div class="group-label">── Initial Response (Stem)</div>
+        <button class="phase-btn" onclick="sel('INCIDENT')">
+          <span class="pdot dot-gray"></span><span class="pnum">1</span>
+          <span class="pname">Incident / Event</span>
+        </button>
+        <button class="phase-btn" onclick="sel('NOTIF')">
+          <span class="pdot dot-gray"></span><span class="pnum">2</span>
+          <span class="pname">Notification</span>
+        </button>
+        <button class="phase-btn" onclick="sel('INIT_RESP')">
+          <span class="pdot dot-gray"></span><span class="pnum">3</span>
+          <span class="pname">Initial Response &amp; Assessment</span>
+        </button>
+        <button class="phase-btn" onclick="sel('INIT_UC')">
+          <span class="pdot dot-gray"></span><span class="pnum">4</span>
+          <span class="pname">Initial UC Meeting</span>
+        </button>
+        <button class="phase-btn" onclick="sel('INC_BRIEF')">
+          <span class="pdot dot-gray"></span><span class="pnum">5</span>
+          <span class="pname">Incident Brief — ICS-201</span>
+          <span class="pforms">ICS-201</span>
+        </button>
+      </div>
+
+      <!-- Establish Objectives -->
+      <div class="phase-group">
+        <div class="group-label">── Establish Objectives</div>
+        <button class="phase-btn" onclick="sel('IC_OBJ')">
+          <span class="pdot dot-yellow"></span><span class="pnum">6</span>
+          <span class="pname">IC/UC Develop/Update Objectives Meeting</span>
+          <span class="pforms">ICS-202</span>
+        </button>
+        <button class="phase-btn" onclick="sel('CMD_STAFF')">
+          <span class="pdot dot-yellow"></span><span class="pnum">7</span>
+          <span class="pname">Command &amp; General Staff Meeting/Briefing</span>
+          <span class="pforms">ICS-202 · ICS-203</span>
+        </button>
+      </div>
+
+      <!-- Develop the Plan -->
+      <div class="phase-group">
+        <div class="group-label">── Develop the Plan (Loop)</div>
+        <button class="phase-btn" onclick="sel('PREP_TACT')">
+          <span class="pdot dot-red"></span><span class="pnum">8</span>
+          <span class="pname">Preparing for the Tactics Meeting</span>
+          <span class="pforms">ICS-215 · ICS-215A</span>
+        </button>
+        <button class="phase-btn" onclick="sel('TACTICS')">
+          <span class="pdot dot-red"></span><span class="pnum">9</span>
+          <span class="pname">Tactics Meeting</span>
+          <span class="pforms">ICS-215 · ICS-215A · ICS-204</span>
+        </button>
+        <button class="phase-btn" onclick="sel('PREP_PLAN')">
+          <span class="pdot dot-red"></span><span class="pnum">10</span>
+          <span class="pname">Preparing for the Planning Meeting</span>
+          <span class="pforms">ICS-204 · ICS-205 · ICS-206</span>
+        </button>
+        <button class="phase-btn" onclick="sel('PLAN_MEET')">
+          <span class="pdot dot-red"></span><span class="pnum">11</span>
+          <span class="pname">Planning Meeting</span>
+          <span class="pforms">ICS-202 thru ICS-206</span>
+        </button>
+      </div>
+
+      <!-- Prepare & Disseminate -->
+      <div class="phase-group">
+        <div class="group-label">── Prepare &amp; Disseminate the Plan</div>
+        <button class="phase-btn" onclick="sel('IAP_PREP')">
+          <span class="pdot dot-green"></span><span class="pnum">12</span>
+          <span class="pname">IAP Prep &amp; Approval</span>
+          <span class="pforms">ICS-202 thru ICS-208</span>
+        </button>
+        <button class="phase-btn" onclick="sel('OPS_BRIEF')">
+          <span class="pdot dot-green"></span><span class="pnum">13</span>
+          <span class="pname">Operations Briefing</span>
+          <span class="pforms">Complete IAP · ICS-204</span>
+        </button>
+      </div>
+
+      <!-- Execute -->
+      <div class="phase-group">
+        <div class="group-label">── Execute, Evaluate &amp; Revise</div>
+        <button class="phase-btn" onclick="sel('EXEC_PLAN')">
+          <span class="pdot dot-teal"></span><span class="pnum">14</span>
+          <span class="pname">Execute Plan &amp; Assess Progress</span>
+          <span class="pforms">ICS-214 · ICS-209</span>
+        </button>
+        <button class="phase-btn" onclick="sel('NEW_OPS')">
+          <span class="pdot dot-teal"></span><span class="pnum">15</span>
+          <span class="pname">New Ops Period Begins</span>
+          <span class="pforms">ICS-214 · ICS-209</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT: Detail panel -->
+  <div class="detail-panel">
+    <div class="dp-header">
+      <div class="dp-phase-label" id="dp-phase-label">Select a phase</div>
+      <div class="dp-title" id="dp-title" style="color:var(--muted)">Click any phase button to begin</div>
+    </div>
+    <div class="dp-body" id="dp-body">
+      <div class="placeholder">
+        <div class="placeholder-icon">📋</div>
+        <div>Select a phase from the list to see the standard agenda, required ICS forms, and who should attend.</div>
+      </div>
+    </div>
+    <div class="dp-actions" id="dp-actions" style="display:none">
+      <button class="btn btn-primary" id="btn-sheet" onclick="generateSheet()">🖨 Generate Briefing Sheet</button>
+      <button class="btn" id="btn-form" onclick="openForm()" style="display:none">📋 Open Primary Form</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = 'http://192.168.50.1:5055/api/ics';
+
+const PHASES = {
+  INCIDENT:{num:1,name:'Incident / Event',group:'Initial Response',color:'#c8c8c8',
+    agenda:['Event occurs or threat identified','Initial notification chain activated','First responders dispatched to scene'],
+    forms:[],att:[{n:'First responders / initial IC',r:true,ok:false}],url:''},
+  NOTIF:{num:2,name:'Notification',group:'Initial Response',color:'#c8c8c8',
+    agenda:['Notify partner agencies and stakeholders','Activate EOC if warranted','Initial resource request made','Establish communication channels'],
+    forms:[],att:[{n:'Incident Commander',r:true,ok:false},{n:'Agency Representatives',r:false,ok:false}],url:''},
+  INIT_RESP:{num:3,name:'Initial Response & Assessment',group:'Initial Response',color:'#c8c8c8',
+    agenda:['Deploy initial resources','Conduct scene size-up','Establish Incident Command Post','Set initial life safety priorities','Begin resource tracking'],
+    forms:[{l:'ICS-201 Incident Briefing',u:'../ics213.html'}],
+    att:[{n:'Incident Commander',r:true,ok:false},{n:'Safety Officer',r:true,ok:false},{n:'First Responders',r:true,ok:false}],url:'../ics213.html'},
+  INIT_UC:{num:4,name:'Initial UC Meeting',group:'Initial Response',color:'#c8c8c8',
+    agenda:['Establish Unified Command if multi-agency','Agree on shared incident objectives','Define organizational structure','Determine operational area'],
+    forms:[{l:'ICS-201',u:'../ics213.html'},{l:'ICS-202 Incident Objectives',u:'planning.html'}],
+    att:[{n:'Agency Administrators / Reps',r:true,ok:false},{n:'Incident Commander(s)',r:true,ok:false},{n:'Safety Officer',r:true,ok:false}],url:'planning.html'},
+  INC_BRIEF:{num:5,name:'Incident Brief — ICS-201',group:'Initial Response',color:'#c8c8c8',
+    agenda:['Brief incoming ICS staff on current situation','Review map sketch and resource status','Confirm incident objectives','Hand off to incoming IC if transitioning'],
+    forms:[{l:'ICS-201 Incident Briefing',u:'../ics213.html'}],
+    att:[{n:'Incoming IC / Section Chiefs',r:true,ok:false},{n:'Outgoing IC',r:true,ok:false}],url:'../ics213.html'},
+  IC_OBJ:{num:6,name:'IC/UC Develop/Update Objectives Meeting',group:'Establish Objectives',color:'#f5d08a',
+    agenda:['Review situation status update','Develop or update incident objectives','Confirm priorities and constraints','Brief Command Staff on objectives'],
+    forms:[{l:'ICS-202 Incident Objectives',u:'planning.html'}],
+    att:[{n:'Incident Commander',r:true,ok:false},{n:'Safety Officer',r:true,ok:false},{n:'All Section Chiefs',r:true,ok:false}],url:'planning.html'},
+  CMD_STAFF:{num:7,name:'Command & General Staff Meeting/Briefing',group:'Establish Objectives',color:'#f5d08a',
+    agenda:['IC briefs updated objectives','Section Chiefs brief section status','Coordinate cross-section needs','Review safety message','Confirm Tactics Meeting time'],
+    forms:[{l:'ICS-202 Objectives',u:'planning.html'},{l:'ICS-203 Organization',u:'planning.html'}],
+    att:[{n:'Incident Commander',r:true,ok:false},{n:'Safety Officer',r:true,ok:false},{n:'Operations Section Chief',r:true,ok:false},{n:'Planning Section Chief',r:true,ok:false},{n:'Logistics Section Chief',r:true,ok:false},{n:'Finance/Admin Chief',r:false,ok:false}],url:'command.html'},
+  PREP_TACT:{num:8,name:'Preparing for the Tactics Meeting',group:'Develop the Plan',color:'#e8534a',
+    agenda:['Resource Unit assembles current resource status','Situation Unit prepares situation display and maps','PSC prepares ICS-215 Ops Planning Worksheet','Safety Officer prepares ICS-215A safety analysis'],
+    forms:[{l:'ICS-215 Ops Planning Worksheet',u:'operations.html'},{l:'ICS-215A Safety Analysis',u:'command.html'}],
+    att:[{n:'Planning Section Chief',r:true,ok:false},{n:'Resource Unit Leader',r:true,ok:false},{n:'Situation Unit Leader',r:true,ok:false},{n:'Safety Officer',r:true,ok:false}],url:'planning.html'},
+  TACTICS:{num:9,name:'Tactics Meeting',group:'Develop the Plan',color:'#e8534a',
+    agenda:['OSC presents tactical options by Division/Group','Complete ICS-215 Ops Planning Worksheet','Conduct ICS-215A safety analysis','Determine resource assignments for next period','Identify additional resource needs'],
+    forms:[{l:'ICS-215',u:'operations.html'},{l:'ICS-215A',u:'command.html'},{l:'ICS-203',u:'planning.html'},{l:'ICS-204 Assignment List',u:'operations.html'}],
+    att:[{n:'Incident Commander',r:true,ok:false},{n:'Operations Section Chief',r:true,ok:false},{n:'Planning Section Chief',r:true,ok:false},{n:'Safety Officer',r:true,ok:false},{n:'Resource Unit Leader',r:true,ok:false},{n:'Situation Unit Leader',r:true,ok:false}],url:'operations.html'},
+  PREP_PLAN:{num:10,name:'Preparing for the Planning Meeting',group:'Develop the Plan',color:'#e8534a',
+    agenda:['Finalize Division/Group assignments (ICS-204)','Draft communications plan (ICS-205)','Draft medical plan (ICS-206)','Prepare org chart (ICS-207)','Finalize safety message (ICS-208)'],
+    forms:[{l:'ICS-204',u:'operations.html'},{l:'ICS-205 Comms Plan',u:'logistics.html'},{l:'ICS-206 Medical Plan',u:'logistics.html'},{l:'ICS-207 Org Chart',u:'command.html'},{l:'ICS-208 Safety Message',u:'command.html'}],
+    att:[{n:'Planning Section Chief',r:true,ok:false},{n:'All Unit Leaders',r:true,ok:false},{n:'Safety Officer',r:true,ok:false}],url:'planning.html'},
+  PLAN_MEET:{num:11,name:'Planning Meeting',group:'Develop the Plan',color:'#e8534a',
+    agenda:['PSC facilitates — all Section Chiefs attend','Review and confirm objectives and assignments','Confirm resource, logistics, and comms plans','IC approves the complete IAP'],
+    forms:[{l:'ICS-202',u:'planning.html'},{l:'ICS-203',u:'planning.html'},{l:'ICS-204',u:'operations.html'},{l:'ICS-205',u:'logistics.html'},{l:'ICS-206',u:'logistics.html'}],
+    att:[{n:'Incident Commander',r:true,ok:false},{n:'All Section Chiefs',r:true,ok:false},{n:'Safety Officer',r:true,ok:false},{n:'Resource Unit Leader',r:true,ok:false}],url:'planning.html'},
+  IAP_PREP:{num:12,name:'IAP Prep & Approval',group:'Prepare & Disseminate',color:'#5ab05a',
+    agenda:['Assemble complete IAP package','IC reviews and signs ICS-202','Reproduce IAP for distribution to all supervisors','Stage briefing materials at operations briefing location'],
+    forms:[{l:'ICS-202',u:'planning.html'},{l:'ICS-203',u:'planning.html'},{l:'ICS-204',u:'operations.html'},{l:'ICS-205',u:'logistics.html'},{l:'ICS-206',u:'logistics.html'},{l:'ICS-207',u:'command.html'},{l:'ICS-208',u:'command.html'}],
+    att:[{n:'Incident Commander',r:true,ok:false},{n:'Planning Section Chief',r:true,ok:false},{n:'Safety Officer',r:true,ok:false},{n:'Documentation Unit Leader',r:false,ok:false}],url:'planning.html'},
+  OPS_BRIEF:{num:13,name:'Operations Briefing',group:'Prepare & Disseminate',color:'#5ab05a',
+    agenda:['IC presents signed incident objectives','OSC briefs assignments by Division/Group','Logistics briefs support and supply plan','Comms Unit Leader briefs ICS-205','Safety Officer delivers safety message (ICS-208)','Q&A — all resources'],
+    forms:[{l:'Complete IAP (ICS-202 through 208)',u:'planning.html'},{l:'ICS-204 by Division',u:'operations.html'}],
+    att:[{n:'All incoming resources',r:true,ok:false},{n:'Incident Commander',r:true,ok:false},{n:'All Supervisors',r:true,ok:false},{n:'Outgoing resources (debrief)',r:false,ok:false}],url:'operations.html'},
+  EXEC_PLAN:{num:14,name:'Execute Plan & Assess Progress',group:'Execute, Evaluate & Revise',color:'#5abfbf',
+    agenda:['Field operations underway per IAP','OSC monitors tactical progress vs objectives','Resource Unit tracks resource status (T-cards)','Situation Unit collects field observer reports','Log all significant events in ICS-214'],
+    forms:[{l:'ICS-214 Activity Log',u:'../ics214.html'},{l:'ICS-209 Status Summary',u:'planning.html'},{l:'ICS-309 Comms Log',u:'../ics309.html'}],
+    att:[{n:'All activated resources',r:true,ok:false},{n:'Operations Section Chief',r:true,ok:false},{n:'Resource Unit Leader',r:true,ok:false}],url:'../ics214.html'},
+  NEW_OPS:{num:15,name:'New Ops Period Begins',group:'Execute, Evaluate & Revise',color:'#5abfbf',
+    agenda:['New operational period commences','Objectives meeting scheduled for next cycle','Debrief outgoing shift — collect ICS-214 logs','Determine if activation continues or demobilizes'],
+    forms:[{l:'ICS-214 Activity Log',u:'../ics214.html'},{l:'ICS-209 Status Summary',u:'planning.html'}],
+    att:[{n:'IC / Unified Command',r:true,ok:false},{n:'All Section Chiefs',r:true,ok:false}],url:'../ics214.html'},
+};
+
+let currentId = null;
+
+// Load active roster for attendee cross-reference
+let rosterRoles = [];
+fetch(`${API}/resources`, {signal:AbortSignal.timeout(3000)})
+  .then(r=>r.json()).then(d=>{rosterRoles=(d||[]).map(r=>(r.role||'').toLowerCase());})
+  .catch(()=>{});
+
+function sel(id) {
+  currentId = id;
+  const ph = PHASES[id];
+  if (!ph) return;
+
+  // Highlight active button
+  document.querySelectorAll('.phase-btn').forEach(b => b.classList.remove('active'));
+  const btns = document.querySelectorAll('.phase-btn');
+  btns.forEach(b => { if (b.getAttribute('onclick') === `sel('${id}')`) b.classList.add('active'); });
+
+  // Update header
+  document.getElementById('dp-phase-label').textContent = `Phase ${ph.num} of 15 — ${ph.group}`;
+  document.getElementById('dp-title').textContent = ph.name;
+  document.getElementById('dp-title').style.color = ph.color;
+
+  // Build agenda
+  const agenda = ph.agenda.map((a,i) =>
+    `<div class="agenda-item"><span class="agenda-num">${i+1}.</span><span>${a}</span></div>`
+  ).join('');
+
+  // Build forms
+  const forms = ph.forms.length
+    ? ph.forms.map(f => `<a class="form-chip" href="${f.u}" target="_blank">📋 ${f.l}</a>`).join('')
+    : '<span style="color:var(--muted);font-size:11px">No specific forms required at this phase</span>';
+
+  // Build attendees with roster cross-reference
+  const attendees = ph.att.map(a => {
+    const key = a.n.toLowerCase().split('/')[0].trim();
+    const present = rosterRoles.some(r => r.includes(key));
+    const dotClass = a.r ? (present ? 'att-present' : 'att-missing') : 'att-optional';
+    const badge = present
+      ? '<span class="att-badge present">✓ On roster</span>'
+      : a.r ? '<span class="att-badge missing">⚠ Not checked in</span>' : '';
+    return `<div class="att-row">
+      <span class="att-dot ${dotClass}"></span>
+      <span class="att-name">${a.n}</span>
+      <span style="font-size:10px;color:var(--muted)">${a.r?'Required':'Optional'}</span>
+      ${badge}
+    </div>`;
+  }).join('');
+
+  document.getElementById('dp-body').innerHTML = `
+    <div class="dp-section">
+      <div class="dp-section-label">Standard Agenda</div>
+      ${agenda}
+    </div>
+    <div class="dp-section">
+      <div class="dp-section-label">Required Forms</div>
+      ${forms}
+    </div>
+    <div class="dp-section">
+      <div class="dp-section-label">Who Should Attend</div>
+      ${attendees}
+    </div>`;
+
+  document.getElementById('dp-actions').style.display = '';
+  document.getElementById('btn-form').style.display = ph.url ? '' : 'none';
+}
+
+function generateSheet() {
+  if (!currentId) return;
+  const ph = PHASES[currentId];
+  const w = window.open('', '_blank', 'width=800,height=650');
+  w.document.write(`<!DOCTYPE html><html><head><title>${ph.name}</title>
+  <style>body{font-family:Arial,sans-serif;margin:30px;color:#000}
+  h1{font-size:18px;color:#1a3a6b;border-bottom:3px solid #1a3a6b;padding-bottom:8px;margin-bottom:4px}
+  .meta{font-size:11px;color:#555;margin-bottom:18px}
+  h2{font-size:13px;color:#1a3a6b;margin:16px 0 6px}
+  ul{margin:0;padding-left:20px;font-size:12px;line-height:1.8}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .chip{padding:3px 10px;border:1px solid #1a3a6b;border-radius:4px;font-size:11px;color:#1a3a6b}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+  th{background:#1a3a6b;color:#fff;padding:5px 8px;text-align:left}
+  td{border:1px solid #ddd;padding:5px 8px}
+  .footer{margin-top:30px;font-size:9px;color:#999;border-top:1px solid #ddd;padding-top:6px}
+  @media print{body{margin:15px}}</style></head><body>
+  <h1>ICS Planning P — ${ph.name}</h1>
+  <div class="meta">
+    Phase ${ph.num} of 15 &nbsp;·&nbsp; Group: ${ph.group} &nbsp;·&nbsp;
+    Printed: ${new Date().toLocaleString()} &nbsp;·&nbsp; K9ESV FieldComms IMS v1.0
+  </div>
+  <h2>Standard Agenda</h2>
+  <ul>${ph.agenda.map(a=>`<li>${a}</li>`).join('')}</ul>
+  <h2>Required Forms</h2>
+  <div class="chips">${ph.forms.length ? ph.forms.map(f=>`<span class="chip">${f.l}</span>`).join('') : '<span style="color:#888">No specific forms required</span>'}</div>
+  <h2>Who Should Attend</h2>
+  <table>
+    <tr><th>Role</th><th>Required</th><th>Assigned To</th><th>Present / Signature</th></tr>
+    ${ph.att.map(a=>`<tr><td>${a.n}</td><td>${a.r?'Yes':'Optional'}</td><td></td><td style="width:180px">&nbsp;</td></tr>`).join('')}
+  </table>
+  <div class="footer">K9ESV Incident Management System v1.0 · http://192.168.50.1/ics/planningp.html</div>
+  </body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 500);
+}
+
+function openForm() {
+  if (currentId && PHASES[currentId].url) window.open(PHASES[currentId].url, '_blank');
+}
+</script>
+<script src="/lib/identity.js"></script>
+</body>
+</html>

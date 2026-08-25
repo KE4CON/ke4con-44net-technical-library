@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — Station Dashboard</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+/* ── Dashboard layout ─────────────────────────────────────────────── */
+.hero {
+  background: linear-gradient(135deg, var(--panel) 0%, var(--bg) 100%);
+  border-bottom: 2px solid var(--eoc);
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.hero-left { display: flex; align-items: center; gap: 16px; }
+.callsign-badge {
+  font-family: var(--font-hd); font-size: 28px; color: var(--amber);
+  letter-spacing: 4px; text-shadow: 0 0 20px rgba(245,166,35,0.4);
+}
+.hero-title { font-family: var(--font-hd); font-size: 15px; color: rgba(255,255,255,0.75); letter-spacing: 2px; }
+.utc-clock { font-family: var(--font-hd); font-size: 22px; color: #fff; letter-spacing: 2px; }
+
+.sec-label {
+  font-family: var(--font-hd);
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--eoc); padding: 16px 0 8px;
+  display: flex; align-items: center; gap: 10px;
+}
+.sec-label::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+/* Card grid */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.op-card {
+  background: var(--input-bg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 18px 16px; text-decoration: none; color: var(--txt);
+  display: flex; flex-direction: column; gap: 8px;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  cursor: pointer; position: relative; overflow: hidden;
+}
+.op-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--card-color, var(--eoc));
+}
+.op-card:hover {
+  border-color: var(--card-color, var(--eoc));
+  background: var(--panel2); transform: translateY(-2px); text-decoration: none;
+}
+.op-card .card-icon { font-size: 28px; line-height: 1; }
+.op-card .card-name { font-family: var(--font-hd); font-size: 14px; letter-spacing: 1px; }
+.op-card .card-desc { font-size: 11px; color: rgba(255,255,255,0.75); line-height: 1.4; }
+.op-card .card-port { font-size: 10px; color: var(--dim); margin-top: auto; }
+
+/* Status panel */
+.status-panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.stat-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.stat-row .label { color: rgba(255,255,255,0.75); min-width: 80px; }
+.stat-row .value { color: var(--txt); font-weight: bold; }
+
+/* Service dots */
+.svc-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.svc-dot-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+
+/* Weather widget */
+.weather-widget {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.wx-header {
+  padding: 10px 14px; background: var(--panel2); border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 8px;
+}
+.wx-header-title { font-family: var(--font-hd); font-size: 11px; letter-spacing: 1px; color: var(--amber); flex: 1; }
+.wx-header-status { font-size: 10px; color: rgba(255,255,255,0.75); }
+.wx-header-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.wx-body { padding: 10px 14px; }
+
+/* Alert severity levels — NWS uses Extreme / Severe / Moderate / Minor / Unknown */
+.alert-item {
+  border-left: 4px solid var(--amber); border-radius: 0 6px 6px 0;
+  padding: 0; margin-bottom: 8px; overflow: hidden;
+  background: var(--bg); cursor: pointer;
+  transition: filter 0.15s;
+}
+.alert-item:last-child { margin-bottom: 0; }
+.alert-item:hover { filter: brightness(1.1); }
+
+.alert-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+}
+.alert-icon { font-size: 16px; flex-shrink: 0; }
+.alert-event { font-family: var(--font-hd); font-size: 13px; flex: 1; }
+.alert-sev-badge {
+  font-family: var(--font-hd); font-size: 9px; letter-spacing: 0.08em;
+  padding: 2px 6px; border-radius: 3px; white-space: nowrap;
+}
+.alert-chevron { font-size: 12px; color: rgba(255,255,255,0.75); transition: transform 0.2s; }
+.alert-item.expanded .alert-chevron { transform: rotate(90deg); }
+
+.alert-detail {
+  display: none; padding: 0 12px 10px 38px;
+  font-size: 11px; line-height: 1.6; color: rgba(255,255,255,0.75);
+}
+.alert-item.expanded .alert-detail { display: block; }
+.alert-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 6px; font-size: 10px; }
+.alert-meta span { display: flex; align-items: center; gap: 4px; }
+.alert-desc { color: var(--txt); font-size: 11px; line-height: 1.6; }
+.alert-areas { margin-top: 6px; font-size: 10px; color: rgba(255,255,255,0.75); }
+.alert-instruction { margin-top: 8px; padding: 6px 8px; background: rgba(26,58,107,0.06); border-radius: 4px; font-size: 10px; color: var(--amber); }
+
+/* Severity color schemes */
+.sev-extreme  { border-color: #ff0000; }
+.sev-extreme .alert-event  { color: #ff4444; }
+.sev-extreme .alert-sev-badge { background: rgba(255,0,0,0.2); color: #ff4444; border: 1px solid rgba(255,0,0,0.4); }
+
+.sev-severe   { border-color: var(--red); }
+.sev-severe .alert-event   { color: var(--red); }
+.sev-severe .alert-sev-badge { background: rgba(184,32,32,0.10); color: var(--red); border: 1px solid rgba(255,80,80,0.3); }
+
+.sev-moderate { border-color: var(--eoc-lt); }
+.sev-moderate .alert-event { color: var(--amber); }
+.sev-moderate .alert-sev-badge { background: rgba(26,58,107,0.10); color: var(--amber); border: 1px solid rgba(245,166,35,0.3); }
+
+.sev-minor    { border-color: var(--blue); }
+.sev-minor .alert-event { color: var(--blue); }
+.sev-minor .alert-sev-badge { background: rgba(26,58,107,0.08); color: var(--blue); border: 1px solid rgba(0,120,255,0.3); }
+
+.sev-unknown  { border-color: rgba(255,255,255,0.75); }
+.sev-unknown .alert-event { color: rgba(255,255,255,0.75); }
+.sev-unknown .alert-sev-badge { background: var(--panel2); color: rgba(255,255,255,0.75); border: 1px solid var(--line); }
+
+/* No-alert state */
+.wx-clear { padding: 12px; text-align: center; color: #fff; font-size: 12px; }
+.wx-offline { padding: 12px; text-align: center; color: rgba(255,255,255,0.75); font-size: 11px; }
+
+/* APRS table */
+.aprs-table-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.aprs-table-wrap .table-hdr {
+  padding: 10px 14px; background: var(--panel2); border-bottom: 1px solid var(--line);
+  font-family: var(--font-hd); font-size: 11px; letter-spacing: 1px; color: rgba(255,255,255,0.75);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+/* DMS status bar */
+.dms-bar {
+  padding: 8px 16px; font-family: var(--font-hd); font-size: 13px; letter-spacing: 1px;
+  display: flex; align-items: center; gap: 10px; border-radius: 6px; margin-bottom: 10px;
+}
+.dms-disarmed { background: var(--panel2); border: 1px solid var(--line); color: rgba(255,255,255,0.75); }
+.dms-armed    { background: #d4f0de; border: 1px solid var(--green); color: #fff; }
+.dms-warning  { background: #fef3d8; border: 1px solid var(--amber); color: var(--amber); animation: pulse 1.5s infinite; }
+.dms-triggered{ background: #fde8e8; border: 1px solid var(--red); color: var(--red); animation: pulse 0.8s infinite; }
+
+.ics-launch-btn {
+  display: block; text-align: center; background: var(--eoc);
+  color: #000; font-family: var(--font-hd); font-size: 16px; letter-spacing: 3px;
+  padding: 14px; border-radius: 6px; text-decoration: none; margin-top: 12px;
+  border: 2px solid var(--accent);
+}
+.ics-launch-btn:hover { opacity: 0.9; text-decoration: none; transform: none; }
+
+/* ── Mode switcher ──────────────────────────────────────────────────────── */
+.mode-bar {
+  background: var(--eoc);
+  border-bottom: 3px solid var(--accent);
+  padding: 0;
+  display: flex;
+  align-items: stretch;
+}
+.mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: none;
+  border: none;
+  border-bottom: 4px solid transparent;
+  color: rgba(255,255,255,0.55);
+  font-family: var(--font-hd);
+  font-size: 13px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  margin-bottom: -3px;
+}
+.mode-btn:hover {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.85);
+}
+.mode-btn.active {
+  background: rgba(255,255,255,0.12);
+  color: #ffffff;
+  border-bottom-color: var(--accent);
+}
+.mode-btn .mb-icon { font-size: 20px; }
+.mode-btn .mb-label { line-height: 1.2; text-align: left; }
+.mode-btn .mb-sub {
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: rgba(255,255,255,0.5);
+  font-family: var(--font-ui);
+  text-transform: none;
+  display: block;
+  margin-top: 1px;
+}
+.mode-btn.active .mb-sub { color: rgba(255,255,255,0.7); }
+.mode-divider {
+  width: 1px;
+  background: rgba(255,255,255,0.15);
+  margin: 8px 0;
+}
+
+/* Mode-gated sections */
+.mode-section { display: none; }
+.mode-section.visible { display: block; }
+.starcom-section { display: none; }
+.starcom-section.visible { display: block; }
+
+/* Mode indicator in hero */
+.mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-family: var(--font-hd);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  border: 1px solid;
+  transition: background 0.2s, color 0.2s;
+}
+.mode-pill.amateur {
+  background: rgba(26,58,107,0.15);
+  border-color: rgba(26,58,107,0.4);
+  color: var(--eoc);
+}
+.mode-pill.ics {
+  background: rgba(184,32,32,0.12);
+  border-color: rgba(184,32,32,0.35);
+  color: var(--red);
+}
+.mode-pill.starcom {
+  background: rgba(26,107,42,0.15);
+  border-color: rgba(46,160,78,0.4);
+  color: #2ea04e;
+}
+
+/* ICS launch strip (shown only in ICS mode) */
+.ics-mode-strip {
+  background: linear-gradient(135deg, var(--eoc) 0%, var(--eoc-lt) 100%);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+.ics-mode-strip:hover { opacity: 0.92; text-decoration: none; }
+.ics-mode-strip .ims-icon { font-size: 28px; }
+.ics-mode-strip .ims-body { flex: 1; }
+.ics-mode-strip .ims-title {
+  font-family: var(--font-hd);
+  font-size: 16px;
+  color: #fff;
+  letter-spacing: 1px;
+}
+.ics-mode-strip .ims-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.7);
+  margin-top: 2px;
+}
+.ics-mode-strip .ims-arrow {
+  font-size: 20px;
+  color: rgba(255,255,255,0.6);
+}
+
+</style>
+</head>
+<body>
+
+<!-- HERO BAR -->
+<div class="hero">
+  <div class="hero-left">
+    <div>
+      <div class="callsign-badge" id="stationCall">EMCOMM-NET</div>
+      <div class="hero-title">INCIDENT MANAGEMENT SYSTEM · v1.0</div>
+    </div>
+  </div>
+  <div>
+    <div class="utc-clock" id="utcClock">--:--:-- UTC</div>
+    <div style="font-size:11px;color:var(--muted);text-align:right" id="utcDate">----/--/--</div>
+    <div class="utc-clock" id="localClock" style="font-size:16px;margin-top:4px">--:--:-- LCL</div>
+    <div style="font-size:11px;color:var(--muted);text-align:right" id="localDate">----/--/--</div>
+    <div style="text-align:right;margin-top:5px">
+      <span class="mode-pill amateur" id="modePill">📻 Amateur Radio Mode</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODE SWITCHER ──────────────────────────────────────────────────── -->
+<div class="mode-bar">
+  <button class="mode-btn active" id="modeBtn-amateur" onclick="setMode('amateur')">
+    <span class="mb-icon">📻</span>
+    <span class="mb-label">
+      Amateur Radio
+      <span class="mb-sub">ARES · RACES · NTS · HF · VHF</span>
+    </span>
+  </button>
+  <div class="mode-divider"></div>
+  <button class="mode-btn" id="modeBtn-starcom" onclick="setMode('starcom')">
+    <span class="mb-icon">🚔</span>
+    <span class="mb-label">
+      Starcom / Public Safety
+      <span class="mb-sub">Radio ID · Unit Tracking · SAR</span>
+    </span>
+  </button>
+  <div class="mode-divider"></div>
+  <button class="mode-btn" id="modeBtn-ics" onclick="setMode('ics')">
+    <span class="mb-icon">🏛</span>
+    <span class="mb-label">
+      ICS / Incident Command
+      <span class="mb-sub">Operations · Planning · Logistics · Finance</span>
+    </span>
+  </button>
+</div>
+
+<div class="page-wrap" style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start">
+<div>
+
+<!-- NWS WEATHER ALERTS + RADAR ROW -->
+<div style="display:grid;grid-template-columns:1fr auto;gap:12px;margin-bottom:12px;align-items:start">
+
+<div class="weather-widget" id="weatherWidget" style="margin-bottom:0">
+  <div class="wx-header">
+    <div class="wx-header-dot" id="wxDot" style="background:var(--muted)"></div>
+    <span class="wx-header-title">⚡ NWS WEATHER ALERTS</span>
+    <span class="wx-header-status" id="wxStatus">Checking…</span>
+    <span style="font-size:10px;color:var(--muted);margin-left:8px" id="wxUpdated"></span>
+    <button onclick="pollWeather()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 0 0 8px" title="Refresh">⟳</button>
+  </div>
+  <div class="wx-body">
+    <div id="alertsList">
+      <div class="wx-offline">Waiting for internet connection…</div>
+    </div>
+  </div>
+</div>
+
+<!-- RADAR CARD — next to NWS alerts -->
+<a href="radar.html" id="radar-card" style="
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:var(--panel); border:1px solid var(--line); border-radius:8px;
+  padding:16px 20px; text-decoration:none; color:var(--txt);
+  min-width:160px; max-width:180px; gap:8px; position:relative; overflow:hidden;
+  transition:border-color 0.15s,background 0.15s,transform 0.1s;
+  border-top:3px solid var(--blue);
+" onmouseover="this.style.transform='translateY(-2px)';this.style.borderColor='var(--blue)'"
+   onmouseout="this.style.transform='';this.style.borderColor='var(--line)';this.style.borderTopColor='var(--blue)'">
+  <div style="font-size:32px;line-height:1">🌩</div>
+  <div style="font-family:var(--font-hd);font-size:13px;letter-spacing:1px;text-align:center">NWS RADAR</div>
+  <div style="font-size:10px;color:rgba(0,0,0,0.6);text-align:center;line-height:1.4">
+    Animated NEXRAD loop<br>McHenry County, IL
+  </div>
+  <div id="radar-card-status" style="
+    font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:10px;
+    background:var(--muted);color:#fff;margin-top:2px;font-family:var(--font-hd)
+  ">Checking…</div>
+</a>
+
+</div><!-- /alerts+radar row -->
+
+<!-- OPERATIONS -->
+<div class="mode-section amateur-section" id="ms-amateur-ops">
+<div class="sec-label">⚡ Operations</div>
+<div class="card-grid">
+  <a class="op-card" href="netcontrol.html" style="--card-color:var(--green)">
+    <div class="card-icon">📻</div>
+    <div class="card-name">Amateur Net Control</div>
+    <div class="card-desc">Multi-net logging, FCC lookup, ICS-309 export</div>
+    <div class="card-port">Port 5050</div>
+  </a>
+
+  <a class="op-card" href="http://192.168.50.1:8080" target="_blank" style="--card-color:var(--eoc)">
+    <div class="card-icon">🗺️</div>
+    <div class="card-name">APRS Live Map</div>
+    <div class="card-desc">Graywolf TNC — live stations, messaging, iGate</div>
+    <div class="card-port">GW:8080 · YC:8082 ↗</div>
+  </a>
+  <a class="op-card" href="http://192.168.50.1:8090" target="_blank" style="--card-color:var(--purple)">
+    <div class="card-icon">📧</div>
+    <div class="card-name">Winlink</div>
+    <div class="card-desc">Primary: Winlink Express on the Windows station. Backup: Pat (browser) on the Pi.</div>
+    <div class="card-port">Pat backup → Port 8090 ↗</div>
+  </a>
+  <a class="op-card" href="callsign.html" style="--card-color:var(--green)">
+    <div class="card-icon">🔍</div>
+    <div class="card-name">Callsign Lookup</div>
+    <div class="card-desc">FCC ULS local database search</div>
+    <div class="card-port">Offline FCC DB</div>
+  </a>
+
+  <a class="op-card" href="tactical.html" style="--card-color:var(--blue)">
+    <div class="card-icon">🎯</div>
+    <div class="card-name">APRS Tactical Map</div>
+    <div class="card-desc">Leaflet map — APRS + resources + drawn shapes</div>
+    <div class="card-port">Offline tiles</div>
+  </a>
+
+  <a class="op-card" href="#" onclick="openJS8Call(event)" style="--card-color:var(--purple)">
+    <div class="card-icon">📡</div>
+    <div class="card-name">JS8Call</div>
+    <div class="card-desc">HF digital messaging via keyboard</div>
+    <div class="card-port" id="js8-port-label">Port 2442 ↗</div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px" id="js8-sub">⚠ Windows laptop — tap to configure IP</div>
+  </a>
+    <a class="op-card" href="refs.html" style="--card-color:var(--eoc)">
+    <span class="card-icon">📚</span>
+    <div class="card-name">Reference Library</div>
+    <div class="card-desc">Manuals, SOGs, SWIC plans, ICS docs</div>
+  </a>
+  <a class="op-card" href="printcenter.html" style="--card-color:var(--muted)">
+    <div class="card-icon">🖨️</div>
+    <div class="card-name">Print Center</div>
+    <div class="card-desc">ICS-309, Roster, ICS forms, IAP Package</div>
+    <div class="card-port">CUPS 631</div>
+  </a>
+</div>
+</div><!-- /ms-amateur-ops -->
+
+<div class="mode-section amateur-section" id="ms-amateur-safety">
+<!-- PUBLIC SAFETY -->
+<div class="sec-label">🚨 Public Safety</div>
+<div class="card-grid">
+  <a class="op-card" href="roster.html" style="--card-color:var(--blue)">
+    <div class="card-icon">👥</div>
+    <div class="card-name">Member Roster</div>
+    <div class="card-desc">Directory, activations, certifications, equipment</div>
+    <div class="card-port">ARES/RACES/ARRL</div>
+  </a>
+  <a class="op-card" href="deadmans.html" style="--card-color:var(--red)">
+    <div class="card-icon">⏱️</div>
+    <div class="card-name">Dead Man's Switch</div>
+    <div class="card-desc">Net inactivity monitor with threshold alerts</div>
+    <div class="card-port">DMS Service</div>
+  </a>
+  <a class="op-card" href="preflight.html" style="--card-color:var(--green)">
+    <div class="card-icon">✅</div>
+    <div class="card-name">Pre-flight Checklist</div>
+    <div class="card-desc">GO/CAUTION/NO-GO system health check</div>
+    <div class="card-port">Port 5051</div>
+  </a>
+</div>
+</div><!-- /ms-amateur-safety -->
+
+<div class="mode-section amateur-section" id="ms-amateur-forms">
+<!-- FORMS & TRAFFIC -->
+<div class="sec-label">📋 Forms &amp; Traffic</div>
+<div class="card-grid">
+  <a class="op-card" href="nts.html" style="--card-color:var(--eoc)">
+    <div class="card-icon">📨</div>
+    <div class="card-name">NTS Radiogram</div>
+    <div class="card-desc">ARRL radiogram format, ARL welfare messages</div>
+    <div class="card-port">ICS-309 compatible</div>
+  </a>
+  <a class="op-card" href="ics213.html" style="--card-color:var(--blue)">
+    <div class="card-icon">📝</div>
+    <div class="card-name">ICS-213 Message</div>
+    <div class="card-desc">FEMA general message form with reply block</div>
+    <div class="card-port">FEMA layout</div>
+  </a>
+  <a class="op-card" href="ics214.html" style="--card-color:var(--purple)">
+    <div class="card-icon">📊</div>
+    <div class="card-name">ICS-214 Activity Log</div>
+    <div class="card-desc">Unit activity log, resources assigned, UTC timestamps</div>
+    <div class="card-port">FEMA layout</div>
+  </a>
+</div>
+</div><!-- /ms-amateur-forms -->
+
+<div class="mode-section amateur-section" id="ms-amateur-ref">
+<!-- REFERENCE -->
+<div class="sec-label">📚 Reference</div>
+<div class="card-grid">
+  <a class="op-card" href="propagation.html" style="--card-color:var(--eoc)">
+    <div class="card-icon">☀️</div>
+    <div class="card-name">HF Propagation</div>
+    <div class="card-desc">ITU-R P.533 model, 24-hour heatmap, MUF/LUF</div>
+    <div class="card-port">Offline</div>
+  </a>
+  <a class="op-card" href="grid.html" style="--card-color:var(--green)">
+    <div class="card-icon">🔷</div>
+    <div class="card-name">Grid Square Calc</div>
+    <div class="card-desc">Maidenhead grid, distance/bearing, Leaflet map</div>
+    <div class="card-port">Offline</div>
+  </a>
+  <a class="op-card" href="repeaters.html" style="--card-color:var(--blue)">
+    <div class="card-icon">📶</div>
+    <div class="card-name">Repeater Database</div>
+    <div class="card-desc">RepeaterBook data, ARES/SKYWARN, radius filter</div>
+    <div class="card-port">Local JSON</div>
+  </a>
+  <a class="op-card" href="facilities.html" style="--card-color:var(--purple)">
+    <div class="card-icon">🏛️</div>
+    <div class="card-name">Facilities</div>
+    <div class="card-desc">EOCs, hospitals, shelters, staging areas</div>
+    <div class="card-port">Local DB</div>
+  </a>
+  <a class="op-card" href="http://192.168.50.1:8081" target="_blank" style="--card-color:var(--muted)">
+    <div class="card-icon">📖</div>
+    <div class="card-name">Kiwix</div>
+    <div class="card-desc">Offline Wikipedia, first aid, reference books</div>
+    <div class="card-port">Port 8081 ↗</div>
+  </a>
+  <a class="op-card" href="cheatsheets.html" style="--card-color:var(--eoc)">
+    <div class="card-icon">📄</div>
+    <div class="card-name">Radio Cheat Sheets</div>
+    <div class="card-desc">Quick reference cards, phonetics, Q-codes</div>
+    <div class="card-port">Offline</div>
+  </a>
+</div>
+</div><!-- /ms-amateur-ref -->
+
+<!-- SYSTEM STATUS — always visible in amateur mode -->
+<div class="mode-section amateur-section" id="ms-amateur-system">
+<div class="sec-label">🌐 Connectivity &amp; System</div>
+<div class="card-grid">
+  <a class="op-card" href="wan-status.html" style="--card-color:var(--amber)" id="wan-card">
+    <div class="card-icon">📡</div>
+    <div class="card-name">WAN Status</div>
+    <div class="card-desc">InstyConnect cellular · Starlink failover · active WAN source</div>
+    <div class="card-port" id="wan-card-status">Checking...</div>
+  </a>
+  <a class="op-card" href="amprgate.html" style="--card-color:var(--blue)" id="ampr-card">
+    <div class="card-icon">🛰</div>
+    <div class="card-name">AMPRNet Gateway</div>
+    <div class="card-desc">44Net WireGuard tunnel · 44.0.0.0/8 routing · gateway Pi status</div>
+    <div class="card-port" id="ampr-card-status">Checking...</div>
+  </a>
+</div>
+</div><!-- /ms-amateur-system -->
+
+<!-- ── STARCOM / PUBLIC SAFETY MODE SECTIONS ──────────────────────────── -->
+
+<!-- Starcom: Net Operations -->
+<div class="mode-section starcom-section" id="ms-starcom-ops">
+<div class="sec-label">🚔 Starcom Net Operations</div>
+<div class="card-grid">
+  <a class="op-card" href="starcom.html" style="--card-color:var(--blue)">
+    <div class="card-icon">🚔</div>
+    <div class="card-name">Starcom Net Logger</div>
+    <div class="card-desc">Public safety radio net logging with Radio IDs and unit tracking</div>
+    <div class="card-port">Starcom</div>
+  </a>
+  <a class="op-card" href="starcom.html?net=weather" style="--card-color:var(--eoc)">
+    <div class="card-icon">⛈️</div>
+    <div class="card-name">Weather Net</div>
+    <div class="card-desc">Quick-launch Starcom weather net with storm spotter check-in</div>
+    <div class="card-port">Starcom · Weather</div>
+  </a>
+  <a class="op-card" href="starcom.html?net=sar" style="--card-color:var(--red)">
+    <div class="card-icon">🔍</div>
+    <div class="card-name">SAR Net</div>
+    <div class="card-desc">Quick-launch Search &amp; Rescue net with field unit tracking</div>
+    <div class="card-port">Starcom · SAR</div>
+  </a>
+  <a class="op-card" href="observer.html" style="--card-color:var(--muted)">
+    <div class="card-icon">👁️</div>
+    <div class="card-name">Observer Mode</div>
+    <div class="card-desc">Read-only live net view for served agencies and EOC display</div>
+    <div class="card-port">Read-only</div>
+  </a>
+</div>
+</div><!-- /ms-starcom-ops -->
+
+<!-- Starcom: Resource Tracking -->
+<div class="mode-section starcom-section" id="ms-starcom-resources">
+<div class="sec-label">📍 Resource Tracking</div>
+<div class="card-grid">
+  <a class="op-card" href="resmap.html" style="--card-color:var(--red)">
+    <div class="card-icon">🗺️</div>
+    <div class="card-name">Resource Tracking Map</div>
+    <div class="card-desc">Starcom unit placement, status colors, zone drawing</div>
+    <div class="card-port">Manual</div>
+  </a>
+  <a class="op-card" href="resources.html" style="--card-color:var(--eoc)">
+    <div class="card-icon">📦</div>
+    <div class="card-name">Resource Board</div>
+    <div class="card-desc">Track personnel, vehicles, equipment status — Available to Demobilized</div>
+    <div class="card-port">Port 5050</div>
+  </a>
+  <a class="op-card" href="roster.html" style="--card-color:var(--green)">
+    <div class="card-icon">👥</div>
+    <div class="card-name">Member Roster</div>
+    <div class="card-desc">Activation check-in, Radio IDs, certifications, deployment log</div>
+    <div class="card-port">Port 5050</div>
+  </a>
+  <a class="op-card" href="facilities.html" style="--card-color:var(--amber)">
+    <div class="card-icon">🏥</div>
+    <div class="card-name">Facilities Directory</div>
+    <div class="card-desc">EOC, shelters, hospitals, staging areas with frequencies</div>
+    <div class="card-port">Reference</div>
+  </a>
+</div>
+</div><!-- /ms-starcom-resources -->
+
+<!-- Starcom: ICS & Documentation -->
+<div class="mode-section starcom-section" id="ms-starcom-ics">
+<div class="sec-label">📋 ICS &amp; Documentation</div>
+<div class="card-grid">
+  <a class="op-card" href="ics/index.html" style="--card-color:var(--amber)">
+    <div class="card-icon">🏛</div>
+    <div class="card-name">ICS Platform</div>
+    <div class="card-desc">Full incident command — command, ops, planning, logistics, finance</div>
+    <div class="card-port">Port 5055</div>
+  </a>
+  <a class="op-card" href="ics213.html" style="--card-color:var(--purple)">
+    <div class="card-icon">📝</div>
+    <div class="card-name">ICS-213 Message</div>
+    <div class="card-desc">Formal general message form with incident log</div>
+    <div class="card-port">Forms</div>
+  </a>
+  <a class="op-card" href="ics214.html" style="--card-color:var(--purple)">
+    <div class="card-icon">📊</div>
+    <div class="card-name">ICS-214 Activity Log</div>
+    <div class="card-desc">Timestamped unit activity log, printable form</div>
+    <div class="card-port">Forms</div>
+  </a>
+  <a class="op-card" href="printcenter.html" style="--card-color:var(--eoc)">
+    <div class="card-icon">🖨️</div>
+    <div class="card-name">Print Center</div>
+    <div class="card-desc">All forms, reference cards, and incident cover sheet</div>
+    <div class="card-port">Print</div>
+  </a>
+</div>
+</div><!-- /ms-starcom-ics -->
+
+<!-- STARCOM: Connectivity & System -->
+<div class="mode-section starcom-section" id="ms-starcom-system">
+<div class="sec-label">🌐 Connectivity &amp; System</div>
+<div class="card-grid">
+  <a class="op-card" href="wan-status.html" style="--card-color:var(--amber)">
+    <div class="card-icon">📡</div>
+    <div class="card-name">WAN Status</div>
+    <div class="card-desc">InstyConnect cellular · Starlink failover · active WAN source</div>
+    <div class="card-port" id="wan-card-status-sc">Checking...</div>
+  </a>
+  <a class="op-card" href="amprgate.html" style="--card-color:var(--blue)">
+    <div class="card-icon">🛰</div>
+    <div class="card-name">AMPRNet Gateway</div>
+    <div class="card-desc">44Net WireGuard tunnel · 44.0.0.0/8 routing · gateway Pi status</div>
+    <div class="card-port" id="ampr-card-status-sc">Checking...</div>
+  </a>
+</div>
+</div><!-- /ms-starcom-system -->
+
+<!-- ── ICS MODE SECTIONS ────────────────────────────────────────────── -->
+
+<!-- ICS: Platform entry (shown only in ICS mode) -->
+<div class="mode-section ics-section" id="ms-ics-platform">
+  <a class="ics-mode-strip" href="ics/index.html">
+    <span class="ims-icon">🏛</span>
+    <div class="ims-body">
+      <div class="ims-title">▲ ICS PLATFORM — Incident Command System</div>
+      <div class="ims-sub">Command · Operations · Planning · Logistics · Finance</div>
+    </div>
+    <span class="ims-arrow">›</span>
+  </a>
+</div>
+
+<!-- ICS: Command & Ops tools -->
+<div class="mode-section ics-section" id="ms-ics-ops">
+<div class="sec-label">🔴 Operations</div>
+<div class="card-grid">
+  <a class="op-card" href="ics/operations.html" style="--card-color:var(--red)">
+    <div class="card-icon">🔴</div>
+    <div class="card-name">ICS Operations</div>
+    <div class="card-desc">T-cards, resources, assignments, ICS-204</div>
+    <div class="card-port">Operations Section</div>
+  </a>
+  <a class="op-card" href="ics/command.html" style="--card-color:var(--accent)">
+    <div class="card-icon">⭐</div>
+    <div class="card-name">ICS Command</div>
+    <div class="card-desc">Objectives, safety, staff, ICS-201/202/203</div>
+    <div class="card-port">Command Section</div>
+  </a>
+  <a class="op-card" href="ics/planning.html" style="--card-color:var(--blue)">
+    <div class="card-icon">📋</div>
+    <div class="card-name">ICS Planning</div>
+    <div class="card-desc">Situation status, IAP forms, resource status</div>
+    <div class="card-port">Planning Section</div>
+  </a>
+  <a class="op-card" href="ics/logistics.html" style="--card-color:var(--green)">
+    <div class="card-icon">🟢</div>
+    <div class="card-name">ICS Logistics</div>
+    <div class="card-desc">Comms plan, supply, facilities, ICS-205/211</div>
+    <div class="card-port">Logistics Section</div>
+  </a>
+  <a class="op-card" href="ics/finance.html" style="--card-color:var(--purple)">
+    <div class="card-icon">💜</div>
+    <div class="card-name">ICS Finance/Admin</div>
+    <div class="card-desc">Cost accounting, time tracking, procurement</div>
+    <div class="card-port">Finance Section</div>
+  </a>
+  <a class="op-card" href="tactical.html" style="--card-color:var(--blue)">
+    <div class="card-icon">🎯</div>
+    <div class="card-name">Tactical Map</div>
+    <div class="card-desc">APRS + resource positions, unit tracking</div>
+    <div class="card-port">APRS + Offline</div>
+  </a>
+  <a class="op-card" href="resmap.html" style="--card-color:var(--red)">
+    <div class="card-icon">🗺️</div>
+    <div class="card-name">Resource Map</div>
+    <div class="card-desc">Starcom unit placement, status colors, zones</div>
+    <div class="card-port">Manual</div>
+  </a>
+  <a class="op-card" href="resources.html" style="--card-color:var(--eoc)">
+    <div class="card-icon">📦</div>
+    <div class="card-name">Resource Board</div>
+    <div class="card-desc">Personnel, vehicles, equipment status tracking</div>
+    <div class="card-port">Port 5050</div>
+  </a>
+</div>
+</div><!-- /ms-ics-ops -->
+
+<!-- ICS: Personnel & Coordination -->
+<div class="mode-section ics-section" id="ms-ics-personnel">
+<div class="sec-label">👥 Personnel &amp; Coordination</div>
+<div class="card-grid">
+  <a class="op-card" href="roster.html" style="--card-color:var(--blue)">
+    <div class="card-icon">👥</div>
+    <div class="card-name">Member Roster</div>
+    <div class="card-desc">Directory, activations, certifications, ICS positions</div>
+    <div class="card-port">ARES/RACES</div>
+  </a>
+  <a class="op-card" href="preflight.html" style="--card-color:var(--green)">
+    <div class="card-icon">✅</div>
+    <div class="card-name">Pre-Flight Check</div>
+    <div class="card-desc">GO/CAUTION/NO-GO readiness before activation</div>
+    <div class="card-port">Port 5051</div>
+  </a>
+  <a class="op-card" href="deadmans.html" style="--card-color:var(--red)">
+    <div class="card-icon">⏱️</div>
+    <div class="card-name">Dead Man's Switch</div>
+    <div class="card-desc">Net inactivity monitor with escalating alerts</div>
+    <div class="card-port">DMS Service</div>
+  </a>
+  <a class="op-card" href="facilities.html" style="--card-color:var(--purple)">
+    <div class="card-icon">🏛️</div>
+    <div class="card-name">Facilities</div>
+    <div class="card-desc">EOC, hospitals, shelters, staging areas, radio freqs</div>
+    <div class="card-port">Local DB</div>
+  </a>
+</div>
+</div><!-- /ms-ics-personnel -->
+
+<!-- ICS: Forms & Documentation -->
+<div class="mode-section ics-section" id="ms-ics-forms">
+<div class="sec-label">📋 ICS Forms &amp; Documentation</div>
+<div class="card-grid">
+  <a class="op-card" href="ics213.html" style="--card-color:var(--blue)">
+    <div class="card-icon">📝</div>
+    <div class="card-name">ICS-213 Message</div>
+    <div class="card-desc">General message form with reply block, printable</div>
+    <div class="card-port">FEMA standard</div>
+  </a>
+  <a class="op-card" href="ics214.html" style="--card-color:var(--purple)">
+    <div class="card-icon">📊</div>
+    <div class="card-name">ICS-214 Activity Log</div>
+    <div class="card-desc">Unit activity log, resources assigned, UTC timestamps</div>
+    <div class="card-port">FEMA standard</div>
+  </a>
+  <a class="op-card" href="ics309.html" style="--card-color:var(--purple)">
+    <div class="card-icon">📋</div>
+    <div class="card-name">ICS-309 Comms Log</div>
+    <div class="card-desc">Communications log of message traffic, printable for after-action</div>
+    <div class="card-port">FEMA standard</div>
+  </a>
+  <a class="op-card" href="printcenter.html" style="--card-color:var(--eoc)">
+    <div class="card-icon">🖨️</div>
+    <div class="card-name">Print Center</div>
+    <div class="card-desc">ICS-309, IAP package, incident cover sheet</div>
+    <div class="card-port">All forms</div>
+  </a>
+  <a class="op-card" href="refs.html" style="--card-color:var(--eoc)">
+    <div class="card-icon">📚</div>
+    <div class="card-name">Reference Library</div>
+    <div class="card-desc">SWIC plans, SOGs, agency documents, ICS guides</div>
+    <div class="card-port">Port 5056</div>
+  </a>
+</div>
+</div><!-- /ms-ics-forms -->
+
+<!-- ICS: Communications -->
+<div class="mode-section ics-section" id="ms-ics-comms">
+<div class="sec-label">📡 Communications</div>
+<div class="card-grid">
+  <a class="op-card" href="netcontrol.html" style="--card-color:var(--green)">
+    <div class="card-icon">📻</div>
+    <div class="card-name">Amateur Net Control</div>
+    <div class="card-desc">Multi-net logging, ICS-309 comms log export</div>
+    <div class="card-port">Port 5050</div>
+  </a>
+
+  <a class="op-card" href="http://192.168.50.1:8090" target="_blank" style="--card-color:var(--purple)">
+    <div class="card-icon">📧</div>
+    <div class="card-name">Winlink</div>
+    <div class="card-desc">Primary: Winlink Express on the Windows station. Backup: Pat (browser) on the Pi.</div>
+    <div class="card-port">Pat backup → Port 8090 ↗</div>
+  </a>
+  <a class="op-card" href="winlink-import.html" style="--card-color:var(--purple)">
+    <div class="card-icon">📥</div>
+    <div class="card-name">Winlink Form Import</div>
+    <div class="card-desc">Bring Winlink Express ICS-213/214/309 form data into the incident record &amp; re-print on the Pi</div>
+    <div class="card-port">Incident archive</div>
+  </a>
+  <a class="op-card" href="repeaters.html" style="--card-color:var(--blue)">
+    <div class="card-icon">📶</div>
+    <div class="card-name">Repeater Database</div>
+    <div class="card-desc">ICS-205 planning, ARES/SKYWARN repeaters</div>
+    <div class="card-port">Local JSON</div>
+  </a>
+  <a class="op-card" href="cheatsheets.html" style="--card-color:var(--eoc)">
+    <div class="card-icon">📄</div>
+    <div class="card-name">Cheat Sheets</div>
+    <div class="card-desc">Prowords, ICS structure, CTCSS, signal reports</div>
+    <div class="card-port">Offline</div>
+  </a>
+</div>
+</div><!-- /ms-ics-comms -->
+
+<!-- ICS: Connectivity & System -->
+<div class="mode-section ics-section" id="ms-ics-system">
+<div class="sec-label">🌐 Connectivity &amp; System</div>
+<div class="card-grid">
+  <a class="op-card" href="wan-status.html" style="--card-color:var(--amber)">
+    <div class="card-icon">📡</div>
+    <div class="card-name">WAN Status</div>
+    <div class="card-desc">InstyConnect cellular · Starlink failover · active WAN source</div>
+    <div class="card-port" id="wan-card-status-ics">Checking...</div>
+  </a>
+  <a class="op-card" href="amprgate.html" style="--card-color:var(--blue)">
+    <div class="card-icon">🛰</div>
+    <div class="card-name">AMPRNet Gateway</div>
+    <div class="card-desc">44Net WireGuard tunnel · 44.0.0.0/8 routing · gateway Pi status</div>
+    <div class="card-port" id="ampr-card-status-ics">Checking...</div>
+  </a>
+</div>
+</div><!-- /ms-ics-system -->
+
+<!-- ICS launch btn (kept for Amateur mode, bottom of page) -->
+<div class="mode-section amateur-section" id="ms-amateur-ics-launch">
+<a class="ics-launch-btn" href="ics/index.html">▲ ICS PLATFORM — Incident Command System</a>
+</div>
+
+<!-- APRS Live Stations -->
+<div class="sec-label" style="margin-top:20px">📡 Live APRS Stations</div>
+<div class="aprs-table-wrap">
+  <div class="table-hdr">
+    <span>REAL-TIME APRS STATIONS (GRAYWOLF)</span>
+    <span id="aprsCount" style="color:var(--muted)">—</span>
+  </div>
+  <div style="overflow-x:auto">
+    <table id="aprsTable">
+      <thead><tr><th>Callsign</th><th>Distance</th><th>Course/Speed</th><th>Comment</th><th>Last Heard</th></tr></thead>
+      <tbody id="aprsBody"><tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px">Connecting to Graywolf…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- end main col -->
+
+<!-- RIGHT SIDEBAR -->
+<div>
+<!-- Station Status -->
+<div class="panel" style="margin-bottom:12px">
+  <div style="font-family:var(--font-hd);font-size:12px;letter-spacing:2px;color:var(--eoc);margin-bottom:12px">STATION STATUS</div>
+
+  <!-- DMS -->
+  <div class="dms-bar dms-disarmed" id="dmsBar">
+    <span>⏱</span><span id="dmsLabel">DMS: Disarmed</span>
+  </div>
+
+  <!-- Quick stats -->
+  <div class="status-panel" style="margin-bottom:12px">
+    <div class="stat-row">
+      <span class="label">CPU Temp</span>
+      <span class="value" id="statTemp">—°C</span>
+    </div>
+    <div class="stat-row">
+      <span class="label">Memory</span>
+      <span class="value" id="statMem">—%</span>
+    </div>
+    <div class="stat-row">
+      <span class="label">Disk</span>
+      <span class="value" id="statDisk">—%</span>
+    </div>
+    <div class="stat-row">
+      <span class="label">Internet</span>
+      <span class="value" id="statNet"><span class="dot dot-gray"></span></span>
+    </div>
+    <div class="stat-row">
+      <span class="label">GPS Fix</span>
+      <span class="value" id="statGPS"><span class="dot dot-gray"></span></span>
+    </div>
+    <div class="stat-row">
+      <span class="label">Updated</span>
+      <span class="value" id="statTime" style="font-size:10px">—</span>
+    </div>
+  </div>
+
+  <!-- Service dots -->
+  <div style="font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:1px">SERVICES</div>
+  <div class="svc-grid" id="svcGrid">
+    <div class="svc-dot-row"><span class="dot dot-gray"></span>Loading…</div>
+  </div>
+</div>
+
+<!-- Internet indicator -->
+<div class="panel" id="internetPanel" style="margin-bottom:12px;padding:10px 14px;display:flex;align-items:center;gap:8px">
+  <span class="dot dot-gray" id="inetDot"></span>
+  <span id="inetLabel" style="font-size:12px">Checking internet…</span>
+</div>
+
+<!-- Quick Links -->
+<div class="panel">
+  <div style="font-family:var(--font-hd);font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:10px">QUICK LINKS</div>
+  <a href="observer.html" style="display:block;padding:6px 0;border-bottom:1px solid var(--line);font-size:12px">👁 Observer Mode</a>
+  <a href="preflight.html" style="display:block;padding:6px 0;border-bottom:1px solid var(--line);font-size:12px">✅ Pre-flight Check</a>
+  <a href="printcenter.html" style="display:block;padding:6px 0;border-bottom:1px solid var(--line);font-size:12px">🖨 Print Center</a>
+  <a href="callsign.html" style="display:block;padding:6px 0;font-size:12px">🔍 Callsign Lookup</a>
+</div>
+</div><!-- end sidebar -->
+</div><!-- end page grid -->
+
+<script>
+// ── Station config (edit these for your station) ──────────────────────
+const STATION_LAT = 42.3153;   // Default: Woodstock IL (McHenry County seat) — updated by installer
+const STATION_LON = -88.4473;  // Default: Woodstock IL (McHenry County seat) — updated by installer
+const STATION_CALL = "W8EXX";  // Your callsign
+
+document.getElementById("stationCall").textContent = STATION_CALL;
+
+// ── UTC Clock ─────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+
+  // UTC clock
+  const hh = String(now.getUTCHours()).padStart(2,"0");
+  const mm = String(now.getUTCMinutes()).padStart(2,"0");
+  const ss = String(now.getUTCSeconds()).padStart(2,"0");
+  document.getElementById("utcClock").textContent = `${hh}:${mm}:${ss} UTC`;
+  const yr = now.getUTCFullYear();
+  const mo = String(now.getUTCMonth()+1).padStart(2,"0");
+  const dy = String(now.getUTCDate()).padStart(2,"0");
+  document.getElementById("utcDate").textContent = `${yr}/${mo}/${dy}`;
+
+  // Local 24-hour clock
+  const lhh = String(now.getHours()).padStart(2,"0");
+  const lmm = String(now.getMinutes()).padStart(2,"0");
+  const lss = String(now.getSeconds()).padStart(2,"0");
+  document.getElementById("localClock").textContent = `${lhh}:${lmm}:${lss} LCL`;
+  const lyr = now.getFullYear();
+  const lmo = String(now.getMonth()+1).padStart(2,"0");
+  const ldy = String(now.getDate()).padStart(2,"0");
+  document.getElementById("localDate").textContent = `${lyr}/${lmo}/${ldy}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Health monitor poll ───────────────────────────────────────────────
+const SVC_LABELS = {
+  "nginx":"nginx","fcc-lookup":"FCC API","graywolf":"Graywolf","pat":"Pat",
+  "kiwix-serve":"Kiwix","gpsd":"gpsd","chrony":"Chrony",
+  "deadmans":"DMS","tailscaled":"Tailscale","ics-platform":"ICS"
+};
+
+async function pollHealth() {
+  try {
+    const r = await fetch("http://192.168.50.1:5051/api/health/quick", {signal: AbortSignal.timeout(5000)});
+    const d = await r.json();
+    const temp = d.cpu_temp ? `${d.cpu_temp}°C` : "—°C";
+    const memPct = d.memory_pct ? `${d.memory_pct}%` : "—%";
+    document.getElementById("statTemp").textContent = temp;
+    document.getElementById("statMem").textContent = memPct;
+    document.getElementById("statTime").textContent =
+      d.timestamp ? d.timestamp.slice(11,19) + " UTC" : "—";
+
+    // Internet
+    const inet = d.internet;
+    const inetDot = document.getElementById("inetDot");
+    const inetLbl = document.getElementById("inetLabel");
+    inetDot.className = `dot ${inet ? "dot-green" : "dot-red"}`;
+    inetLbl.textContent = inet ? "Internet: Connected" : "Internet: Offline";
+
+    // GPS
+    const gpsEl = document.getElementById("statGPS");
+    const gpsFix = d.gps_fix;
+    gpsEl.innerHTML = `<span class="dot ${gpsFix ? "dot-green" : "dot-amber"}"></span>`;
+
+    // If GPS has a fix, update station coordinates live
+    if (gpsFix) {
+      try {
+        const posRes = await fetch("http://192.168.50.1:5050/api/position");
+        const pos = await posRes.json();
+        if (pos.fix && pos.lat && pos.lon) {
+          // Update global station position for NWS alerts
+          window._stationLat = pos.lat;
+          window._stationLon = pos.lon;
+          const gpsInfo = document.getElementById("gpsCoords");
+          if (gpsInfo) gpsInfo.textContent =
+            `GPS ${pos.lat.toFixed(4)}, ${pos.lon.toFixed(4)} (${pos.mode_str})`;
+        }
+      } catch(e) {}
+    }
+
+    // Net status
+    const netEl = document.getElementById("statNet");
+    netEl.innerHTML = `<span class="dot ${inet ? "dot-green" : "dot-red"}"></span>`;
+  } catch(e) { /* offline */ }
+
+  try {
+    const r2 = await fetch("http://192.168.50.1:5051/api/health/services",{signal:AbortSignal.timeout(5000)});
+    const svcs = await r2.json();
+    const grid = document.getElementById("svcGrid");
+    grid.innerHTML = Object.entries(svcs).map(([k,v]) => {
+      const cls = v.active ? "dot-green" : "dot-red";
+      const lbl = SVC_LABELS[k] || k;
+      return `<div class="svc-dot-row"><span class="dot ${cls}"></span>${lbl}</div>`;
+    }).join("");
+  } catch(e) {}
+
+  try {
+    const r3 = await fetch("http://192.168.50.1:5050/api/dms",{signal:AbortSignal.timeout(3000)});
+    const dms = await r3.json();
+    const bar = document.getElementById("dmsBar");
+    const lbl = document.getElementById("dmsLabel");
+    bar.className = `dms-bar dms-${dms.state || "disarmed"}`;
+    const states = {disarmed:"⏱ DMS Disarmed", armed:"⏱ DMS Armed", warning:"⚠ DMS WARNING", triggered:"🚨 DMS TRIGGERED"};
+    const armedNets = (dms.armed_nets || []);
+    const netStr = armedNets.length ? ` · ${armedNets.length} net${armedNets.length>1?"s":""}: ${armedNets.slice(0,2).join(", ")}${armedNets.length>2?" +"+( armedNets.length-2):""}` : "";
+    lbl.textContent = (states[dms.state] || "⏱ DMS Disarmed") + netStr;
+  } catch(e) {}
+
+  try {
+    const st = await fetch("http://192.168.50.1:5050/api/dms",{signal:AbortSignal.timeout(3000)});
+    const dk = await st.json();
+    // disk from full health if available
+  } catch(e) {}
+}
+
+pollHealth();
+setInterval(pollHealth, 30000);
+
+// ── NWS Weather Alerts ────────────────────────────────────────────────
+// NWS URL uses live GPS if available, falls back to configured coords
+function getNWSUrl() {
+  const lat = window._stationLat || STATION_LAT;
+  const lon = window._stationLon || STATION_LON;
+  return `https://api.weather.gov/alerts/active?point=${lat},${lon}&limit=20`;
+}
+const NWS_URL = getNWSUrl(); // initial; updated dynamically in pollWeather()
+let nwsConnected = false;
+
+// NWS event → emoji icon
+const WX_ICONS = {
+  'Tornado':                    '🌪️',
+  'Tornado Warning':            '🌪️',
+  'Tornado Watch':              '🌪️',
+  'Flash Flood':                '🌊',
+  'Flash Flood Warning':        '🌊',
+  'Flash Flood Watch':          '🌊',
+  'Flood':                      '🌊',
+  'Flood Warning':              '🌊',
+  'Flood Watch':                '🌊',
+  'Flood Advisory':             '🌊',
+  'Severe Thunderstorm':        '⛈️',
+  'Severe Thunderstorm Warning':'⛈️',
+  'Severe Thunderstorm Watch':  '⛈️',
+  'Thunderstorm':               '⛈️',
+  'Winter Storm':               '❄️',
+  'Winter Storm Warning':       '❄️',
+  'Winter Storm Watch':         '❄️',
+  'Blizzard':                   '🌨️',
+  'Blizzard Warning':           '🌨️',
+  'Ice Storm':                  '🧊',
+  'Ice Storm Warning':          '🧊',
+  'Freeze':                     '🧊',
+  'Freeze Warning':             '🧊',
+  'Frost':                      '🧊',
+  'Wind':                       '💨',
+  'High Wind':                  '💨',
+  'High Wind Warning':          '💨',
+  'Wind Advisory':              '💨',
+  'Dense Fog':                  '🌫️',
+  'Dense Fog Advisory':         '🌫️',
+  'Heat':                       '🌡️',
+  'Excessive Heat':             '🌡️',
+  'Excessive Heat Warning':     '🌡️',
+  'Heat Advisory':              '🌡️',
+  'Hurricane':                  '🌀',
+  'Hurricane Warning':          '🌀',
+  'Hurricane Watch':            '🌀',
+  'Tropical Storm':             '🌀',
+  'Earthquake':                 '🌍',
+  'Tsunami':                    '🌊',
+  'Fire':                       '🔥',
+  'Red Flag':                   '🔥',
+  'Dust Storm':                 '🌬️',
+  'Air Quality':                '😷',
+  'Special Weather':            '⚠️',
+  'Special Marine':             '⚓',
+};
+
+function wxIcon(event) {
+  for (const [k, v] of Object.entries(WX_ICONS)) {
+    if (event && event.includes(k)) return v;
+  }
+  return '⚠️';
+}
+
+// Map NWS severity → CSS class + label
+function sevClass(severity, urgency, certainty) {
+  const s = (severity || '').toLowerCase();
+  if (s === 'extreme')  return ['sev-extreme',  'EXTREME'];
+  if (s === 'severe')   return ['sev-severe',   'SEVERE'];
+  if (s === 'moderate') return ['sev-moderate', 'MODERATE'];
+  if (s === 'minor')    return ['sev-minor',    'MINOR'];
+  return ['sev-unknown', severity || 'UNKNOWN'];
+}
+
+// Dot color for header
+function dotColor(alerts) {
+  if (!alerts.length) return 'var(--green)';
+  const sevs = alerts.map(a => (a.properties.severity||'').toLowerCase());
+  if (sevs.includes('extreme'))  return '#ff2222';
+  if (sevs.includes('severe'))   return 'var(--red)';
+  if (sevs.includes('moderate')) return 'var(--amber)';
+  return 'var(--blue)';
+}
+
+function formatExpiry(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const now = new Date();
+  const diffH = (d - now) / 3600000;
+  const utcStr = d.toUTCString().slice(5, 22) + ' UTC';
+  if (diffH < 0) return 'Expired';
+  if (diffH < 1) return `${Math.round(diffH * 60)} min (${utcStr})`;
+  if (diffH < 24) return `${diffH.toFixed(1)} hr (${utcStr})`;
+  return utcStr;
+}
+
+function buildAlertHTML(a, idx) {
+  const p = a.properties;
+  const event    = p.event || 'Weather Alert';
+  const severity = p.severity || 'Unknown';
+  const urgency  = p.urgency  || '';
+  const certainty= p.certainty|| '';
+  const [cls, sevLabel] = sevClass(severity, urgency, certainty);
+  const icon = wxIcon(event);
+
+  // Truncate description to first 300 chars unless expanded
+  const descFull = (p.description || '').replace(/\n\n/g, '\n').trim();
+  const descShort = descFull.length > 300 ? descFull.slice(0, 300) + '…' : descFull;
+  const instruction = (p.instruction || '').trim();
+
+  // Area names — pipe-separated, wrap nicely
+  const areas = (p.areaDesc || '').split(';').map(s => s.trim()).filter(Boolean);
+  const areaStr = areas.slice(0, 6).join(' · ') + (areas.length > 6 ? ` +${areas.length - 6} more` : '');
+
+  const onset   = p.onset   ? new Date(p.onset).toUTCString().slice(5,22)   + ' UTC' : '—';
+  const expires = formatExpiry(p.expires || p.ends);
+  const msgType = p.messageType || '';
+
+  return `
+  <div class="alert-item ${cls}" id="alert-${idx}" onclick="toggleAlert(${idx})">
+    <div class="alert-head">
+      <span class="alert-icon">${icon}</span>
+      <span class="alert-event">${event}</span>
+      <span class="alert-sev-badge">${sevLabel}</span>
+      ${msgType === 'Update' ? `<span style="font-size:9px;color:var(--muted);margin-left:4px">UPD</span>` : ''}
+      <span class="alert-chevron">›</span>
+    </div>
+    <div class="alert-detail">
+      <div class="alert-meta">
+        <span>🕐 Onset: <strong>${onset}</strong></span>
+        <span>⏱ Expires: <strong>${expires}</strong></span>
+        <span>📍 Urgency: <strong>${urgency}</strong></span>
+        <span>🎯 Certainty: <strong>${certainty}</strong></span>
+      </div>
+      <div class="alert-areas">📍 ${areaStr || p.areaDesc || '—'}</div>
+      ${descShort ? `<div class="alert-desc" style="margin-top:8px">${descShort.replace(/\n/g,'<br>')}</div>` : ''}
+      ${instruction ? `<div class="alert-instruction">⚡ ${instruction.replace(/\n/g,' ')}</div>` : ''}
+      <div style="margin-top:8px;font-size:10px;color:var(--muted)">
+        Source: NWS · Sender: ${p.senderName || 'NWS'} · ID: ${(p['@id']||'').split('/').pop() || '—'}
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleAlert(idx) {
+  const el = document.getElementById(`alert-${idx}`);
+  if (el) el.classList.toggle('expanded');
+}
+
+async function pollWeather() {
+  try {
+    const r = await fetch(getNWSUrl(), { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    nwsConnected = true;
+
+    const alerts = (data.features || []).filter(a =>
+      // Filter only actionable severities — skip past-expired
+      !['past','allclear'].includes((a.properties.status||'').toLowerCase())
+    );
+
+    // Sort: Extreme first, then Severe, Moderate, Minor
+    const sevOrder = { extreme:0, severe:1, moderate:2, minor:3 };
+    alerts.sort((a, b) => {
+      const sa = sevOrder[(a.properties.severity||'').toLowerCase()] ?? 9;
+      const sb = sevOrder[(b.properties.severity||'').toLowerCase()] ?? 9;
+      return sa - sb;
+    });
+
+    const list    = document.getElementById('alertsList');
+    const dot     = document.getElementById('wxDot');
+    const status  = document.getElementById('wxStatus');
+    const updated = document.getElementById('wxUpdated');
+
+    updated.textContent = `Updated ${new Date().toUTCString().slice(17,22)} UTC`;
+
+    if (alerts.length === 0) {
+      dot.style.background = 'var(--green)';
+      dot.style.boxShadow  = '0 0 6px var(--green)';
+      status.textContent   = 'No active alerts';
+      status.style.color   = 'var(--green)';
+      list.innerHTML = `<div class="wx-clear">✓ No active NWS alerts for this area</div>`;
+    } else {
+      const color = dotColor(alerts);
+      dot.style.background = color;
+      dot.style.boxShadow  = `0 0 8px ${color}`;
+      const extreme = alerts.filter(a => (a.properties.severity||'').toLowerCase() === 'extreme').length;
+      const severe  = alerts.filter(a => (a.properties.severity||'').toLowerCase() === 'severe').length;
+      status.textContent = `${alerts.length} alert${alerts.length>1?'s':''}` +
+        (extreme ? ` — ${extreme} EXTREME` : severe ? ` — ${severe} SEVERE` : '');
+      status.style.color = color;
+      list.innerHTML = alerts.map((a, i) => buildAlertHTML(a, i)).join('');
+
+      // Auto-expand single alert or first Extreme
+      if (alerts.length === 1) {
+        document.getElementById('alert-0')?.classList.add('expanded');
+      } else if (extreme > 0) {
+        document.getElementById('alert-0')?.classList.add('expanded');
+      }
+    }
+  } catch(e) {
+    // No internet — show graceful offline state
+    if (!nwsConnected) {
+      document.getElementById('wxDot').style.background = 'var(--muted)';
+      document.getElementById('wxStatus').textContent = 'Offline';
+      document.getElementById('wxStatus').style.color = 'var(--muted)';
+      document.getElementById('alertsList').innerHTML =
+        `<div class="wx-offline">NWS alerts unavailable — no internet connection<br>
+         <span style="font-size:10px">Connect Ethernet for live weather alerts</span></div>`;
+    }
+  }
+}
+
+// Poll immediately, then every 10 minutes
+pollWeather();
+setInterval(pollWeather, 600000);
+
+// ── APRS Stations from Graywolf ───────────────────────────────────────
+async function pollAPRS() {
+  try {
+    const r = await fetch("http://192.168.50.1:8080/api/stations",{signal:AbortSignal.timeout(5000)});
+    const stations = await r.json();
+    const tbody = document.getElementById("aprsBody");
+    document.getElementById("aprsCount").textContent = `${stations.length} stations`;
+
+    if (stations.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:16px">No APRS stations heard</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = stations.slice(0,20).map(s => {
+      const dist = s.distance_km ? `${s.distance_km.toFixed(1)} km` : "—";
+      const cs   = s.course ? `${s.course}° / ${s.speed || 0} km/h` : "—";
+      const heard = s.last_heard ? new Date(s.last_heard).toUTCString().slice(17,22)+" UTC" : "—";
+      return `<tr>
+        <td><strong>${s.callsign || "?"}</strong></td>
+        <td>${dist}</td><td>${cs}</td>
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.comment || ""}</td>
+        <td>${heard}</td>
+      </tr>`;
+    }).join("");
+  } catch(e) {
+    document.getElementById("aprsBody").innerHTML =
+      '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:16px">Graywolf unavailable — start Graywolf APRS service</td></tr>';
+  }
+}
+
+pollAPRS();
+setInterval(pollAPRS, 30000);
+
+// ── JS8Call dynamic IP ─────────────────────────────────────────────
+const JS8_KEY = 'fc_js8call_ip';
+
+function initJS8Card() {
+  const ip = localStorage.getItem(JS8_KEY);
+  const sub = document.getElementById('js8-sub');
+  const lbl = document.getElementById('js8-port-label');
+  if (ip) {
+    if (sub) sub.textContent = '📡 Windows: ' + ip;
+    if (lbl) lbl.textContent = ip + ':2442 ↗';
+  }
+}
+
+function openJS8Call(e) {
+  e.preventDefault();
+  const current = localStorage.getItem(JS8_KEY) || '';
+  const ip = prompt(
+    'Enter the IP address of the Windows laptop running JS8Call.\n' +
+    'Example: 192.168.50.2\n\n' +
+    'Find it by running "ipconfig" on the Windows machine.\n' +
+    'Leave blank to clear.',
+    current
+  );
+  if (ip === null) return; // cancelled
+  if (ip.trim() === '') {
+    localStorage.removeItem(JS8_KEY);
+    const sub = document.getElementById('js8-sub');
+    const lbl = document.getElementById('js8-port-label');
+    if (sub) sub.textContent = '⚠ Windows laptop — tap to configure IP';
+    if (lbl) lbl.textContent = 'Port 2442 ↗';
+    return;
+  }
+  localStorage.setItem(JS8_KEY, ip.trim());
+  initJS8Card();
+  window.open('http://' + ip.trim() + ':2442', '_blank');
+}
+────────
+(function() {
+  const MODE_KEY = 'fc_dashboard_mode';
+
+  function setMode(mode) {
+    // Save preference
+    localStorage.setItem(MODE_KEY, mode);
+
+    // Update buttons
+    document.querySelectorAll('.mode-btn').forEach(b => {
+      b.classList.toggle('active', b.id === 'modeBtn-' + mode);
+    });
+
+    // Show/hide sections
+    document.querySelectorAll('.amateur-section').forEach(el => {
+      el.classList.toggle('visible', mode === 'amateur');
+    });
+    document.querySelectorAll('.starcom-section').forEach(el => {
+      el.classList.toggle('visible', mode === 'starcom');
+    });
+    document.querySelectorAll('.ics-section').forEach(el => {
+      el.classList.toggle('visible', mode === 'ics');
+    });
+
+    // Update hero badge
+    const pill = document.getElementById('modePill');
+    if (pill) {
+      pill.className = 'mode-pill ' + mode;
+      pill.innerHTML = mode === 'amateur'
+        ? '📻 Amateur Radio Mode'
+        : mode === 'starcom'
+        ? '🚔 Starcom / Public Safety Mode'
+        : '🏛 ICS Mode';
+    }
+
+    // Update page title tint
+    document.body.dataset.mode = mode;
+  }
+
+  // Expose globally
+  window.setMode = setMode;
+
+  // Restore saved mode on load — also check URL param
+  window.addEventListener('DOMContentLoaded', () => {
+    const urlMode = new URLSearchParams(location.search).get('mode');
+    const saved = urlMode || localStorage.getItem(MODE_KEY) || 'amateur';
+    setMode(saved);
+    initJS8Card();
+  });
+})();
+
+// ── WAN + AMPRNet live status on dashboard cards ──────────────────────────
+(function() {
+  const API = 'http://192.168.50.1:5050';
+
+  function updateWanCards(source, label) {
+    ['wan-card-status','wan-card-status-sc','wan-card-status-ics'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = label;
+      el.style.color = {cellular:'var(--green)',satellite:'var(--blue)',
+                        none:'var(--red)'}[source] || 'var(--dim)';
+    });
+    const card = document.getElementById('wan-card');
+    if (card) card.style.setProperty('--card-color',
+      {cellular:'var(--green)',satellite:'var(--blue)',none:'var(--red)'}[source] || 'var(--amber)');
+    // Update radar card status pill
+    const rs = document.getElementById('radar-card-status');
+    if (rs) {
+      const online = source === 'cellular' || source === 'satellite';
+      rs.textContent = online ? '✓ LIVE' : '✗ OFFLINE — WAN required';
+      rs.style.background = online ? 'var(--green)' : 'var(--red)';
+    }
+  }
+
+  function updateAmprCards(up, addr) {
+    ['ampr-card-status','ampr-card-status-sc','ampr-card-status-ics'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = up ? 'UP  \u00b7  ' + (addr || '44.x.x.x') : 'TUNNEL DOWN';
+      el.style.color = up ? 'var(--green)' : 'var(--red)';
+    });
+    const card = document.getElementById('ampr-card');
+    if (card) card.style.setProperty('--card-color', up ? 'var(--green)' : 'var(--red)');
+  }
+
+  function pollStatus() {
+    fetch(API + '/wan/status', {signal: AbortSignal.timeout(4000)})
+      .then(r => r.json())
+      .then(d => {
+        const src = d.active_source || 'unknown';
+        const carrier = (d.instyconnect && d.instyconnect.carrier) || 'Cellular';
+        const labels = {
+          cellular:  'Cellular  \u00b7  ' + carrier,
+          satellite: 'Starlink  (failover)',
+          site:      'Site Ethernet',
+          none:      'No WAN  \u2014  Offline',
+        };
+        updateWanCards(src, labels[src] || src);
+      })
+      .catch(() => updateWanCards('unknown', 'Status unavailable'));
+
+    fetch(API + '/amprgate/status', {signal: AbortSignal.timeout(4000)})
+      .then(r => r.json())
+      .then(d => updateAmprCards(d.tunnel === 'up' && d.reachable !== false, d.ampr_address))
+      .catch(() =>
+        fetch('http://192.168.50.2:9000/api/status', {signal: AbortSignal.timeout(3000)})
+          .then(r => r.json())
+          .then(d => updateAmprCards(d.tunnel === 'up', d.ampr_address))
+          .catch(() => updateAmprCards(false, null))
+      );
+  }
+
+  pollStatus();
+  setInterval(pollStatus, 30000);
+})();
+
+</script>

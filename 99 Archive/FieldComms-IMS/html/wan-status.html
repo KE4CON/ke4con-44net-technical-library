@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WAN Status — FieldComms</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.page-header {
+  background: var(--eoc);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 3px solid var(--accent);
+  position: sticky; top: 0; z-index: 100;
+}
+.page-header h1 { font-family: var(--font-hd); font-size: 18px; letter-spacing: 2px; }
+.page-header .sub { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+.back-btn {
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+  color: #fff; padding: 6px 14px; border-radius: 6px;
+  font-family: var(--font-ui); font-size: 12px; cursor: pointer;
+  text-decoration: none;
+}
+.back-btn:hover { background: rgba(255,255,255,0.2); text-decoration: none; color: #fff; }
+
+.main { max-width: 960px; margin: 24px auto; padding: 0 16px 40px; }
+
+/* Active WAN hero */
+.active-wan {
+  border-radius: 10px; padding: 22px 24px;
+  margin-bottom: 20px;
+  display: flex; align-items: center; gap: 20px;
+  border: 2px solid transparent;
+}
+.active-wan.cellular { background: #e4f5ea; border-color: var(--green); }
+.active-wan.satellite { background: #eef2ff; border-color: var(--blue); }
+.active-wan.none { background: #fde8e8; border-color: var(--red); }
+.active-wan .icon { font-size: 44px; }
+.active-wan .info h2 { font-family: var(--font-hd); font-size: 20px; letter-spacing: 1px; }
+.active-wan .info .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+/* Source cards */
+.source-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+@media (max-width: 600px) { .source-grid { grid-template-columns: 1fr; } }
+
+.source-card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 18px; position: relative;
+}
+.source-card.active { border-color: var(--green); }
+.source-card.standby { border-color: var(--line); opacity: 0.8; }
+.source-card.down { border-color: var(--red); }
+
+.source-card h3 {
+  font-family: var(--font-hd); font-size: 13px; letter-spacing: 1px;
+  color: var(--eoc); margin-bottom: 12px;
+  border-bottom: 1px solid var(--line); padding-bottom: 6px;
+  display: flex; align-items: center; gap: 8px;
+}
+.priority-badge {
+  font-size: 10px; background: var(--eoc); color: #fff;
+  padding: 2px 6px; border-radius: 10px; letter-spacing: 1px;
+}
+.priority-badge.active-badge { background: var(--green); }
+.priority-badge.standby-badge { background: var(--dim); }
+
+.status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.dot-green { background: var(--green); box-shadow: 0 0 6px rgba(26,122,58,0.4); }
+.dot-red   { background: var(--red); }
+.dot-amber { background: var(--amber); }
+.dot-gray  { background: var(--dim); }
+.dot-blue  { background: var(--blue); }
+
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.stat { background: var(--bg); border-radius: 5px; padding: 8px 10px; }
+.stat .label { font-size: 10px; color: var(--eoc-lt); letter-spacing: 1px; text-transform: uppercase; }
+.stat .value { font-size: 14px; font-weight: bold; color: var(--txt); margin-top: 2px; }
+
+/* Section cards */
+.section-card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 18px; margin-bottom: 16px;
+}
+.section-card h2 {
+  font-family: var(--font-hd); font-size: 14px; letter-spacing: 1px;
+  color: var(--eoc); margin-bottom: 14px;
+  border-bottom: 1px solid var(--line); padding-bottom: 8px;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: var(--eoc); color: #fff; padding: 8px 12px;
+     text-align: left; font-size: 11px; letter-spacing: 1px; }
+td { padding: 8px 12px; border-bottom: 1px solid var(--line); }
+tr:nth-child(even) td { background: var(--bg); }
+
+.info-box {
+  background: var(--panel2); border-left: 3px solid var(--eoc-lt);
+  border-radius: 4px; padding: 12px 14px; font-size: 12px; line-height: 1.6;
+  margin-bottom: 12px;
+}
+.info-box.warn { border-color: var(--amber); background: #fef9ed; }
+
+.last-poll { font-size: 11px; color: var(--dim); text-align: right; margin-bottom: 12px; }
+
+.btn {
+  padding: 9px 18px; border: none; border-radius: 6px;
+  font-family: var(--font-ui); font-size: 13px; cursor: pointer;
+  text-decoration: none; display: inline-block;
+}
+.btn-blue  { background: var(--eoc-lt); color: #fff; }
+.btn-gray  { background: var(--line); color: var(--txt); }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div>
+    <h1>📡 WAN Status</h1>
+    <div class="sub">InstyConnect Cellular  ·  Starlink Satellite  ·  EMCOMM-NET Internet</div>
+  </div>
+  <a href="/" class="back-btn">← Dashboard</a>
+</div>
+
+<div class="main">
+
+  <div class="last-poll" id="last-poll">Checking status...</div>
+
+  <!-- Active WAN hero -->
+  <div class="active-wan none" id="active-hero">
+    <div class="icon" id="hero-icon">🔄</div>
+    <div class="info">
+      <h2 id="hero-text">Checking WAN...</h2>
+      <div class="sub" id="hero-sub">Querying router status</div>
+    </div>
+  </div>
+
+  <!-- Source cards -->
+  <div class="source-grid">
+
+    <!-- InstyConnect Cellular -->
+    <div class="source-card" id="cellular-card">
+      <h3>
+        <span>📶 InstyConnect Cellular</span>
+        <span class="priority-badge active-badge" id="cell-badge">PRIMARY</span>
+      </h3>
+      <div class="status-row">
+        <div class="dot dot-gray" id="cell-dot"></div>
+        <span id="cell-status">Checking...</span>
+      </div>
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="label">Carrier</div>
+          <div class="value" id="cell-carrier">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Technology</div>
+          <div class="value" id="cell-tech">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Signal</div>
+          <div class="value" id="cell-signal">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Antenna</div>
+          <div class="value" id="cell-antenna">—</div>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <a href="http://10.1.1.1" target="_blank" class="btn btn-gray" style="font-size:11px;padding:6px 12px">
+          Open InstyConnect Admin →
+        </a>
+      </div>
+    </div>
+
+    <!-- Starlink -->
+    <div class="source-card" id="starlink-card">
+      <h3>
+        <span>🛰 Starlink Satellite</span>
+        <span class="priority-badge standby-badge" id="sl-badge">STANDBY</span>
+      </h3>
+      <div class="status-row">
+        <div class="dot dot-gray" id="sl-dot"></div>
+        <span id="sl-status">Checking...</span>
+      </div>
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="label">Latency</div>
+          <div class="value" id="sl-latency">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Throughput</div>
+          <div class="value" id="sl-throughput">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Obstruction</div>
+          <div class="value" id="sl-obstruction">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Uptime</div>
+          <div class="value" id="sl-uptime">—</div>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <a href="http://192.168.100.1" target="_blank" class="btn btn-gray" style="font-size:11px;padding:6px 12px">
+          Open Starlink Admin →
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Connectivity test results -->
+  <div class="section-card">
+    <h2>Connectivity Test</h2>
+    <div class="info-box">
+      Tests reachability of key external services over the active WAN connection.
+      These run every 60 seconds automatically.
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>SERVICE</th>
+          <th>ADDRESS</th>
+          <th>STATUS</th>
+          <th>RESPONSE</th>
+        </tr>
+      </thead>
+      <tbody id="connectivity-table">
+        <tr><td colspan="4" style="text-align:center;color:var(--dim)">Running tests...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- WAN history / log -->
+  <div class="section-card">
+    <h2>WAN Event Log</h2>
+    <table>
+      <thead>
+        <tr><th>TIME (UTC)</th><th>EVENT</th><th>WAN SOURCE</th></tr>
+      </thead>
+      <tbody id="wan-log">
+        <tr><td colspan="3" style="text-align:center;color:var(--dim)">Loading log...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Deployment guide -->
+  <div class="section-card">
+    <h2>Antenna Quick-Reference</h2>
+    <table>
+      <thead>
+        <tr><th>ANTENNA</th><th>TYPE</th><th>WHEN TO USE</th><th>SETUP TIME</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>InstyConnect Drum</strong></td>
+          <td>Omnidirectional 5G/LTE</td>
+          <td>Default — deploy at every activation. No aiming needed.</td>
+          <td>~2 min</td>
+        </tr>
+        <tr>
+          <td><strong>InstyConnect Switchblade</strong></td>
+          <td>Directional 4×LDAP folding</td>
+          <td>When Drum signal is poor. Swap PoE cable to same ASUS WAN port. Aim toward nearest tower using InstyConnect signal app.</td>
+          <td>~5 min</td>
+        </tr>
+        <tr>
+          <td><strong>Starlink dish</strong></td>
+          <td>Satellite (automatic failover)</td>
+          <td>Automatic — ASUS switches to Starlink USB WAN when cellular drops. Requires clear sky view.</td>
+          <td>Auto</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:14px" class="info-box warn">
+      <strong>Switchblade swap procedure:</strong>
+      Unplug Drum PoE cable from ASUS WAN port →
+      Plug Switchblade PoE cable into same port →
+      Open InstyConnect Wi-Fi on a phone →
+      Browse to http://my.insty →
+      Rotate Switchblade slowly while watching signal bars →
+      Lock antenna direction at peak signal.
+    </div>
+  </div>
+
+  <!-- Plan management -->
+  <div class="section-card">
+    <h2>InstyConnect Plan Management</h2>
+    <table>
+      <thead>
+        <tr><th>STATE</th><th>COST</th><th>HOW TO CHANGE</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Active — Multi-Network Unlimited</strong></td>
+          <td>~$79-99 / month</td>
+          <td>Log in at instyconnect.com → activate plan</td>
+        </tr>
+        <tr>
+          <td><strong>Standby</strong></td>
+          <td>$5 / month</td>
+          <td>Log in at instyconnect.com → pause plan (available after first month)</td>
+        </tr>
+        <tr>
+          <td><strong>Cancelled</strong></td>
+          <td>$0</td>
+          <td>Cancel in portal — re-activation requires new SIM</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+      <a href="https://instyconnect.com" target="_blank" class="btn btn-blue">
+        Open InstyConnect Portal
+      </a>
+      <a href="https://starlink.com/account" target="_blank" class="btn btn-gray">
+        Open Starlink Account
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = 'http://192.168.50.1:5051';
+const INSTY_ADMIN = 'http://10.1.1.1';
+
+// WAN event log stored in memory
+const wanLog = [];
+let lastWanSource = null;
+
+function utc() {
+  return new Date().toUTCString().replace(/.*(\d\d:\d\d:\d\d).*/, '$1') + ' UTC';
+}
+
+function logEvent(event, source) {
+  wanLog.unshift({ time: utc(), event, source });
+  if (wanLog.length > 20) wanLog.pop();
+  renderLog();
+}
+
+function renderLog() {
+  const tbody = document.getElementById('wan-log');
+  if (wanLog.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" style="color:var(--dim)">No events yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = wanLog.map(e =>
+    `<tr><td>${e.time}</td><td>${e.event}</td><td>${e.source}</td></tr>`
+  ).join('');
+}
+
+function setHero(source, detail) {
+  const hero = document.getElementById('active-hero');
+  const icon = document.getElementById('hero-icon');
+  const text = document.getElementById('hero-text');
+  const sub  = document.getElementById('hero-sub');
+
+  if (source === 'cellular') {
+    hero.className = 'active-wan cellular';
+    icon.textContent = '📶';
+    text.textContent = 'ACTIVE WAN: InstyConnect Cellular';
+    text.style.color = 'var(--green)';
+  } else if (source === 'satellite') {
+    hero.className = 'active-wan satellite';
+    icon.textContent = '🛰';
+    text.textContent = 'ACTIVE WAN: Starlink Satellite (Failover)';
+    text.style.color = 'var(--blue)';
+  } else if (source === 'none') {
+    hero.className = 'active-wan none';
+    icon.textContent = '⚠';
+    text.textContent = 'NO WAN — Operating Offline';
+    text.style.color = 'var(--red)';
+  } else {
+    hero.className = 'active-wan none';
+    icon.textContent = '🔄';
+    text.textContent = 'Checking WAN...';
+    text.style.color = 'var(--muted)';
+  }
+  sub.textContent = detail || '';
+}
+
+function load() {
+  // Fetch WAN status from health monitor (port 5051)
+  fetch(API + '/api/health')
+    .then(r => r.json())
+    .then(d => {
+      const wan = d.wan || {};
+      const insty = wan.instyconnect || {};
+      const sl = wan.starlink || {};
+      const active = wan.active_source || 'unknown';
+
+      // Detect WAN source change for logging
+      if (lastWanSource !== null && lastWanSource !== active) {
+        if (active === 'cellular') {
+          logEvent('Failback to InstyConnect cellular', 'InstyConnect Drum/Switchblade');
+        } else if (active === 'satellite') {
+          logEvent('Failover to Starlink satellite', 'Starlink');
+        } else {
+          logEvent('WAN source changed', active);
+        }
+      }
+      if (lastWanSource === null && active !== 'unknown') {
+        logEvent('WAN status monitoring started', active === 'cellular' ? 'InstyConnect' : active === 'satellite' ? 'Starlink' : 'None');
+      }
+      lastWanSource = active;
+
+      // Update hero
+      if (active === 'cellular') {
+        const carrier = insty.carrier || 'T-Mobile / Verizon';
+        setHero('cellular', carrier + ' — ' + (insty.technology || '5G/LTE'));
+      } else if (active === 'satellite') {
+        setHero('satellite', 'Latency: ' + (sl.latency_ms ? sl.latency_ms + ' ms' : '—'));
+      } else {
+        setHero('none', 'All WAN sources down — local FieldComms features remain active');
+      }
+
+      // InstyConnect card
+      const cellCard = document.getElementById('cellular-card');
+      const cellUp = insty.connected === true;
+      const cellActive = active === 'cellular';
+      cellCard.className = 'source-card ' + (cellUp ? (cellActive ? 'active' : 'standby') : 'down');
+      document.getElementById('cell-dot').className = 'dot ' + (cellUp ? 'dot-green' : 'dot-red');
+      document.getElementById('cell-status').textContent = cellUp
+        ? (cellActive ? 'Connected — Active WAN' : 'Connected — Standby')
+        : 'Disconnected';
+      document.getElementById('cell-badge').className = 'priority-badge ' + (cellActive ? 'active-badge' : 'standby-badge');
+      document.getElementById('cell-badge').textContent = cellActive ? 'ACTIVE' : 'PRIMARY';
+      document.getElementById('cell-carrier').textContent = insty.carrier || '—';
+      document.getElementById('cell-tech').textContent = insty.technology || '—';
+      document.getElementById('cell-signal').textContent = insty.signal_strength || '—';
+      document.getElementById('cell-antenna').textContent = insty.antenna || 'Drum';
+
+      // Starlink card
+      const slCard = document.getElementById('starlink-card');
+      const slUp = sl.connected === true;
+      const slActive = active === 'satellite';
+      slCard.className = 'source-card ' + (slUp ? (slActive ? 'active' : 'standby') : 'down');
+      document.getElementById('sl-dot').className = 'dot ' + (slUp ? (slActive ? 'dot-green' : 'dot-blue') : 'dot-gray');
+      document.getElementById('sl-status').textContent = slUp
+        ? (slActive ? 'Connected — Active WAN (Failover)' : 'Connected — Standby')
+        : (sl.dish_present ? 'Dish present — not receiving WAN' : 'Not detected');
+      document.getElementById('sl-badge').textContent = slActive ? 'ACTIVE' : 'STANDBY';
+      document.getElementById('sl-latency').textContent = sl.latency_ms ? sl.latency_ms + ' ms' : '—';
+      document.getElementById('sl-throughput').textContent =
+        sl.download_mbps ? sl.download_mbps + ' / ' + sl.upload_mbps + ' Mbps' : '—';
+      document.getElementById('sl-obstruction').textContent = sl.obstruction_pct !== undefined
+        ? sl.obstruction_pct + '%' : '—';
+      document.getElementById('sl-uptime').textContent = sl.uptime || '—';
+
+      // Last poll
+      document.getElementById('last-poll').textContent =
+        'Last updated: ' + utc() + ' — auto-refreshes every 30s';
+    })
+    .catch(() => {
+      setHero('unknown', 'Cannot reach FieldComms health API');
+      document.getElementById('last-poll').textContent = 'API unreachable — retrying...';
+    });
+
+  // Run connectivity tests
+  runConnectivityTests();
+}
+
+function runConnectivityTests() {
+  const tests = [
+    { service: 'NWS Weather Alerts', url: 'https://api.weather.gov/', addr: 'api.weather.gov' },
+    { service: 'APRS-IS', url: 'http://192.168.50.1:5050/aprs/status', addr: 'APRS-IS via FieldComms' },
+    { service: 'Cloudflare DNS', url: 'https://1.1.1.1/', addr: '1.1.1.1' },
+    { service: 'AMPRNet Gateway', url: 'http://192.168.50.2:9000/health', addr: '192.168.50.2:9000' },
+  ];
+
+  const tbody = document.getElementById('connectivity-table');
+  tbody.innerHTML = tests.map(t =>
+    `<tr id="ct-${t.addr.replace(/[^a-z0-9]/gi,'-')}">
+      <td>${t.service}</td>
+      <td><code>${t.addr}</code></td>
+      <td><span class="dot dot-gray" style="display:inline-block"></span> Checking...</td>
+      <td>—</td>
+    </tr>`
+  ).join('');
+
+  tests.forEach(t => {
+    const rowId = 'ct-' + t.addr.replace(/[^a-z0-9]/gi, '-');
+    const start = Date.now();
+    fetch(t.url, { mode: 'no-cors', signal: AbortSignal.timeout(5000) })
+      .then(() => {
+        const ms = Date.now() - start;
+        const row = document.getElementById(rowId);
+        if (row) {
+          row.cells[2].innerHTML = '<span class="dot dot-green" style="display:inline-block"></span> Reachable';
+          row.cells[3].textContent = ms + ' ms';
+        }
+      })
+      .catch(() => {
+        const row = document.getElementById(rowId);
+        if (row) {
+          row.cells[2].innerHTML = '<span class="dot dot-red" style="display:inline-block"></span> Unreachable';
+          row.cells[3].textContent = 'Timeout';
+        }
+      });
+  });
+}
+
+load();
+setInterval(load, 30000);
+renderLog();
+</script>
+</body>
+</html>

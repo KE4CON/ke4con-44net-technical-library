@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AMPRNet Gateway — FieldComms</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.page-header {
+  background: var(--eoc);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 3px solid var(--accent);
+  position: sticky; top: 0; z-index: 100;
+}
+.page-header h1 { font-family: var(--font-hd); font-size: 18px; letter-spacing: 2px; }
+.page-header .sub { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+.back-btn {
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+  color: #fff; padding: 6px 14px; border-radius: 6px;
+  font-family: var(--font-ui); font-size: 12px; cursor: pointer;
+  text-decoration: none;
+}
+.back-btn:hover { background: rgba(255,255,255,0.2); text-decoration: none; color: #fff; }
+
+.main { max-width: 960px; margin: 24px auto; padding: 0 16px 40px; }
+
+.status-hero {
+  border-radius: 10px; padding: 28px 24px;
+  display: flex; align-items: center; gap: 20px;
+  margin-bottom: 20px; transition: all 0.3s;
+}
+.status-hero.up   { background: #e4f5ea; border: 2px solid var(--green); }
+.status-hero.down { background: #fde8e8; border: 2px solid var(--red); }
+.status-hero.unknown { background: var(--panel); border: 2px solid var(--line); }
+.status-icon { font-size: 48px; }
+.status-text h2 { font-family: var(--font-hd); font-size: 22px; letter-spacing: 2px; }
+.status-text .addr { font-size: 13px; margin-top: 4px; color: var(--muted); }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 16px;
+}
+.card h3 {
+  font-family: var(--font-hd); font-size: 11px; letter-spacing: 1px;
+  color: var(--eoc-lt); text-transform: uppercase; margin-bottom: 10px;
+  border-bottom: 1px solid var(--line); padding-bottom: 6px;
+}
+.card .big { font-size: 22px; font-weight: bold; color: var(--txt); }
+.card .sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+.section-card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 18px; margin-bottom: 16px;
+}
+.section-card h2 {
+  font-family: var(--font-hd); font-size: 14px; letter-spacing: 1px;
+  color: var(--eoc); margin-bottom: 14px;
+  border-bottom: 1px solid var(--line); padding-bottom: 8px;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: var(--eoc); color: #fff; padding: 8px 12px;
+     text-align: left; font-size: 11px; letter-spacing: 1px; }
+td { padding: 8px 12px; border-bottom: 1px solid var(--line); }
+tr:nth-child(even) td { background: var(--bg); }
+
+.dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+.dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot-red   { background: var(--red); }
+.dot-amber { background: var(--amber); }
+.dot-gray  { background: var(--dim); }
+
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn {
+  padding: 10px 20px; border: none; border-radius: 6px;
+  font-family: var(--font-ui); font-size: 13px; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.85; }
+.btn-green  { background: var(--green); color: #fff; }
+.btn-red    { background: var(--red); color: #fff; }
+.btn-amber  { background: var(--amber); color: #fff; }
+.btn-blue   { background: var(--eoc-lt); color: #fff; }
+.btn-gray   { background: var(--line); color: var(--txt); }
+
+.action-msg { margin-top: 10px; font-size: 12px; color: var(--eoc-lt); min-height: 18px; }
+
+.last-poll { font-size: 11px; color: var(--dim); text-align: right; margin-bottom: 12px; }
+
+.info-box {
+  background: var(--panel2); border-left: 3px solid var(--eoc-lt);
+  border-radius: 4px; padding: 12px 14px; font-size: 12px; line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.gateway-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--eoc); color: #fff; text-decoration: none;
+  padding: 10px 18px; border-radius: 6px;
+  font-family: var(--font-hd); font-size: 13px; letter-spacing: 1px;
+  transition: background 0.15s;
+}
+.gateway-link:hover { background: var(--eoc-lt); text-decoration: none; color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div>
+    <h1>🛰 AMPRNet / 44Net Gateway</h1>
+    <div class="sub">FieldComms EMCOMM-NET  ·  K9ESV  ·  Routes 44.0.0.0/8</div>
+  </div>
+  <a href="/" class="back-btn">← Dashboard</a>
+</div>
+
+<div class="main">
+
+  <div class="last-poll" id="last-poll">Fetching status...</div>
+
+  <!-- Hero status -->
+  <div class="status-hero unknown" id="hero">
+    <div class="status-icon" id="hero-icon">🔄</div>
+    <div class="status-text">
+      <h2 id="hero-text">Checking tunnel...</h2>
+      <div class="addr" id="hero-addr">Gateway Pi: 192.168.50.2</div>
+    </div>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="cards">
+    <div class="card">
+      <h3>AMPRNet Address</h3>
+      <div class="big" id="ampr-addr">—</div>
+      <div class="sub">Assigned 44.x.x.x/29</div>
+    </div>
+    <div class="card">
+      <h3>Last Handshake</h3>
+      <div class="big" id="handshake">—</div>
+      <div class="sub">WireGuard peer contact</div>
+    </div>
+    <div class="card">
+      <h3>Data Received</h3>
+      <div class="big" id="rx">—</div>
+      <div class="sub">via AMPRNet tunnel</div>
+    </div>
+    <div class="card">
+      <h3>Data Sent</h3>
+      <div class="big" id="tx">—</div>
+      <div class="sub">via AMPRNet tunnel</div>
+    </div>
+    <div class="card">
+      <h3>Gateway CPU Temp</h3>
+      <div class="big" id="cpu-temp">—</div>
+      <div class="sub">Gateway Pi temperature</div>
+    </div>
+    <div class="card">
+      <h3>Gateway Memory</h3>
+      <div class="big" id="mem">—</div>
+      <div class="sub">Used / Total MB</div>
+    </div>
+    <div class="card">
+      <h3>IP Forwarding</h3>
+      <div class="big" id="fwd">—</div>
+      <div class="sub">Required for routing</div>
+    </div>
+    <div class="card">
+      <h3>Gateway Uptime</h3>
+      <div class="big" id="uptime">—</div>
+      <div class="sub">Since last reboot</div>
+    </div>
+  </div>
+
+  <!-- Routes -->
+  <div class="section-card">
+    <h2>Active Routes</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>NETWORK</th>
+          <th>VIA</th>
+          <th>STATUS</th>
+        </tr>
+      </thead>
+      <tbody id="routes">
+        <tr><td colspan="3" style="text-align:center;color:var(--dim)">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Tunnel control -->
+  <div class="section-card">
+    <h2>Tunnel Control</h2>
+    <div class="info-box warn" style="border-color:var(--amber);background:#fef9ed">
+      <strong>Tunnel controls require physical access to the gateway Pi.</strong>
+      These buttons only work when this page is open in the Chromium browser
+      on the gateway Pi itself — not from operator laptops or phones on EMCOMM-NET.
+      This is by design. A valid callsign login is also required.<br><br>
+      To control the tunnel: sit at the gateway Pi keyboard → open Chromium →
+      go to http://localhost:9001 → log in with your callsign → use the controls.
+    </div>
+    <div class="actions">
+      <button class="btn btn-green" onclick="action('up')">▲ Bring Tunnel UP</button>
+      <button class="btn btn-red"   onclick="action('down')">▼ Bring Tunnel DOWN</button>
+      <button class="btn btn-amber" onclick="action('restart')">↺ Restart Tunnel</button>
+      <button class="btn btn-blue"  onclick="load()">⟳ Refresh Status</button>
+      <a href="http://192.168.50.2:9000" target="_blank" class="gateway-link">
+        🛰 Open Gateway Dashboard
+      </a>
+    </div>
+    <div class="action-msg" id="action-msg"></div>
+  </div>
+
+  <!-- About -->
+  <div class="section-card">
+    <h2>About This Gateway</h2>
+    <table>
+      <tr><td style="width:200px;color:var(--muted)">Gateway Pi IP</td><td>192.168.50.2</td></tr>
+      <tr><td style="color:var(--muted)">Gateway status API</td><td>http://192.168.50.2:9000/api/status</td></tr>
+      <tr><td style="color:var(--muted)">AMPRNet block</td><td id="about-block">44.x.x.x/29</td></tr>
+      <tr><td style="color:var(--muted)">WireGuard endpoint</td><td>amprgw.ampr.org:51820</td></tr>
+      <tr><td style="color:var(--muted)">What it routes</td><td>All 44.0.0.0/8 traffic for every device on EMCOMM-NET</td></tr>
+      <tr><td style="color:var(--muted)">AMPRNet portal</td>
+          <td><a href="https://portal.ampr.org" target="_blank">https://portal.ampr.org</a></td></tr>
+    </table>
+  </div>
+
+</div>
+
+<script>
+// ── Status data from FieldComms Pi's local poll cache ──────────
+// The amprgate-poll service writes /data/amprgate_status.json every 30s.
+// We read it via the fcc-lookup API's data endpoint.
+const API_BASE = 'http://192.168.50.1:5050';
+const GATEWAY_DIRECT = 'http://192.168.50.2:9000';
+
+function fmt(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+  return (bytes / 1073741824).toFixed(2) + ' GB';
+}
+
+function setHero(state) {
+  const hero = document.getElementById('hero');
+  const icon = document.getElementById('hero-icon');
+  const text = document.getElementById('hero-text');
+  hero.className = 'status-hero ' + state;
+  if (state === 'up') {
+    icon.textContent = '🛰';
+    text.textContent = 'TUNNEL UP — AMPRNet Connected';
+    text.style.color = 'var(--green)';
+  } else if (state === 'down') {
+    icon.textContent = '⚠';
+    text.textContent = 'TUNNEL DOWN';
+    text.style.color = 'var(--red)';
+  } else {
+    icon.textContent = '🔄';
+    text.textContent = 'Gateway Unreachable';
+    text.style.color = 'var(--amber)';
+  }
+}
+
+function applyData(d) {
+  const tunnel = d.tunnel || 'unknown';
+  const reachable = d.reachable !== false;
+
+  if (!reachable) {
+    setHero('unknown');
+    document.getElementById('hero-addr').textContent =
+      'Gateway Pi (192.168.50.2) not responding — is it powered on?';
+    return;
+  }
+
+  setHero(tunnel);
+  document.getElementById('hero-addr').textContent =
+    'AMPRNet address: ' + (d.ampr_address || 'not assigned yet');
+
+  document.getElementById('ampr-addr').textContent = d.ampr_address || '—';
+  document.getElementById('handshake').textContent  = d.last_handshake || '—';
+  document.getElementById('rx').textContent         = fmt(d.rx_bytes);
+  document.getElementById('tx').textContent         = fmt(d.tx_bytes);
+  document.getElementById('cpu-temp').textContent   = d.cpu_temp ? d.cpu_temp + ' °C' : '—';
+  document.getElementById('mem').textContent =
+    d.mem_used_mb ? d.mem_used_mb + ' / ' + d.mem_total_mb + ' MB' : '—';
+  document.getElementById('fwd').textContent =
+    d.ip_forward ? '✓ Enabled' : '✗ DISABLED';
+  document.getElementById('fwd').style.color =
+    d.ip_forward ? 'var(--green)' : 'var(--red)';
+  document.getElementById('uptime').textContent = d.uptime || '—';
+
+  if (d.ampr_address) {
+    document.getElementById('about-block').textContent = d.ampr_address;
+  }
+
+  const tbody = document.getElementById('routes');
+  if (d.routes && d.routes.length) {
+    tbody.innerHTML = d.routes.map(r =>
+      `<tr>
+        <td>${r.net}</td>
+        <td><code>${r.via}</code></td>
+        <td>
+          <span class="dot dot-${r.ok ? 'green' : 'red'}"></span>
+          ${r.ok ? 'Active' : 'Not routed'}
+        </td>
+      </tr>`
+    ).join('');
+  } else {
+    tbody.innerHTML = '<tr><td colspan="3">No 44Net routes found — tunnel may be down</td></tr>';
+  }
+
+  const polled = d.polled_at || d.timestamp || '—';
+  document.getElementById('last-poll').textContent =
+    'Last polled: ' + polled + ' (auto-refreshes every 30s)';
+}
+
+function load() {
+  // First try the local poll cache (most reliable — no cross-origin issues)
+  fetch(API_BASE + '/amprgate/status')
+    .then(r => r.json())
+    .then(applyData)
+    .catch(() => {
+      // Fallback: try the gateway directly
+      fetch(GATEWAY_DIRECT + '/api/status')
+        .then(r => r.json())
+        .then(d => { d.reachable = true; applyData(d); })
+        .catch(() => {
+          applyData({ reachable: false, tunnel: 'unknown' });
+        });
+    });
+}
+
+function action(act) {
+  const msg = document.getElementById('action-msg');
+
+  // Tunnel control is localhost-only on the gateway Pi (port 9001).
+  // These buttons only work when browsing FROM the gateway Pi itself.
+  // Get session token from cookie
+  const token = document.cookie.split(';')
+    .map(c => c.trim())
+    .find(c => c.startsWith('amprtoken='));
+
+  if (!token) {
+    msg.textContent = 'Login required — enter your callsign first';
+    msg.style.color = 'var(--amber)';
+    return;
+  }
+
+  msg.textContent = 'Sending command to gateway...';
+  msg.style.color = 'var(--muted)';
+
+  // Control port 9001 — localhost only. Only works on gateway Pi keyboard browser.
+  fetch('http://127.0.0.1:9001/api/tunnel/' + act, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token.split('=')[1] }
+  })
+  .then(r => r.json())
+  .then(d => {
+    msg.textContent = d.message || 'Done';
+    msg.style.color = d.ok ? 'var(--green)' : 'var(--red)';
+    if (d.ok) setTimeout(load, 2500);
+  })
+  .catch(() => {
+    msg.textContent = 'Tunnel control requires physical access to the gateway Pi keyboard. ' +
+                      'Open this page in Chromium on the gateway Pi itself.';
+    msg.style.color = 'var(--amber)';
+  });
+}
+
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>

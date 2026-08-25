@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Incident Management — Grid Square Calculator</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.page-header {
+  background: linear-gradient(135deg, var(--eoc) 0%, var(--eoc-lt) 100%);
+  border-bottom: 2px solid var(--eoc);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 16px;
+}
+.page-header a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; }
+.page-header a:hover { color: #fff; }
+.page-title { font-family: var(--font-hd); font-size: 18px; color: var(--eoc); letter-spacing: 2px; }
+
+.container { max-width: 960px; margin: 0 auto; padding: 20px; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media(max-width:640px){ .two-col { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
+}
+.panel-title {
+  font-family: var(--font-hd); font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--eoc); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.panel-title::after { content:''; flex:1; height:1px; background:var(--line); }
+
+label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+input[type=text], input[type=number] {
+  width: 100%; box-sizing: border-box;
+  background: var(var(--input-bg); border: 1px solid var(--line); border-radius: 4px;
+  color: var(--txt); padding: 8px 10px; font-size: 14px; font-family: var(--font-hd);
+  margin-bottom: 10px;
+}
+input:focus { outline: none; border-color: var(--eoc-lt); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.result-box {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
+  padding: 14px; margin-top: 10px; min-height: 60px;
+}
+.result-main { font-family: var(--font-hd); font-size: 32px; color: var(--amber); letter-spacing: 4px; text-align: center; }
+.result-sub { font-size: 11px; color: var(--muted); text-align: center; margin-top: 4px; }
+.result-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; border-bottom: 1px solid var(--line); }
+.result-row:last-child { border-bottom: none; }
+.result-row .rl { color: var(--muted); }
+.result-row .rv { color: var(--txt); font-family: var(--font-hd); }
+
+/* Distance calculator */
+.dist-result {
+  font-family: var(--font-hd); font-size: 22px; color: var(--green);
+  text-align: center; margin: 10px 0 4px;
+}
+
+/* Grid map visual */
+#gridCanvas { width:100%; border-radius:6px; display:block; background: var(--bg); margin-top:10px; }
+
+/* Reference table */
+.ref-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ref-table th { text-align: left; padding: 6px 8px; color: #ffffff; font-family: var(--font-hd); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; border-bottom: 1px solid var(--line); }
+.ref-table td { padding: 5px 8px; border-bottom: 1px solid var(--line); color: var(--txt); }
+.ref-table tr:hover td { background: var(--panel2); }
+.ref-table .code { font-family: var(--font-hd); color: var(--eoc-lt); letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <a href="index.html">⌂ Home</a>
+  <span style="color:var(--line)">›</span>
+  <span class="page-title">📡 GRID SQUARE CALCULATOR</span>
+</div>
+
+<div class="container">
+
+  <div class="two-col">
+
+    <!-- Lat/Lon → Grid -->
+    <div class="panel">
+      <div class="panel-title">📍 Lat / Lon → Grid Square</div>
+      <div class="row2">
+        <div>
+          <label>Latitude (decimal)</label>
+          <input type="number" id="inLat" step="0.0001" placeholder="42.3153" value="42.3153">
+        </div>
+        <div>
+          <label>Longitude (decimal)</label>
+          <input type="number" id="inLon" step="0.0001" placeholder="-88.4473" value="-88.4473">
+        </div>
+      </div>
+      <button class="btn" onclick="calcFromLatLon()">Calculate Grid</button>
+
+      <div class="result-box" id="ll2grid">
+        <div class="result-main" id="ll2gridMain">—</div>
+        <div class="result-sub" id="ll2gridSub"></div>
+      </div>
+      <div id="ll2gridDetail" style="margin-top:8px"></div>
+
+      <div style="margin-top:14px">
+        <button class="btn btn-sm" onclick="useMyLocation()" style="width:100%;background:var(--panel2)">
+          📡 Use My Location (GPS)
+        </button>
+      </div>
+    </div>
+
+    <!-- Grid → Lat/Lon -->
+    <div class="panel">
+      <div class="panel-title">🔤 Grid Square → Lat / Lon</div>
+      <label>Maidenhead Locator (4 or 6 chars)</label>
+      <input type="text" id="inGrid" placeholder="EN90ab" maxlength="8" oninput="this.value=this.value.toUpperCase()">
+      <button class="btn" onclick="calcFromGrid()">Decode Grid</button>
+
+      <div class="result-box" id="grid2ll">
+        <div class="result-main" id="grid2llMain" style="font-size:18px">—</div>
+        <div class="result-sub" id="grid2llSub"></div>
+      </div>
+      <div id="grid2llDetail" style="margin-top:8px"></div>
+    </div>
+
+  </div>
+
+  <!-- Distance / Bearing between two grids -->
+  <div class="panel" style="margin-top:16px">
+    <div class="panel-title">📐 Distance &amp; Bearing Between Two Grids</div>
+    <div style="display:grid;grid-template-columns:1fr 40px 1fr auto;gap:10px;align-items:end">
+      <div>
+        <label>Grid 1</label>
+        <input type="text" id="distG1" placeholder="EN90ab" maxlength="8" oninput="this.value=this.value.toUpperCase()" style="margin-bottom:0">
+      </div>
+      <div style="text-align:center;padding-bottom:10px;color:var(--muted);font-size:20px">↔</div>
+      <div>
+        <label>Grid 2</label>
+        <input type="text" id="distG2" placeholder="FM18lv" maxlength="8" oninput="this.value=this.value.toUpperCase()" style="margin-bottom:0">
+      </div>
+      <button class="btn" onclick="calcDistance()" style="margin-bottom:0">Go</button>
+    </div>
+    <div id="distResult" style="margin-top:14px;text-align:center;min-height:40px"></div>
+  </div>
+
+  <!-- Canvas map -->
+  <div class="panel" style="margin-top:16px">
+    <div class="panel-title">🗺 Grid Square Map (North America)</div>
+    <canvas id="gridCanvas" height="360"></canvas>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center">
+      Click or tap the map to look up a grid square. Highlighted square = your current result.
+    </div>
+  </div>
+
+  <!-- Reference -->
+  <div class="panel" style="margin-top:16px">
+    <div class="panel-title">📋 Maidenhead Grid Reference</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <table class="ref-table">
+          <tr><th>Precision</th><th>Chars</th><th>Size (approx)</th></tr>
+          <tr><td>Field</td><td class="code">EN</td><td>20° lon × 10° lat</td></tr>
+          <tr><td>Square</td><td class="code">EN90</td><td>2° lon × 1° lat</td></tr>
+          <tr><td>Subsquare</td><td class="code">EN90ab</td><td>5' lon × 2.5' lat</td></tr>
+          <tr><td>Extended</td><td class="code">EN90ab12</td><td>30" lon × 15" lat</td></tr>
+        </table>
+      </div>
+      <div>
+        <table class="ref-table">
+          <tr><th>Field</th><th>Pairs A–R</th></tr>
+          <tr><td>Lon: 18 fields × 20° = 360°</td><td>A=−180° … R=+160°</td></tr>
+          <tr><td>Lat: 18 fields × 10° = 180°</td><td>A=−90° … R=+80°</td></tr>
+          <tr><td colspan="2" style="color:var(--muted);font-size:11px;padding-top:6px">
+            Digits 0–9, then lowercase letters a–x for subsquare.
+          </td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ── Maidenhead encode ───────────────────────────────────────────── */
+function latLonToGrid(lat, lon, precision=6) {
+  lon += 180; lat += 90;
+  const f1 = String.fromCharCode(65 + Math.floor(lon / 20));
+  const f2 = String.fromCharCode(65 + Math.floor(lat / 10));
+  const s1 = String(Math.floor((lon % 20) / 2));
+  const s2 = String(Math.floor(lat % 10));
+  if (precision === 4) return f1 + f2 + s1 + s2;
+  const ss1 = String.fromCharCode(97 + Math.floor((lon % 2) / (2/24)));
+  const ss2 = String.fromCharCode(97 + Math.floor((lat % 1) / (1/24)));
+  return f1 + f2 + s1 + s2 + ss1 + ss2;
+}
+
+/* ── Maidenhead decode (returns center lat/lon) ──────────────────── */
+function gridToLatLon(grid) {
+  grid = grid.toUpperCase().trim();
+  if (grid.length < 2) return null;
+  let lon = (grid.charCodeAt(0) - 65) * 20 - 180;
+  let lat = (grid.charCodeAt(1) - 65) * 10 - 90;
+  if (grid.length >= 4) {
+    lon += parseInt(grid[2]) * 2;
+    lat += parseInt(grid[3]) * 1;
+  }
+  if (grid.length >= 6) {
+    lon += (grid.toLowerCase().charCodeAt(4) - 97) * (2/24);
+    lat += (grid.toLowerCase().charCodeAt(5) - 97) * (1/24);
+    // center of subsquare
+    lon += 1/24; lat += 0.5/24;
+  } else if (grid.length >= 4) {
+    lon += 1; lat += 0.5;
+  } else {
+    lon += 10; lat += 5;
+  }
+  return { lat, lon };
+}
+
+/* ── Great-circle distance (km) ─────────────────────────────────── */
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+
+function bearing(lat1, lon1, lat2, lon2) {
+  const dLon = (lon2-lon1)*Math.PI/180;
+  const y = Math.sin(dLon)*Math.cos(lat2*Math.PI/180);
+  const x = Math.cos(lat1*Math.PI/180)*Math.sin(lat2*Math.PI/180) - Math.sin(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.cos(dLon);
+  return ((Math.atan2(y,x)*180/Math.PI) + 360) % 360;
+}
+
+function bearingLabel(b) {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(b/22.5)%16];
+}
+
+/* ── UI: Lat/Lon → Grid ─────────────────────────────────────────── */
+function calcFromLatLon() {
+  const lat = parseFloat(document.getElementById('inLat').value);
+  const lon = parseFloat(document.getElementById('inLon').value);
+  if (isNaN(lat) || isNaN(lon)) { alert('Enter valid lat/lon'); return; }
+  const g6 = latLonToGrid(lat, lon, 6);
+  const g4 = latLonToGrid(lat, lon, 4);
+  document.getElementById('ll2gridMain').textContent = g6;
+  document.getElementById('ll2gridSub').textContent = `4-char: ${g4}`;
+  document.getElementById('ll2gridDetail').innerHTML = `
+    <div class="result-row"><span class="rl">Field</span><span class="rv">${g6.slice(0,2)}</span></div>
+    <div class="result-row"><span class="rl">Square</span><span class="rv">${g4}</span></div>
+    <div class="result-row"><span class="rl">Subsquare</span><span class="rv">${g6}</span></div>
+    <div class="result-row"><span class="rl">Decimal</span><span class="rv">${lat.toFixed(4)}, ${lon.toFixed(4)}</span></div>
+    <div class="result-row"><span class="rl">DMS Lat</span><span class="rv">${toDMS(lat,'lat')}</span></div>
+    <div class="result-row"><span class="rl">DMS Lon</span><span class="rv">${toDMS(lon,'lon')}</span></div>
+  `;
+  currentGrid = g6;
+  drawMap();
+}
+
+function toDMS(deg, axis) {
+  const abs = Math.abs(deg), d = Math.floor(abs), m = Math.floor((abs-d)*60), s = ((abs-d-m/60)*3600).toFixed(1);
+  const dir = axis==='lat' ? (deg>=0?'N':'S') : (deg>=0?'E':'W');
+  return `${d}° ${m}' ${s}" ${dir}`;
+}
+
+function calcFromGrid() {
+  const g = document.getElementById('inGrid').value.trim();
+  if (g.length < 2) { alert('Enter at least a 2-char grid'); return; }
+  const ll = gridToLatLon(g);
+  if (!ll) { alert('Invalid grid'); return; }
+  document.getElementById('grid2llMain').textContent = `${ll.lat.toFixed(4)}, ${ll.lon.toFixed(4)}`;
+  document.getElementById('grid2llSub').textContent = `Grid center`;
+  document.getElementById('grid2llDetail').innerHTML = `
+    <div class="result-row"><span class="rl">Grid</span><span class="rv">${g.toUpperCase()}</span></div>
+    <div class="result-row"><span class="rl">Lat</span><span class="rv">${toDMS(ll.lat,'lat')}</span></div>
+    <div class="result-row"><span class="rl">Lon</span><span class="rv">${toDMS(ll.lon,'lon')}</span></div>
+    <div class="result-row"><span class="rl">Decimal</span><span class="rv">${ll.lat.toFixed(6)}, ${ll.lon.toFixed(6)}</span></div>
+  `;
+  currentGrid = g.toUpperCase();
+  drawMap();
+}
+
+function calcDistance() {
+  const g1 = document.getElementById('distG1').value.trim();
+  const g2 = document.getElementById('distG2').value.trim();
+  const ll1 = gridToLatLon(g1), ll2 = gridToLatLon(g2);
+  if (!ll1 || !ll2) { document.getElementById('distResult').innerHTML='<span style="color:var(--red)">Invalid grid(s)</span>'; return; }
+  const km = haversine(ll1.lat, ll1.lon, ll2.lat, ll2.lon);
+  const mi = km * 0.621371;
+  const b = bearing(ll1.lat, ll1.lon, ll2.lat, ll2.lon);
+  const b2 = bearing(ll2.lat, ll2.lon, ll1.lat, ll1.lon);
+  document.getElementById('distResult').innerHTML = `
+    <div style="font-family:var(--font-hd);font-size:28px;color:var(--green)">${km.toFixed(1)} km &nbsp; / &nbsp; ${mi.toFixed(1)} mi</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px">
+      ${g1.toUpperCase()} → ${g2.toUpperCase()}: <b style="color:var(--txt)">${b.toFixed(1)}° ${bearingLabel(b)}</b>
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      ${g2.toUpperCase()} → ${g1.toUpperCase()}: <b style="color:var(--txt)">${b2.toFixed(1)}° ${bearingLabel(b2)}</b>
+    </div>
+  `;
+}
+
+function useMyLocation() {
+  if (!navigator.geolocation) { alert('Geolocation not available'); return; }
+  navigator.geolocation.getCurrentPosition(p => {
+    document.getElementById('inLat').value = p.coords.latitude.toFixed(6);
+    document.getElementById('inLon').value = p.coords.longitude.toFixed(6);
+    calcFromLatLon();
+  }, () => alert('Could not get location'));
+}
+
+/* ── Canvas map ─────────────────────────────────────────────────── */
+let currentGrid = 'EN90';
+const MAP_LON0 = -170, MAP_LON1 = -50, MAP_LAT0 = 15, MAP_LAT1 = 75;
+
+function drawMap() {
+  const canvas = document.getElementById('gridCanvas');
+  const W = canvas.offsetWidth || 800, H = 360;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const style = getComputedStyle(document.documentElement);
+  const colBg    = style.getPropertyValue('--bg').trim() || '#0d1a0d';
+  const colLine  = style.getPropertyValue('--line').trim() || '#2a3a2a';
+  const colMuted = style.getPropertyValue('--muted').trim() || '#6a8a6a';
+  const colAmber = style.getPropertyValue('--amber').trim() || '#f5a623';
+  const colGreen = style.getPropertyValue('--green').trim() || '#39ff14';
+  const colTxt   = style.getPropertyValue('--txt').trim() || '#d0e8d0';
+
+  const lx = lon => (lon - MAP_LON0) / (MAP_LON1 - MAP_LON0) * W;
+  const ly = lat => H - (lat - MAP_LAT0) / (MAP_LAT1 - MAP_LAT0) * H;
+
+  ctx.fillStyle = colBg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid field lines (2° lon, 1° lat = square)
+  ctx.strokeStyle = colLine; ctx.lineWidth = 0.5;
+  for (let lon = MAP_LON0; lon <= MAP_LON1; lon += 2) {
+    ctx.beginPath(); ctx.moveTo(lx(lon), 0); ctx.lineTo(lx(lon), H); ctx.stroke();
+  }
+  for (let lat = MAP_LAT0; lat <= MAP_LAT1; lat += 1) {
+    ctx.beginPath(); ctx.moveTo(0, ly(lat)); ctx.lineTo(W, ly(lat)); ctx.stroke();
+  }
+
+  // Field boundaries (20° lon, 10° lat)
+  ctx.strokeStyle = colMuted; ctx.lineWidth = 1.2;
+  for (let lon = MAP_LON0; lon <= MAP_LON1; lon += 20) {
+    ctx.beginPath(); ctx.moveTo(lx(lon), 0); ctx.lineTo(lx(lon), H); ctx.stroke();
+  }
+  for (let lat = MAP_LAT0; lat <= MAP_LAT1; lat += 10) {
+    ctx.beginPath(); ctx.moveTo(0, ly(lat)); ctx.lineTo(W, ly(lat)); ctx.stroke();
+  }
+
+  // Field labels
+  ctx.fillStyle = colMuted; ctx.font = `bold 11px monospace`;
+  for (let lon = MAP_LON0; lon < MAP_LON1; lon += 20) {
+    for (let lat = MAP_LAT0; lat < MAP_LAT1; lat += 10) {
+      const fi = String.fromCharCode(65 + Math.floor((lon+180)/20));
+      const fj = String.fromCharCode(65 + Math.floor((lat+90)/10));
+      ctx.fillText(fi+fj, lx(lon)+4, ly(lat)-4);
+    }
+  }
+
+  // Highlight current grid
+  if (currentGrid && currentGrid.length >= 4) {
+    const ll = gridToLatLon(currentGrid);
+    if (ll && ll.lon >= MAP_LON0 && ll.lon <= MAP_LON1 && ll.lat >= MAP_LAT0 && ll.lat <= MAP_LAT1) {
+      let boxW, boxH;
+      if (currentGrid.length >= 6) { boxW = 2/24; boxH = 1/24; }
+      else { boxW = 2; boxH = 1; }
+      const gx = lx(ll.lon - boxW/2), gy = ly(ll.lat + boxH/2);
+      const gw = lx(ll.lon + boxW/2) - gx, gh = ly(ll.lat - boxH/2) - gy;
+      ctx.fillStyle = 'rgba(245,166,35,0.25)';
+      ctx.fillRect(gx, gy, gw, gh);
+      ctx.strokeStyle = colAmber; ctx.lineWidth = 2;
+      ctx.strokeRect(gx, gy, gw, gh);
+
+      // dot at center
+      ctx.beginPath(); ctx.arc(lx(ll.lon), ly(ll.lat), 4, 0, Math.PI*2);
+      ctx.fillStyle = colGreen; ctx.fill();
+
+      // label
+      ctx.fillStyle = colAmber; ctx.font = 'bold 12px monospace';
+      ctx.fillText(currentGrid.slice(0,6), lx(ll.lon)+8, ly(ll.lat)-6);
+    }
+  }
+
+  // Border
+  ctx.strokeStyle = colLine; ctx.lineWidth = 1;
+  ctx.strokeRect(0, 0, W, H);
+}
+
+canvas.addEventListener('click', function(e) {
+  const rect = this.getBoundingClientRect();
+  const px = e.clientX - rect.left, py = e.clientY - rect.top;
+  const W = this.width, H = this.height;
+  const lon = px / W * (MAP_LON1 - MAP_LON0) + MAP_LON0;
+  const lat = MAP_LAT1 - py / H * (MAP_LAT1 - MAP_LAT0);
+  document.getElementById('inLat').value = lat.toFixed(4);
+  document.getElementById('inLon').value = lon.toFixed(4);
+  calcFromLatLon();
+});
+
+window.addEventListener('load', () => { calcFromLatLon(); });
+window.addEventListener('resize', drawMap);
+
+const canvas = document.getElementById('gridCanvas');
+</script>
+
+<script src="/lib/identity.js"></script>
+</body>
+</html>

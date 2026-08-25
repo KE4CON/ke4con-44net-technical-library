@@ -1,0 +1,92 @@
+Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+
+Copyright (c) 2026 James Rospopo KE4CON
+McHenry County Emergency Services Volunteers — K9ESV / MCESV / MCEMA
+Woodstock, Illinois 60098
+
+This license applies to all documentation in the FieldComms IMS project,
+including but not limited to:
+
+  - FieldComms IMS User Manual
+  - FieldComms IMS Installation Guide
+  - FieldComms IMS Field Quick Reference
+  - FieldComms IMS Bill of Materials
+  - FieldComms IMS Price Verification
+  - FieldComms IMS Leadership Brief
+  - FieldComms IMS ARDC Grant Proposal
+  - FieldComms IMS Beta Test Checklist
+  - All PDF documents in the docs/ directory
+  - All document generator scripts in the docs_generators/ directory
+
+The software source code (Python, HTML, JavaScript, shell scripts, systemd
+units) is licensed separately under the GNU Affero General Public License
+v3.0 (AGPLv3). See LICENSE for details.
+
+=============================================================================
+
+You are free to:
+
+  SHARE — copy and redistribute the material in any medium or format
+           for any purpose, even commercially.
+
+  ADAPT — remix, transform, and build upon the material for any purpose,
+           even commercially.
+
+The licensor cannot revoke these freedoms as long as you follow the
+license terms.
+
+=============================================================================
+
+Under the following terms:
+
+  ATTRIBUTION — You must give appropriate credit, provide a link to the
+  license, and indicate if changes were made. You may do so in any
+  reasonable manner, but not in any way that suggests the licensor
+  endorses you or your use.
+
+  Appropriate credit means:
+    - Name/callsign: James Rospopo KE4CON / K9ESV / MCESV
+    - Project: FieldComms IMS
+    - Source: https://github.com/KE4CON/FieldComms-IMS
+    - License: CC BY-SA 4.0
+
+  SHAREALIKE — If you remix, transform, or build upon the material, you
+  must distribute your contributions under the same license as the
+  original (CC BY-SA 4.0).
+
+  NO ADDITIONAL RESTRICTIONS — You may not apply legal terms or
+  technological measures that legally restrict others from doing anything
+  the license permits.
+
+=============================================================================
+
+Notices:
+
+  You do not have to comply with the license for elements of the material
+  in the public domain or where your use is permitted by an applicable
+  exception or limitation.
+
+  No warranties are given. The license may not give you all of the
+  permissions necessary for your intended use. For example, other rights
+  such as publicity, privacy, or moral rights may limit how you use the
+  material.
+
+=============================================================================
+
+Full license text: https://creativecommons.org/licenses/by-sa/4.0/legalcode
+
+Human-readable summary: https://creativecommons.org/licenses/by-sa/4.0/
+
+=============================================================================
+
+How to apply this license to your adaptation:
+
+  If you adapt any FieldComms IMS documentation for your own EMCOMM
+  deployment, add the following notice to your adapted work:
+
+    "Based on FieldComms IMS by James Rospopo KE4CON / K9ESV / MCESV
+     (https://github.com/KE4CON/FieldComms-IMS), licensed under
+     CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0).
+     Adapted by [Your Name / Callsign] for [Your Organization], [Year].
+     This adapted work is also licensed under CC BY-SA 4.0."
+
