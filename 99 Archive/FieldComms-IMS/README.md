@@ -1,3 +1,9 @@
+> **Archived 2026-08-25 — superseded by [FieldCommand-IMS](https://github.com/KE4CON/FieldCommand-IMS).**
+> FieldCommand-IMS's own `CLAUDE.md` calls the "FieldComms" brand "now purged" — this is
+> the predecessor, imported here with full git history (`git subtree`) so the prior work
+> is preserved as part of Project AROC rather than left in a loose local folder with a
+> dead GitHub remote. Don't build on this; it's history, not an active project.
+
 # FieldComms EmComm Field Server v1.0
 
 Off-grid emergency communications server for Raspberry Pi.
