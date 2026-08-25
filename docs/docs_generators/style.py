@@ -13,6 +13,11 @@ hand-edited in Word.
 This module is a straight port of the shared style.py used by OpenTrack / APRS-Command,
 kept byte-for-byte compatible so the JSON chapter schema (h1/h2/p/steps/bullets/callout/
 screenshot/code/table) works identically across every KE4CON repo.
+
+SPDX-License-Identifier: GPL-3.0-or-later
+Part of Project AROC (github.com/KE4CON/ke4con-44net-technical-library).
+See LICENSE at the repository root for the full text, and LICENSING.md for what
+license covers what in this repo.
 """
 import re
 from docx import Document
