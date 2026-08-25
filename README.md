@@ -12,6 +12,8 @@ Project AROC (Amateur Radio Operations Center) is a long-term engineering, docum
 
 The project is built around the philosophy that engineering knowledge should be documented with the same care used to build the system itself.
 
+Project AROC is written for two audiences at once: James (KE4CON), building this specific operations center, and anyone else who wants to learn from and implement the same concepts for their own station. Every book, standard, and runbook should read as something a reader could actually follow to build their own version — not private notes that happen to be public. See "License" below for what that means in practice.
+
 Project AROC combines:
 
 * 44Net networking
@@ -76,12 +78,13 @@ The numbered folders above are the published library itself. Repo-engineering-on
 
 Project Goals
 
-Project AROC has four primary goals:
+Project AROC has five primary goals:
 
 1. Build a reliable Amateur Radio Operations Center.
 2. Create a professional engineering reference library.
 3. Develop reusable software and documentation.
 4. Preserve engineering knowledge for future expansion.
+5. Make the concepts learnable and implementable by others, not just KE4CON.
 
 ⸻
 
@@ -97,6 +100,6 @@ Every document is expected to evolve through multiple revisions as the project m
 
 License
 
-Copyright © James (KE4CON)
+Project AROC is dual-licensed by content type — **CC BY-SA 4.0** for documentation and the technical library, **GPLv3** for software — so the concepts here can be reused and implemented by others, not just read. See [`LICENSING.md`](LICENSING.md) for the full split and the case-by-case exceptions the project owner reserves.
 
-Project AROC is currently under active development.
+Copyright © James (KE4CON). Project AROC is currently under active development.

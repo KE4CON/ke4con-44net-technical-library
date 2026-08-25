@@ -23,6 +23,11 @@ operations).
   communications, network engineering, systems engineering, and professional technical
   documentation.
 - **Full charter:** `README.md` (project overview, goals, development philosophy).
+- **Audience (decided 2026-08-25):** written for two readers at once — James (KE4CON)
+  building this specific center, and anyone else who wants to learn from and implement
+  the same concepts for their own station. Write every book/standard/runbook so a
+  stranger could actually follow it, not as private notes that happen to be public. See
+  §7 Licensing for what makes that legally real, not just aspirational.
 
 ---
 
@@ -136,3 +141,20 @@ depends on it.
   a `.docx` and call it done; edit the chapter JSON and rebuild.
 - **Update this file's §3 Current Status in the same commit** that completes a milestone,
   book, or significant feature — never as a deferred follow-up.
+
+---
+
+## 7. Licensing
+
+Dual-licensed by content type, decided 2026-08-25 — full detail in `LICENSING.md`:
+
+- **Documentation & technical library** (`00 Engineering`, `01 Publications`,
+  `02 Operations`, `05 Media`, `06 Downloads`, any book content): **CC BY-SA 4.0**.
+- **Software** (`03 Software Development`, `docs/docs_generators/`, every `build.py`):
+  **GPLv3**.
+- **This is a default, not an absolute rule** — the project owner reserves the right to
+  license a specific document or piece of software differently, case by case. When that
+  happens, note the exception on that item's own Document Control page (or file header
+  for code) — it overrides the table above for that item only.
+- Full texts: `LICENSE` (GPLv3) and `LICENSE-CONTENT` (CC BY-SA 4.0), fetched verbatim
+  from gnu.org / creativecommons.org, not reproduced from memory.
