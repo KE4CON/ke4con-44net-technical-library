@@ -1,0 +1,11 @@
+services:
+  aroc-dashboard:
+    build: .
+    container_name: aroc-dashboard
+    restart: unless-stopped
+    ports:
+      - "8080:8080"          # bind to your Tailscale IP instead: "100.x.y.z:8080:8080"
+    volumes:
+      - ./config.yaml:/config/config.yaml:ro
+      - ./.env:/config/.env:ro
+      - ~/.ssh/id_ed25519:/home/dashboard/.ssh/id_ed25519:ro   # only for chrony over SSH
