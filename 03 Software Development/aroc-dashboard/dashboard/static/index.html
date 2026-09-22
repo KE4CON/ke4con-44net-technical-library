@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Operations Center</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%231F3A5F'/%3E%3Ccircle cx='8' cy='8' r='3.5' fill='%23D9A521'/%3E%3C/svg%3E">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1 id="title">Operations Center</h1>
+        <div class="subtitle" id="subtitle"></div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="meta" id="summary"></span>
+      <span class="meta" id="clock"></span>
+      <button class="btn-ghost" id="refresh-all" title="Refresh now">⟳</button>
+    </div>
+  </header>
+
+  <main id="grid" class="grid" aria-live="polite"></main>
+
+  <footer class="footer">
+    <span id="footer-left">AROC Dashboard</span>
+    <span id="footer-right"></span>
+  </footer>
+
+  <template id="card-tpl">
+    <section class="card">
+      <div class="card-head">
+        <div class="card-icon"></div>
+        <div class="card-title"></div>
+        <div class="status"><span class="dot"></span><span class="status-label"></span></div>
+      </div>
+      <p class="card-desc"></p>
+      <div class="card-body">
+        <div class="hero"></div>
+        <div class="stats"></div>
+      </div>
+      <div class="tables"></div>
+      <div class="items"></div>
+      <div class="card-error" hidden></div>
+      <a class="btn" target="_blank" rel="noopener">Open dashboard ↗</a>
+      <div class="card-foot"></div>
+    </section>
+  </template>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

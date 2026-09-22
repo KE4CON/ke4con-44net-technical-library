@@ -1,0 +1,123 @@
+# AROC Dashboard configuration.
+# Copy to config.yaml, put secrets in .env (see .env.example), and delete the
+# services you don't have.  Any string may reference ${ENV_VAR} or ${ENV_VAR:-default}.
+
+dashboard:
+  title: KE4CON Operations Center
+  subtitle: Project AROC
+  refresh_seconds: 30        # how often the browser re-fetches /api/status
+  history_points: 24         # sparkline length for collectors without native history
+  # Optional: protect the whole page with HTTP basic auth (recommended if you
+  # expose it beyond Tailscale / the management VLAN).
+  # auth:
+  #   username: ${DASH_USER}
+  #   password: ${DASH_PASSWORD}
+
+services:
+  # ---- Pi-hole (v6 API) -----------------------------------------------------
+  - id: pihole
+    type: pihole
+    title: Pi-hole
+    url: http://192.168.10.5/admin          # "Open dashboard" button target
+    base_url: http://192.168.10.5
+    password: ${PIHOLE_PASSWORD}            # web/app password
+    api_version: 6                          # 5 → use api_token: ${PIHOLE_TOKEN} instead
+    interval: 30
+
+  # ---- Wazuh ----------------------------------------------------------------
+  - id: wazuh
+    type: wazuh
+    title: Wazuh
+    url: https://192.168.30.10
+    api_url: https://192.168.30.10:55000
+    api_user: ${WAZUH_API_USER}
+    api_password: ${WAZUH_API_PASSWORD}
+    indexer_url: https://192.168.30.10:9200   # optional: enables alert + vuln counts
+    indexer_user: ${WAZUH_INDEXER_USER}
+    indexer_password: ${WAZUH_INDEXER_PASSWORD}
+    alert_level: 12                           # "high+" = rule.level >= 12
+    verify_tls: false
+    interval: 60
+
+  # ---- Chrony time server (SSH) --------------------------------------------
+  - id: ntp
+    type: chrony
+    title: Time Server
+    mode: ssh                     # "local" if the dashboard runs on the time server
+    host: 192.168.30.11
+    ssh_user: pi
+    ssh_key: /home/dashboard/.ssh/id_ed25519
+    known_hosts: null             # null = skip host-key verification (LAN only!)
+    interval: 60
+
+  # ---- FortiGate ------------------------------------------------------------
+  - id: fortigate
+    type: fortigate
+    title: FortiGate
+    wide: true
+    url: https://192.168.10.1
+    base_url: https://192.168.10.1
+    token: ${FORTIGATE_TOKEN}     # System > Administrators > REST API Admin
+    wan_interface: wan1
+    public_ip_url: https://api.ipify.org   # null to disable (double-NAT: real public IP)
+    vlan_names: {}                 # e.g. {"10": Management, "20": Trusted}; default = interface name
+    hide_vlans: []
+    verify_tls: false
+    interval: 15
+
+  # ---- Cisco SG300 (SNMP) ---------------------------------------------------
+  - id: sg300
+    type: snmp_switch
+    title: Cisco SG300
+    url: http://192.168.10.2
+    host: 192.168.10.2
+    community: ${SNMP_COMMUNITY}
+    # v3: {user: monitor, auth_key: ${SNMP_AUTH}, auth_proto: sha, priv_key: ${SNMP_PRIV}, priv_proto: aes}
+    uplink: gi28
+    poe_ports: [gi1, gi2, gi3, gi4]
+    traffic_ports:
+      - {name: "vlan 20", label: Trusted}
+      - {name: "vlan 30", label: Servers}
+      - {name: "vlan 40", label: IoT}
+    interval: 15
+
+  # ---- Proxmox VE -----------------------------------------------------------
+  - id: proxmox
+    type: proxmox
+    title: Proxmox VE
+    url: https://192.168.30.20:8006
+    base_url: https://192.168.30.20:8006
+    token_id: ${PVE_TOKEN_ID}        # e.g. dashboard@pve!readonly
+    token_secret: ${PVE_TOKEN_SECRET}
+    verify_tls: false
+    interval: 30
+
+  # ---- Plex -----------------------------------------------------------------
+  - id: plex
+    type: plex
+    title: Plex
+    url: http://192.168.30.21:32400/web
+    base_url: http://192.168.30.21:32400
+    token: ${PLEX_TOKEN}
+    interval: 30
+
+  # ---- HP iLO (Redfish) -----------------------------------------------------
+  - id: ilo
+    type: ilo
+    title: HP iLO
+    url: https://192.168.10.30
+    base_url: https://192.168.10.30
+    username: ${ILO_USER}
+    password: ${ILO_PASSWORD}
+    verify_tls: false
+    interval: 60
+
+  # ---- Anything else: a plain link card with an optional reachability check --
+  - id: unifi
+    type: link
+    title: Some other web UI
+    description: No API wired up yet — just a link.
+    url: https://192.168.10.3
+    check: true                # GET the url and show response time
+    verify_tls: false
+    enabled: false

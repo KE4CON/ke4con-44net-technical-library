@@ -1,0 +1,17 @@
+# systemd unit — copy to /etc/systemd/system/aroc-dashboard.service
+[Unit]
+Description=AROC Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=dashboard
+WorkingDirectory=/opt/aroc-dashboard
+Environment=AROC_CONFIG=/opt/aroc-dashboard/config.yaml
+Environment=AROC_HOST=127.0.0.1
+Environment=AROC_PORT=8080
+ExecStart=/opt/aroc-dashboard/.venv/bin/python -m dashboard.main
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

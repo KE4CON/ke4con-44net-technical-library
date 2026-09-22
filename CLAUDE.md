@@ -70,10 +70,18 @@ not deleted, at `99 Archive/0003A-chatgpt-draft-rev0.1/`.
   as the pilot for the depth/rigor standard in §8 (`01 Publications/Book 7 - APRS/`,
   `AROC-BOOK-0007`, Rev0.1, Draft — awaiting the user's review before more chapters or
   books are started in the same style). All other books: not started.
-- ⏳ `02 Operations`, `03 Software Development` — **do not exist yet**; also still open:
-  whether the standalone software repos (APRS-Command, FieldCommand-IMS, etc.) get
-  absorbed into `03 Software Development` or stay independent and just get linked/
-  documented from here (raised 2026-08-25, undecided)
+- 🟡 `03 Software Development` — created 2026-09-22 with its first piece of software,
+  **AROC Dashboard** (`03 Software Development/aroc-dashboard/`, GPLv3): a config-driven
+  single-pane status board that polls Pi-hole, Wazuh, chrony, FortiGate, an SNMP switch
+  (Cisco SG300), Proxmox, Plex and HP iLO through their own APIs and links to each
+  management UI. Frontend is plain HTML/CSS/JS; backend is FastAPI with one collector
+  module per device type. Parser tests are offline; **not yet run against the real
+  hardware** (§6 "ground every claim" still applies before any book chapter cites it).
+- ⏳ `02 Operations` — **does not exist yet**; also still open: whether the standalone
+  software repos (APRS-Command, FieldCommand-IMS, etc.) get absorbed into
+  `03 Software Development` or stay independent and just get linked/documented from
+  here (raised 2026-08-25, undecided — the dashboard living here is the first in-repo
+  data point, not a decision)
 
 The README's own "Current Status" section should always **link here**, not restate this
 list — this file is authoritative; update it in the same commit that completes a
